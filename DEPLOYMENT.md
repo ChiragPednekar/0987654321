@@ -217,21 +217,24 @@ The generic steps above still apply, but most of them are **already done**.
 | Schema (steps 1–6 above) | **Already applied** — skip section 2 |
 | Reference data | 24 categories, 17 badges, 3 learning paths present |
 | Case library | **Empty** — see "Seed the library" below |
-| Vercel | Project `casecode` created and linked to the repo, but **not deployed** |
+| Vercel | **Nothing deployed.** Rolled back on 2026-08-18 at the user's request |
 
-### Finish the Vercel deploy
+### When you are ready to deploy
 
-The linked Vercel project could not be deployed automatically — the connected
-authorization returns `403 forbidden` on deployments. Import it from the
-dashboard instead:
+Nothing is deployed today — the build is run locally against the live Supabase
+project. When you do want it hosted:
 
 1. <https://vercel.com/new> → import `ChiragPednekar/0987654321`
 2. Framework preset: **Next.js** (auto-detected). No build overrides needed.
 3. Add the environment variables below, then deploy.
 
+> An earlier attempt to deploy through the API failed: the connected
+> authorization returns `403 forbidden` on production deployments. Importing
+> from the dashboard avoids that path entirely.
+
 ### Environment variables
 
-Copy the first two straight out of your local `.env.local`:
+All of these live in your local `.env.local`; copy them from there.
 
 ```
 NEXT_PUBLIC_SUPABASE_URL       = https://hqnsyyhguxtnvkwearoa.supabase.co
