@@ -1,0 +1,334 @@
+/**
+ * Seeds the case library.
+ *
+ *   npm run seed          # write to the database
+ *   npm run seed:dry      # generate and validate, write nothing
+ *
+ * Idempotent: cases are upserted on `slug`, so re-running updates rows in place
+ * rather than creating duplicates. Requires SUPABASE_SERVICE_ROLE_KEY because
+ * it writes tables that RLS reserves for admins.
+ */
+
+import { config } from "dotenv";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../src/lib/types/database";
+import { expand, type Archetype } from "./lib/generator";
+import { FINANCE_ARCHETYPES } from "./templates/finance";
+import { CONSULTING_ARCHETYPES } from "./templates/consulting";
+import { PRODUCT_ARCHETYPES } from "./templates/product";
+
+config({ path: ".env.local" });
+config({ path: ".env" });
+
+const DRY_RUN = process.argv.includes("--dry-run");
+
+const PLAN = [
+  { archetypes: FINANCE_ARCHETYPES, count: 100, seed: 1_000, label: "Finance" },
+  { archetypes: CONSULTING_ARCHETYPES, count: 100, seed: 2_000, label: "Consulting" },
+  { archetypes: PRODUCT_ARCHETYPES, count: 100, seed: 3_000, label: "Product Management" },
+];
+
+/**
+ * Difficulty is rotated across variants so each domain spans the full range,
+ * anchored on the archetype's natural difficulty. The ladders are weighted to
+ * land the library near a 20/55/25 easy/medium/hard split — enough easy cases
+ * for a first session, without the catalogue skewing hard.
+ */
+function difficultyFor(archetype: Archetype, index: number) {
+  const LADDERS = {
+    easy: ["easy", "easy", "easy", "medium", "medium"],
+    medium: ["easy", "medium", "medium", "medium", "hard"],
+    hard: ["hard", "medium", "hard", "medium", "medium"],
+  } as const;
+
+  const ladder = LADDERS[archetype.difficulty];
+  return ladder[index % ladder.length];
+}
+
+async function main() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!DRY_RUN && (!url || !key)) {
+    console.error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.\n" +
+        "Copy .env.example to .env.local and fill them in, or run with --dry-run.",
+    );
+    process.exit(1);
+  }
+
+  const supabase =
+    DRY_RUN || !url || !key
+      ? null
+      : createClient<Database>(url, key, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        });
+
+  // ---- category lookup ---------------------------------------------------
+  let categoryBySlug = new Map<string, string>();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("case_categories")
+      .select("id, slug");
+
+    if (error) {
+      console.error("Could not read case_categories:", error.message);
+      console.error("Have you applied the migrations in supabase/migrations?");
+      process.exit(1);
+    }
+
+    categoryBySlug = new Map((data ?? []).map((row) => [row.slug, row.id]));
+
+    if (categoryBySlug.size === 0) {
+      console.error(
+        "No categories found. Apply 20250101000003_reference_data.sql first.",
+      );
+      process.exit(1);
+    }
+  }
+
+  // ---- generate ----------------------------------------------------------
+  const allCases: Array<{
+    slug: string;
+    title: string;
+    domain: string;
+    difficulty: string;
+    category_id: string | null;
+    company_track: string;
+    estimated_minutes: number;
+    scenario: string;
+    instructions: string;
+    supporting_data: Record<string, unknown>;
+    expected_framework: string;
+    model_answer: string;
+    tags: string[];
+    is_published: boolean;
+    rubric: Archetype["rubric"];
+  }> = [];
+
+  for (const group of PLAN) {
+    const generated = expand(group.archetypes, group.count, group.seed);
+
+    generated.forEach((item, index) => {
+      allCases.push({
+        slug: item.slug,
+        title: item.title,
+        domain: item.archetype.domain,
+        difficulty: difficultyFor(item.archetype, index),
+        category_id: categoryBySlug.get(item.archetype.categorySlug) ?? null,
+        company_track: item.companyTrack,
+        estimated_minutes: item.archetype.estimatedMinutes,
+        scenario: item.scenario,
+        instructions: item.instructions,
+        supporting_data: item.supportingData,
+        expected_framework: item.expectedFramework,
+        model_answer: item.modelAnswer,
+        tags: item.archetype.tags,
+        is_published: true,
+        rubric: item.archetype.rubric,
+      });
+    });
+
+    console.log(`Generated ${generated.length} ${group.label} cases`);
+  }
+
+  // ---- validate ----------------------------------------------------------
+  const problems: string[] = [];
+  const seen = new Set<string>();
+
+  for (const item of allCases) {
+    if (seen.has(item.slug)) problems.push(`duplicate slug: ${item.slug}`);
+    seen.add(item.slug);
+
+    if (item.scenario.length < 200)
+      problems.push(`${item.slug}: scenario too short`);
+    if (!item.model_answer || item.model_answer.length < 200)
+      problems.push(`${item.slug}: model answer too short`);
+
+    const weights = Object.values(item.rubric.criteria);
+    if (weights.length === 0) problems.push(`${item.slug}: empty rubric`);
+    if (weights.some((w) => !Number.isInteger(w) || w <= 0))
+      problems.push(`${item.slug}: invalid rubric weight`);
+
+    // The scenario should not leak an unresolved template expression.
+    if (item.scenario.includes("undefined") || item.scenario.includes("NaN"))
+      problems.push(`${item.slug}: scenario contains undefined/NaN`);
+    if (item.model_answer.includes("undefined") || item.model_answer.includes("NaN"))
+      problems.push(`${item.slug}: model answer contains undefined/NaN`);
+  }
+
+  if (problems.length > 0) {
+    console.error(`\n${problems.length} validation problems:`);
+    problems.slice(0, 25).forEach((p) => console.error("  " + p));
+    process.exit(1);
+  }
+
+  console.log(`\nValidated ${allCases.length} cases with no problems.`);
+
+  const byDifficulty = allCases.reduce<Record<string, number>>((acc, item) => {
+    acc[item.difficulty] = (acc[item.difficulty] ?? 0) + 1;
+    return acc;
+  }, {});
+  console.log("Difficulty spread:", byDifficulty);
+
+  if (DRY_RUN || !supabase) {
+    console.log("\nDry run — nothing written.");
+    console.log("\nSample case:\n");
+    console.log(JSON.stringify(allCases[0], null, 2).slice(0, 1800) + "\n…");
+    return;
+  }
+
+  // ---- write cases -------------------------------------------------------
+  console.log("\nWriting cases…");
+  const CHUNK = 50;
+  const caseIdBySlug = new Map<string, string>();
+
+  for (let i = 0; i < allCases.length; i += CHUNK) {
+    const chunk = allCases.slice(i, i + CHUNK);
+    const { data, error } = await supabase
+      .from("cases")
+      .upsert(
+        chunk.map(({ rubric: _rubric, ...fields }) => fields),
+        { onConflict: "slug" },
+      )
+      .select("id, slug");
+
+    if (error) {
+      console.error("Case upsert failed:", error.message);
+      process.exit(1);
+    }
+
+    for (const row of data ?? []) caseIdBySlug.set(row.slug, row.id);
+    console.log(`  ${Math.min(i + CHUNK, allCases.length)}/${allCases.length}`);
+  }
+
+  // ---- write rubrics -----------------------------------------------------
+  console.log("Writing rubrics…");
+  const rubricRows = allCases
+    .map((item) => {
+      const caseId = caseIdBySlug.get(item.slug);
+      if (!caseId) return null;
+      return {
+        case_id: caseId,
+        criteria: item.rubric.criteria,
+        descriptors: item.rubric.descriptors,
+        max_score: Object.values(item.rubric.criteria).reduce((a, b) => a + b, 0),
+        pass_score: item.rubric.passScore,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+
+  for (let i = 0; i < rubricRows.length; i += CHUNK) {
+    const { error } = await supabase
+      .from("rubrics")
+      .upsert(rubricRows.slice(i, i + CHUNK), { onConflict: "case_id" });
+
+    if (error) {
+      console.error("Rubric upsert failed:", error.message);
+      process.exit(1);
+    }
+  }
+
+  // ---- wire learning paths ----------------------------------------------
+  console.log("Wiring learning path steps…");
+  await wireLearningPaths(supabase, caseIdBySlug);
+
+  console.log(`\nDone. ${allCases.length} cases and rubrics are live.`);
+}
+
+/**
+ * Builds each track from the generated cases, ordered easy → hard so the
+ * unlock sequence is a real difficulty ramp.
+ */
+async function wireLearningPaths(
+  supabase: ReturnType<typeof createClient<Database>>,
+  caseIdBySlug: Map<string, string>,
+) {
+  const TRACKS: Record<string, string[]> = {
+    "finance-track": [
+      "statement-diagnosis-1",
+      "statement-diagnosis-2",
+      "comps-valuation-1",
+      "npv-irr-project-1",
+      "npv-irr-project-2",
+      "capital-raise-1",
+      "comps-valuation-2",
+      "dcf-valuation-1",
+      "capital-raise-2",
+      "dcf-valuation-2",
+      "ma-accretion-1",
+      "ma-accretion-2",
+    ],
+    "consulting-track": [
+      "market-sizing-1",
+      "market-sizing-2",
+      "profitability-decline-1",
+      "profitability-decline-2",
+      "market-entry-1",
+      "growth-strategy-1",
+      "operations-capacity-1",
+      "market-entry-2",
+      "growth-strategy-2",
+      "pricing-strategy-1",
+      "operations-capacity-2",
+      "pricing-strategy-2",
+    ],
+    "product-management-track": [
+      "metric-drop-1",
+      "prioritization-1",
+      "metric-drop-2",
+      "product-launch-1",
+      "prioritization-2",
+      "retention-diagnosis-1",
+      "product-launch-2",
+      "growth-loop-1",
+      "retention-diagnosis-2",
+      "growth-loop-2",
+    ],
+  };
+
+  const { data: paths } = await supabase
+    .from("learning_paths")
+    .select("id, slug");
+
+  const pathIdBySlug = new Map((paths ?? []).map((p) => [p.slug, p.id]));
+
+  for (const [pathSlug, caseSlugs] of Object.entries(TRACKS)) {
+    const pathId = pathIdBySlug.get(pathSlug);
+    if (!pathId) {
+      console.warn(`  skipping ${pathSlug} — path not found`);
+      continue;
+    }
+
+    // Rebuild the track from scratch so re-seeding cannot leave stale steps.
+    await supabase.from("learning_path_steps").delete().eq("path_id", pathId);
+
+    const steps = caseSlugs
+      .map((slug, index) => {
+        const caseId = caseIdBySlug.get(slug);
+        if (!caseId) return null;
+        return {
+          path_id: pathId,
+          case_id: caseId,
+          step_order: index + 1,
+          title: slug.replace(/-\d+$/, "").replace(/-/g, " "),
+          unlock_threshold: 60,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null);
+
+    if (steps.length === 0) continue;
+
+    const { error } = await supabase.from("learning_path_steps").insert(steps);
+    if (error) {
+      console.error(`  ${pathSlug}: ${error.message}`);
+    } else {
+      console.log(`  ${pathSlug}: ${steps.length} steps`);
+    }
+  }
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

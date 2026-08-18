@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# stray npm/home artefacts accidentally committed earlier
+/Library
+/.npm
+
+# supabase cli
+supabase/.branches
+supabase/.temp
