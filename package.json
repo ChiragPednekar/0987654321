@@ -13,7 +13,8 @@
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > src/lib/types/database.ts",
     "seed": "tsx scripts/seed.ts",
-    "seed:dry": "tsx scripts/seed.ts --dry-run"
+    "seed:dry": "tsx scripts/seed.ts --dry-run",
+    "seed:sql": "tsx scripts/seed.ts --emit-sql"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
