@@ -81,9 +81,12 @@ export default async function LeaderboardPage({
 
   const universities = [
     ...new Set(
-      (universityRows ?? [])
-        .map((row) => row.university?.trim())
-        .filter((value): value is string => Boolean(value)),
+      [
+        // Keep the board being viewed visible even when its cohort has no
+        // ranked members yet, so the active scope is never unlabelled.
+        ...(university ? [university] : []),
+        ...(universityRows ?? []).map((row) => row.university?.trim()),
+      ].filter((value): value is string => Boolean(value)),
     ),
   ].sort((a, b) => a.localeCompare(b));
 
