@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,9 @@ const MIN_PASSWORD = 8;
 export function SignupForm() {
   const router = useRouter();
   const [loading, setLoading] = React.useState(false);
+  // When confirmation is required there is no session, and a toast is too easy
+  // to miss — it reads as "signup did nothing". Hold the screen instead.
+  const [pendingEmail, setPendingEmail] = React.useState<string | null>(null);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -48,13 +51,41 @@ export function SignupForm() {
 
     // With email confirmation on, there is no session yet.
     if (!data.session) {
-      toast.success("Check your email to confirm your account.");
+      setPendingEmail(String(formData.get("email")));
       setLoading(false);
       return;
     }
 
     router.push("/dashboard");
     router.refresh();
+  }
+
+  if (pendingEmail) {
+    return (
+      <div className="space-y-4 rounded-lg border border-border bg-muted/30 p-5 text-center">
+        <MailCheck className="mx-auto size-8 text-primary" />
+        <div className="space-y-1.5">
+          <p className="font-medium">Confirm your email</p>
+          <p className="text-sm text-muted-foreground">
+            We sent a confirmation link to{" "}
+            <span className="font-medium text-foreground">{pendingEmail}</span>.
+            Your account is not active until you open it.
+          </p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Nothing arrived? Check spam, then try again in a few minutes —
+          confirmation emails are rate limited.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={() => setPendingEmail(null)}
+        >
+          Use a different email
+        </Button>
+      </div>
+    );
   }
 
   return (
