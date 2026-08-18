@@ -15,7 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
-import { SkillRadar, type SkillPoint } from "@/components/skill-radar";
+import type { SkillPoint } from "@/components/skill-radar";
+import { SkillRadarLazy } from "@/components/skill-radar-lazy";
 import { DOMAINS } from "@/lib/constants";
 import { formatNumber, timeAgo } from "@/lib/utils";
 import type { ActivityType, Domain } from "@/lib/types/database";
@@ -154,7 +155,7 @@ export default async function DashboardPage() {
             </p>
           </CardHeader>
           <CardContent>
-            <SkillRadar data={radarData} />
+            <SkillRadarLazy data={radarData} />
 
             <div className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
               {DOMAINS.map((domain) => {

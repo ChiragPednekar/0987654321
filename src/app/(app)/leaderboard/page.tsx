@@ -69,15 +69,27 @@ export default async function LeaderboardPage({
 
   if (university) query = query.eq("users.university", university);
 
-  const { data: rows } = await query;
-
-  // Other campuses with a presence on this board, for the cohort switcher.
-  const { data: universityRows } = await supabase
-    .from("users")
-    .select("university")
-    .not("university", "is", null)
-    .neq("university", "")
-    .limit(500);
+  // These three are independent, so they go out together. Run in sequence they
+  // cost three round trips to the database region on every single render.
+  const [{ data: rows }, { data: universityRows }, { data: myRow }] =
+    await Promise.all([
+      query,
+      // Other campuses with a presence on this board, for the cohort switcher.
+      supabase
+        .from("users")
+        .select("university")
+        .not("university", "is", null)
+        .neq("university", "")
+        .limit(500),
+      profile
+        ? supabase
+            .from("leaderboards")
+            .select("rank, total_points, cases_solved, accuracy")
+            .eq("period", period)
+            .eq("user_id", profile.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
 
   const universities = [
     ...new Set(
@@ -92,39 +104,26 @@ export default async function LeaderboardPage({
 
   const inTop = rows?.some((row) => row.user_id === profile?.id);
 
+  const mine = myRow ?? null;
+
   // Global rank comes from the stored `rank`. A cohort rank is positional
-  // within the filtered board, so it has to be counted rather than read.
+  // within the filtered board, so it has to be counted rather than read — but
+  // only when the viewer is missing from the visible page, since otherwise
+  // their position is already on screen.
   let myCohortRank: number | null = null;
-  let mine: {
-    rank: number | null;
-    total_points: number;
-    cases_solved: number;
-    accuracy: number;
-  } | null = null;
 
-  if (profile) {
-    const { data: myRow } = await supabase
+  if (mine && university && isMyCohort && !inTop) {
+    const { count } = await supabase
       .from("leaderboards")
-      .select("rank, total_points, cases_solved, accuracy")
+      .select("user_id, users!inner(university)", {
+        count: "exact",
+        head: true,
+      })
       .eq("period", period)
-      .eq("user_id", profile.id)
-      .maybeSingle();
+      .eq("users.university", university)
+      .gt(sort, mine[sort] ?? 0);
 
-    mine = myRow ?? null;
-
-    if (myRow && university && isMyCohort) {
-      const { count } = await supabase
-        .from("leaderboards")
-        .select("user_id, users!inner(university)", {
-          count: "exact",
-          head: true,
-        })
-        .eq("period", period)
-        .eq("users.university", university)
-        .gt(sort, myRow[sort] ?? 0);
-
-      myCohortRank = (count ?? 0) + 1;
-    }
+    myCohortRank = (count ?? 0) + 1;
   }
 
   const boardTitle = isCohort ? university : "Global leaderboard";
