@@ -6,15 +6,13 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 /**
- * Rendered only when the Google provider is actually configured in Supabase.
- * Left unconditional, this button is a guaranteed dead end — Supabase answers
- * "Unsupported provider: provider is not enabled" — and it sits above the
- * working email form, so it reads as auth being broken.
+ * Render only when Supabase really has the provider enabled — see
+ * `googleSignInEnabled()`. Left unconditional, this button is a guaranteed
+ * dead end ("Unsupported provider: provider is not enabled") sitting directly
+ * above the working email form, which reads as auth being broken.
  */
 export function GoogleButton({ next = "/dashboard" }: { next?: string }) {
   const [loading, setLoading] = React.useState(false);
-
-  if (process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED !== "true") return null;
 
   async function signInWithGoogle() {
     setLoading(true);

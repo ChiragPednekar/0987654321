@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { LoginForm } from "@/components/auth/login-form";
 import { GoogleButton } from "@/components/auth/google-button";
+import { googleSignInEnabled } from "@/lib/auth-providers";
 
 export const metadata: Metadata = { title: "Log in" };
 
@@ -11,6 +12,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
   const params = await searchParams;
+  const googleEnabled = await googleSignInEnabled();
   const next = params.next?.startsWith("/") ? params.next : "/dashboard";
 
   return (
@@ -31,7 +33,7 @@ export default async function LoginPage({
         </div>
       )}
 
-      <GoogleButton next={next} />
+      {googleEnabled && <GoogleButton next={next} />}
 
       <LoginForm next={next} />
 

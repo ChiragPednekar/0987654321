@@ -2,10 +2,12 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { SignupForm } from "@/components/auth/signup-form";
 import { GoogleButton } from "@/components/auth/google-button";
+import { googleSignInEnabled } from "@/lib/auth-providers";
 
 export const metadata: Metadata = { title: "Sign up" };
 
-export default function SignupPage() {
+export default async function SignupPage() {
+  const googleEnabled = await googleSignInEnabled();
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -17,7 +19,7 @@ export default function SignupPage() {
         </p>
       </div>
 
-      <GoogleButton />
+      {googleEnabled && <GoogleButton />}
 
       <SignupForm />
 
