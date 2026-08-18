@@ -65,6 +65,7 @@ export default async function AdminCasesPage({
           <span className="w-24 text-right">Submissions</span>
           <span className="w-20 text-right">Avg</span>
           <span className="w-20 text-right">Status</span>
+          <span className="w-14 text-right">Edit</span>
         </div>
 
         <ul className="divide-y divide-border">
@@ -102,6 +103,14 @@ export default async function AdminCasesPage({
                 <Badge variant={item.is_published ? "success" : "secondary"}>
                   {item.is_published ? "Live" : "Draft"}
                 </Badge>
+              </span>
+              <span className="w-14 shrink-0 sm:text-right">
+                <Link
+                  href={`/admin/cases/${item.id}/edit`}
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Edit
+                </Link>
               </span>
             </li>
           ))}

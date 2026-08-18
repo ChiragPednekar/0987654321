@@ -32,17 +32,65 @@ const DEFAULT_CRITERIA: Criterion[] = [
   { key: "recommendation", weight: 25, descriptor: "" },
 ];
 
+export interface CaseFormInitial {
+  id: string;
+  slug: string;
+  title: string;
+  domain: Domain;
+  difficulty: Difficulty;
+  category_id: string | null;
+  company_track: string | null;
+  estimated_minutes: number;
+  scenario: string;
+  instructions: string;
+  supporting_data: Record<string, unknown> | null;
+  expected_framework: string | null;
+  model_answer: string | null;
+  tags: string[] | null;
+  is_published: boolean;
+  rubric: {
+    criteria: Record<string, number>;
+    descriptors: Record<string, string> | null;
+    pass_score: number;
+  } | null;
+}
+
+/** Turns a stored rubric back into the editable row shape. */
+function criteriaFrom(initial?: CaseFormInitial): Criterion[] {
+  const rubric = initial?.rubric;
+  if (!rubric || Object.keys(rubric.criteria ?? {}).length === 0)
+    return DEFAULT_CRITERIA;
+
+  return Object.entries(rubric.criteria).map(([key, weight]) => ({
+    key,
+    weight,
+    descriptor: rubric.descriptors?.[key] ?? "",
+  }));
+}
+
 export function CaseForm({
   categories,
+  initial,
 }: {
   categories: { id: string; name: string; domain: string }[];
+  /** Present when editing an existing case; absent when creating one. */
+  initial?: CaseFormInitial;
 }) {
   const router = useRouter();
+  const isEdit = Boolean(initial);
   const [saving, setSaving] = React.useState(false);
-  const [domain, setDomain] = React.useState<Domain>("consulting");
-  const [difficulty, setDifficulty] = React.useState<Difficulty>("medium");
-  const [categoryId, setCategoryId] = React.useState<string>("");
-  const [criteria, setCriteria] = React.useState<Criterion[]>(DEFAULT_CRITERIA);
+  const [domain, setDomain] = React.useState<Domain>(
+    initial?.domain ?? "consulting",
+  );
+  const [difficulty, setDifficulty] = React.useState<Difficulty>(
+    initial?.difficulty ?? "medium",
+  );
+  const [categoryId, setCategoryId] = React.useState<string>(
+    initial?.category_id ?? "",
+  );
+  const [criteria, setCriteria] = React.useState<Criterion[]>(
+    criteriaFrom(initial),
+  );
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
   const relevantCategories = categories.filter((c) => c.domain === domain);
@@ -62,7 +110,9 @@ export function CaseForm({
       return;
     }
 
-    const keys = cleaned.map((c) => c.key.trim().toLowerCase().replace(/\s+/g, "_"));
+    const keys = cleaned.map((c) =>
+      c.key.trim().toLowerCase().replace(/\s+/g, "_"),
+    );
     if (new Set(keys).size !== keys.length) {
       toast.error("Rubric criteria must have unique names.");
       return;
@@ -83,50 +133,57 @@ export function CaseForm({
       }
     }
 
-    const response = await fetch("/api/admin/cases", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        title: String(formData.get("title")),
-        domain,
-        difficulty,
-        category_id: categoryId || null,
-        company_track: String(formData.get("company_track") || "") || null,
-        estimated_minutes: Number(formData.get("estimated_minutes")),
-        scenario: String(formData.get("scenario")),
-        instructions: String(formData.get("instructions")),
-        supporting_data: supportingData,
-        expected_framework: String(formData.get("expected_framework") || "") || null,
-        model_answer: String(formData.get("model_answer") || "") || null,
-        tags: String(formData.get("tags") || "")
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
-        is_published: formData.get("is_published") === "on",
-        rubric: {
-          criteria: Object.fromEntries(
-            cleaned.map((c, i) => [keys[i], c.weight]),
-          ),
-          descriptors: Object.fromEntries(
-            cleaned
-              .map((c, i) => [keys[i], c.descriptor.trim()])
-              .filter(([, value]) => value),
-          ),
-          pass_score: Number(formData.get("pass_score")),
-        },
-      }),
-    });
+    const response = await fetch(
+      isEdit ? `/api/admin/cases/${initial!.id}` : "/api/admin/cases",
+      {
+        method: isEdit ? "PATCH" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: String(formData.get("title")),
+          domain,
+          difficulty,
+          category_id: categoryId || null,
+          company_track: String(formData.get("company_track") || "") || null,
+          estimated_minutes: Number(formData.get("estimated_minutes")),
+          scenario: String(formData.get("scenario")),
+          instructions: String(formData.get("instructions")),
+          supporting_data: supportingData,
+          expected_framework:
+            String(formData.get("expected_framework") || "") || null,
+          model_answer: String(formData.get("model_answer") || "") || null,
+          tags: String(formData.get("tags") || "")
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+          is_published: formData.get("is_published") === "on",
+          rubric: {
+            criteria: Object.fromEntries(
+              cleaned.map((c, i) => [keys[i], c.weight]),
+            ),
+            descriptors: Object.fromEntries(
+              cleaned
+                .map((c, i) => [keys[i], c.descriptor.trim()])
+                .filter(([, value]) => value),
+            ),
+            pass_score: Number(formData.get("pass_score")),
+          },
+        }),
+      },
+    );
 
     const payload = await response.json();
     setSaving(false);
 
     if (!response.ok) {
-      toast.error(payload.error ?? "Could not create case.");
+      toast.error(
+        payload.error ??
+          (isEdit ? "Could not save case." : "Could not create case."),
+      );
       return;
     }
 
-    toast.success("Case created.");
-    router.push(`/cases/${payload.slug}`);
+    toast.success(isEdit ? "Case saved." : "Case created.");
+    router.push(`/cases/${payload.slug ?? initial!.slug}`);
     router.refresh();
   }
 
@@ -139,7 +196,14 @@ export function CaseForm({
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
-            <Input id="title" name="title" required minLength={5} maxLength={200} />
+            <Input
+              id="title"
+              name="title"
+              required
+              minLength={5}
+              maxLength={200}
+              defaultValue={initial?.title}
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -205,6 +269,7 @@ export function CaseForm({
               <Input
                 id="company_track"
                 name="company_track"
+                defaultValue={initial?.company_track ?? ""}
                 placeholder="e.g. McKinsey"
               />
             </div>
@@ -217,14 +282,19 @@ export function CaseForm({
                 type="number"
                 min={5}
                 max={360}
-                defaultValue={30}
+                defaultValue={initial?.estimated_minutes ?? 30}
                 required
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="tags">Tags (comma separated)</Label>
-              <Input id="tags" name="tags" placeholder="pricing, b2b, saas" />
+              <Input
+                id="tags"
+                name="tags"
+                placeholder="pricing, b2b, saas"
+                defaultValue={initial?.tags?.join(", ") ?? ""}
+              />
             </div>
           </div>
         </CardContent>
@@ -240,6 +310,7 @@ export function CaseForm({
             <Textarea
               id="scenario"
               name="scenario"
+              defaultValue={initial?.scenario}
               required
               minLength={50}
               className="min-h-40 font-mono text-[13px]"
@@ -251,6 +322,7 @@ export function CaseForm({
             <Textarea
               id="instructions"
               name="instructions"
+              defaultValue={initial?.instructions}
               required
               minLength={10}
               className="min-h-24 font-mono text-[13px]"
@@ -262,6 +334,12 @@ export function CaseForm({
             <Textarea
               id="supporting_data"
               name="supporting_data"
+              defaultValue={
+                initial?.supporting_data &&
+                Object.keys(initial.supporting_data).length > 0
+                  ? JSON.stringify(initial.supporting_data, null, 2)
+                  : ""
+              }
               placeholder='{"financials": {"revenue_cr": 50, "growth_pct": 30}}'
               className="min-h-24 font-mono text-[13px]"
             />
@@ -272,6 +350,7 @@ export function CaseForm({
             <Textarea
               id="expected_framework"
               name="expected_framework"
+              defaultValue={initial?.expected_framework ?? ""}
               className="min-h-20 font-mono text-[13px]"
             />
           </div>
@@ -281,6 +360,7 @@ export function CaseForm({
             <Textarea
               id="model_answer"
               name="model_answer"
+              defaultValue={initial?.model_answer ?? ""}
               className="min-h-32 font-mono text-[13px]"
             />
             <p className="text-xs text-muted-foreground">
@@ -294,7 +374,8 @@ export function CaseForm({
         <CardHeader>
           <CardTitle className="text-base">Rubric</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Total {totalWeight} points. Each criterion is graded out of its weight.
+            Total {totalWeight} points. Each criterion is graded out of its
+            weight.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -361,10 +442,11 @@ export function CaseForm({
             <Input
               id="pass_score"
               name="pass_score"
+              defaultValue={initial?.rubric?.pass_score ?? 60}
               type="number"
               min={0}
               max={100}
-              defaultValue={60}
+
               className="w-28"
             />
           </div>
@@ -373,12 +455,17 @@ export function CaseForm({
 
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="is_published" className="size-4" />
+          <input
+            type="checkbox"
+            name="is_published"
+            className="size-4"
+            defaultChecked={initial ? initial.is_published : true}
+          />
           Publish immediately
         </label>
         <Button type="submit" disabled={saving}>
           {saving && <Loader2 className="animate-spin" />}
-          Create case
+          {isEdit ? "Save changes" : "Create case"}
         </Button>
       </div>
     </form>
