@@ -1,0 +1,124 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  font-family: var(--font-geist-sans);
+  color: #fff;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #aaa;
+}
+
+.threadList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.threadCard {
+  background-color: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  gap: 1.5rem;
+}
+
+.voteColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.voteBtn {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: color 0.2s;
+}
+
+.voteBtn:hover {
+  color: #fbbf24;
+}
+
+.voteCount {
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: #fff;
+}
+
+.threadContent {
+  flex: 1;
+}
+
+.threadHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.threadTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+}
+
+.threadTitle:hover {
+  text-decoration: underline;
+}
+
+.badgeVerified {
+  background-color: #064e3b;
+  color: #34d399;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.threadMeta {
+  font-size: 0.875rem;
+  color: #aaa;
+  margin-bottom: 1rem;
+}
+
+.threadPreview {
+  color: #ddd;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.threadFooter {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+  color: #888;
+}
+
+.footerItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
