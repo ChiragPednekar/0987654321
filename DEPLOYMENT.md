@@ -203,3 +203,66 @@ from public.scores group by model;
 - [ ] At least one admin promoted
 - [ ] `CRON_SECRET` set and both cron endpoints returning 200
 - [ ] A real submission graded end to end
+
+---
+
+## This project's current state (2026-08-18)
+
+The generic steps above still apply, but most of them are **already done**.
+
+| Piece | State |
+| --- | --- |
+| Code + CI | Pushed to `ChiragPednekar/0987654321`, CI green |
+| Supabase project | `casecode` / `hqnsyyhguxtnvkwearoa` (ap-south-1), `ACTIVE_HEALTHY` |
+| Schema (steps 1–6 above) | **Already applied** — skip section 2 |
+| Reference data | 24 categories, 17 badges, 3 learning paths present |
+| Case library | **Empty** — see "Seed the library" below |
+| Vercel | Project `casecode` created and linked to the repo, but **not deployed** |
+
+### Finish the Vercel deploy
+
+The linked Vercel project could not be deployed automatically — the connected
+authorization returns `403 forbidden` on deployments. Import it from the
+dashboard instead:
+
+1. <https://vercel.com/new> → import `ChiragPednekar/0987654321`
+2. Framework preset: **Next.js** (auto-detected). No build overrides needed.
+3. Add the environment variables below, then deploy.
+
+### Environment variables
+
+Copy the first two straight out of your local `.env.local`:
+
+```
+NEXT_PUBLIC_SUPABASE_URL       = https://hqnsyyhguxtnvkwearoa.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY  = <the anon key already in .env.local>
+SUPABASE_SERVICE_ROLE_KEY      = <Supabase → Project Settings → API Keys>
+ANTHROPIC_API_KEY              = <console.anthropic.com>
+ANTHROPIC_MODEL                = claude-sonnet-5
+AI_PROVIDER                    = anthropic
+NEXT_PUBLIC_SITE_URL           = https://<your-vercel-domain>
+NEXT_PUBLIC_GOOGLE_AUTH_ENABLED= false
+CRON_SECRET                    = 460d588844668ca676a8a63f3e29b84d9739102b2592f909d9f3db63c895abd5
+```
+
+A fresh `CRON_SECRET` was generated above; it is only a shared secret between
+Vercel Cron and `/api/cron/*`, so any long random string works.
+
+Without `SUPABASE_SERVICE_ROLE_KEY` and `ANTHROPIC_API_KEY` the site still
+builds and public pages render, but **submitting an answer and both cron routes
+will fail** — those are the only two values that cannot be set for you.
+
+### Seed the library
+
+The database has no cases yet. Either:
+
+- paste `supabase/seed/cases.sql` into the Supabase SQL editor (no key needed), or
+- set `SUPABASE_SERVICE_ROLE_KEY` locally and run `npm run seed`.
+
+### After the first deploy
+
+- Supabase → Authentication → URL Configuration: add the Vercel domain to
+  **Site URL** and **Redirect URLs**, or email confirmation and OAuth will
+  bounce back to localhost.
+- The two cron schedules in `vercel.json` start running automatically once
+  deployed on a plan that includes Cron Jobs.
