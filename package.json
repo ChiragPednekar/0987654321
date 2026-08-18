@@ -14,7 +14,8 @@
     "db:types": "supabase gen types typescript --local > src/lib/types/database.ts",
     "seed": "tsx scripts/seed.ts",
     "seed:dry": "tsx scripts/seed.ts --dry-run",
-    "seed:sql": "tsx scripts/seed.ts --emit-sql"
+    "seed:sql": "tsx scripts/seed.ts --emit-sql",
+    "verify:ai": "tsx --conditions=react-server scripts/verify-ai.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
