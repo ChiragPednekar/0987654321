@@ -422,3 +422,31 @@ select distinct on (s.user_id, s.case_id)
   s.evaluated_at
 from public.scores s
 order by s.user_id, s.case_id, s.percentage desc, s.evaluated_at asc;
+
+-- ---------------------------------------------------------------------------
+-- Baseline role privileges.
+--
+-- Hosted Supabase bootstraps the public schema with GRANT ALL to anon,
+-- authenticated and service_role, so the original migrations never stated
+-- these and still worked in production. Anywhere without that bootstrap — a
+-- local stack, a fresh staging project — every role landed with no table
+-- privileges at all: the seeder could not write, and the case library rendered
+-- empty because RLS only filters rows *after* a grant has let the role in.
+--
+-- These are the baseline. 20250101000004_column_privileges.sql runs later and
+-- narrows anon and authenticated back down; that migration remains the single
+-- source of truth for what those two roles may actually do.
+-- ---------------------------------------------------------------------------
+
+grant usage on schema public to anon, authenticated, service_role;
+
+grant all privileges on all tables    in schema public to anon, authenticated, service_role;
+grant all privileges on all sequences in schema public to anon, authenticated, service_role;
+grant all privileges on all functions in schema public to anon, authenticated, service_role;
+
+alter default privileges in schema public
+  grant all on tables    to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on functions to anon, authenticated, service_role;
