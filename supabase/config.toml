@@ -418,9 +418,9 @@ enabled = true
 # Authorised redirect URI to register with Google, for this local stack:
 #   http://127.0.0.1:54321/auth/v1/callback
 [auth.external.google]
-# Flip to true once GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set in .env.
-# The sign-in button follows this setting automatically.
-enabled = false
+# Credentials live in .env (gitignored). The sign-in button follows this
+# setting automatically — it asks the auth server what is enabled.
+enabled = true
 client_id = "env(GOOGLE_CLIENT_ID)"
 secret = "env(GOOGLE_CLIENT_SECRET)"
 skip_nonce_check = false

@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Emits a self-contained server bundle with only the needed node_modules,
+  // which is what keeps the Cloud Run container small.
+  output: "standalone",
   experimental: {
     // Keep server action payloads generous — case answers are long-form essays.
     serverActions: { bodySizeLimit: "2mb" },

@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.github
+supabase/.temp
+supabase/.branches
+supabase/seed
+.env*
+!.env.production
+npm-debug.log*
+*.md
