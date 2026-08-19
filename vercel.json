@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/cron/refresh-leaderboards",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 3 * * *"
     },
     {
       "path": "/api/cron/weekly-contest",
