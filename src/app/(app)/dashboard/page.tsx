@@ -23,6 +23,11 @@ import {
   type HeatmapCounts,
 } from "@/components/submission-heatmap";
 import { dailyIndex } from "@/lib/daily-case";
+import { QuoteCard } from "@/components/quote-card";
+import {
+  TargetSchoolCard,
+  type CohortStanding,
+} from "@/components/target-school-card";
 import { DOMAINS } from "@/lib/constants";
 import { formatNumber, timeAgo } from "@/lib/utils";
 import type { ActivityType, Domain } from "@/lib/types/database";
@@ -154,6 +159,52 @@ export default async function DashboardPage() {
 
       dailySolved = (solvedToday ?? 0) > 0;
     }
+  }
+
+  // ---- campus standing ---------------------------------------------------
+  // Rank is positional within the cohort, so it has to be counted: the stored
+  // `rank` on leaderboards is global.
+  let standing: CohortStanding | null = null;
+  const university = profile.university?.trim();
+
+  if (university) {
+    const [{ count: cohortSize }, { data: myBoard }] = await Promise.all([
+      supabase
+        .from("leaderboards")
+        .select("user_id, users!inner(university)", {
+          count: "exact",
+          head: true,
+        })
+        .eq("period", "all_time")
+        .eq("users.university", university),
+      supabase
+        .from("leaderboards")
+        .select("total_points")
+        .eq("period", "all_time")
+        .eq("user_id", profile.id)
+        .maybeSingle(),
+    ]);
+
+    let cohortRank: number | null = null;
+    if (myBoard) {
+      const { count: ahead } = await supabase
+        .from("leaderboards")
+        .select("user_id, users!inner(university)", {
+          count: "exact",
+          head: true,
+        })
+        .eq("period", "all_time")
+        .eq("users.university", university)
+        .gt("total_points", myBoard.total_points ?? 0);
+
+      cohortRank = (ahead ?? 0) + 1;
+    }
+
+    standing = {
+      university,
+      rank: cohortRank,
+      cohortSize: cohortSize ?? 0,
+    };
   }
 
   // ---- 8-week activity ---------------------------------------------------
@@ -331,6 +382,11 @@ export default async function DashboardPage() {
       </div>
 
       {/* ---------------------------------------------------- activity --- */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <TargetSchoolCard standing={standing} />
+        <QuoteCard />
+      </div>
+
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>

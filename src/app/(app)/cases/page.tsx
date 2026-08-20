@@ -3,6 +3,10 @@ import type { Metadata } from "next";
 import { CheckCircle2, CircleDashed, Clock, Circle } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { CaseFilters } from "@/components/case-filters";
+import {
+  CasesByTrack,
+  type TrackGroup,
+} from "@/components/cases-by-track";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,6 +30,7 @@ type SearchParams = Promise<{
   firm?: string;
   status?: string;
   saved?: string;
+  view?: string;
   q?: string;
   page?: string;
 }>;
@@ -104,6 +109,50 @@ export default async function CasesPage({
     attemptedCaseIds = new Set((attempts ?? []).map((row) => row.case_id));
   }
 
+  const byTrack = params.view === "tracks";
+
+  let trackGroups: TrackGroup[] = [];
+  if (byTrack) {
+    const { data: paths } = await supabase
+      .from("learning_paths")
+      .select(
+        "id, slug, title, domain, learning_path_steps(step_order, cases(id, slug, title, difficulty))",
+      )
+      .eq("is_published", true)
+      .order("sort_order");
+
+    trackGroups = (paths ?? [])
+      .map((path) => {
+        const steps = (path.learning_path_steps ?? []) as unknown as {
+          step_order: number;
+          cases: {
+            id: string;
+            slug: string;
+            title: string;
+            difficulty: string;
+          } | null;
+        }[];
+
+        return {
+          id: path.id,
+          slug: path.slug,
+          title: path.title,
+          domain: path.domain,
+          cases: steps
+            .filter((step) => step.cases)
+            .sort((a, b) => a.step_order - b.step_order)
+            .map((step) => ({ ...step.cases!, step_order: step.step_order })),
+        };
+      })
+      .filter((group) => group.cases.length > 0);
+  }
+
+  const solvedIds = new Set(
+    [...bestByCase.entries()]
+      .filter(([, pct]) => pct >= 60)
+      .map(([id]) => id),
+  );
+
   const filtered = (cases ?? []).filter((item) => {
     if (!params.status || !profile) return true;
     const best = bestByCase.get(item.id);
@@ -136,13 +185,42 @@ export default async function CasesPage({
         </div>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 inline-flex rounded-lg bg-muted p-1 text-sm">
+        {(
+          [
+            ["list", "List"],
+            ["tracks", "By Track"],
+          ] as const
+        ).map(([value, label]) => (
+          <Link
+            key={value}
+            href={value === "tracks" ? "/cases?view=tracks" : "/cases"}
+            className={cn(
+              "rounded-md px-3 py-1 transition-colors",
+              (value === "tracks") === byTrack
+                ? "bg-background font-medium shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
+
+      <div className="mt-4">
         <CaseFilters
           companyTracks={[...COMPANY_TRACKS]}
           signedIn={Boolean(profile)}
         />
       </div>
 
+      {byTrack ? (
+        <CasesByTrack
+          tracks={trackGroups}
+          solvedIds={solvedIds}
+          attemptedIds={attemptedCaseIds}
+        />
+      ) : (
       <Card className="mt-6 overflow-hidden">
         {/* Column headers — hidden on mobile where rows become cards. */}
         <div className="hidden items-center gap-4 border-b border-border bg-muted/40 px-4 py-2.5 text-xs font-medium text-muted-foreground sm:flex">
@@ -247,8 +325,9 @@ export default async function CasesPage({
           </ul>
         )}
       </Card>
+      )}
 
-      {totalPages > 1 && (
+      {!byTrack && totalPages > 1 && (
         <nav
           className="mt-6 flex items-center justify-between"
           aria-label="Pagination"
