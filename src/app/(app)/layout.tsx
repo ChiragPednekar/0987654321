@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { SiteNav } from "@/components/site-nav";
+import { CommandPalette } from "@/components/command-palette";
 
 export default async function AppLayout({
   children,
@@ -12,6 +13,7 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <SiteNav profile={profile} />
+      <CommandPalette />
       <main className="flex-1">{children}</main>
       <footer className="border-t border-border py-6">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 text-xs text-muted-foreground sm:px-6">

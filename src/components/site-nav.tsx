@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
-import { Flame, LogOut, Menu, Shield, User as UserIcon, X } from "lucide-react";
+import { Flame, LogOut, Menu, Settings, Shield, User as UserIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn, initials } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ const LINKS = [
   { href: "/paths", label: "Paths" },
   { href: "/contests", label: "Contests" },
   { href: "/progress", label: "Progress" },
+  { href: "/bookmarks", label: "Bookmarks" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
 
@@ -114,6 +115,11 @@ export function SiteNav({ profile }: { profile: UserRow | null }) {
                 <DropdownMenuItem asChild>
                   <Link href="/profile">
                     <UserIcon /> Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">
+                    <Settings /> Settings
                   </Link>
                 </DropdownMenuItem>
                 {profile.role === "admin" && (
