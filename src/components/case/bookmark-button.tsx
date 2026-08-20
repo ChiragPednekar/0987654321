@@ -51,6 +51,24 @@ export function BookmarkButton({
         return;
       }
 
+      if (!next) {
+        // Only removals get an undo: re-saving something is not a loss.
+        toast("Removed from bookmarks", {
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              setSaved(true);
+              await fetch("/api/bookmarks", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ case_id: caseId }),
+              });
+              router.refresh();
+            },
+          },
+        });
+      }
+
       router.refresh();
     } catch {
       setSaved(!next);

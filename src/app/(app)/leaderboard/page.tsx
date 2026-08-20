@@ -294,7 +294,12 @@ export default async function LeaderboardPage({
                     </Avatar>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">
-                        {user?.full_name ?? "Anonymous"}
+                        <Link
+                          href={`/u/${row.user_id}`}
+                          className="hover:underline"
+                        >
+                          {user?.full_name ?? "Anonymous"}
+                        </Link>
                         {isMe && (
                           <Badge variant="default" className="ml-2">
                             You
