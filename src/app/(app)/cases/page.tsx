@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   CASES_PER_PAGE,
+  CASE_FORMAT_LABEL,
   COMPANY_TRACKS,
   DIFFICULTY_CLASS,
   DOMAIN_LABEL,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import type { Difficulty, Domain } from "@/lib/types/database";
+import type { CaseFormat, Difficulty, Domain } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Cases" };
 
@@ -21,6 +22,8 @@ type SearchParams = Promise<{
   domain?: string;
   difficulty?: string;
   track?: string;
+  format?: string;
+  firm?: string;
   status?: string;
   saved?: string;
   q?: string;
@@ -42,7 +45,7 @@ export default async function CasesPage({
   let query = supabase
     .from("cases")
     .select(
-      "id, slug, title, domain, difficulty, company_track, estimated_minutes, completion_rate, total_submissions",
+      "id, slug, title, domain, difficulty, company_track, firm_style, format, is_pro, estimated_minutes, completion_rate, total_submissions",
       { count: "exact" },
     )
     .eq("is_published", true);
@@ -69,6 +72,8 @@ export default async function CasesPage({
   if (params.difficulty)
     query = query.eq("difficulty", params.difficulty as Difficulty);
   if (params.track) query = query.eq("company_track", params.track);
+  if (params.format) query = query.eq("format", params.format as CaseFormat);
+  if (params.firm) query = query.eq("firm_style", params.firm);
   if (params.q) {
     // Escape PostgREST's `or` filter delimiters before interpolating.
     const safe = params.q.replace(/[(),]/g, " ").trim();
@@ -192,6 +197,19 @@ export default async function CasesPage({
 
                     <span className="flex-1 truncate text-sm font-medium">
                       {item.title}
+                      {item.is_pro && (
+                        <Badge
+                          className="ml-2 align-middle bg-[var(--warning)] text-[10px] text-black"
+                          title="Requires a paid plan"
+                        >
+                          PRO
+                        </Badge>
+                      )}
+                      {item.format !== "full_case" && (
+                        <Badge variant="outline" className="ml-2 align-middle">
+                          {CASE_FORMAT_LABEL[item.format as CaseFormat]}
+                        </Badge>
+                      )}
                       {item.company_track && (
                         <Badge variant="secondary" className="ml-2 align-middle">
                           {item.company_track}

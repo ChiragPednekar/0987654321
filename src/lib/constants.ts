@@ -1,4 +1,4 @@
-import type { Difficulty, Domain } from "@/lib/types/database";
+import type { CaseFormat, Difficulty, Domain } from "@/lib/types/database";
 
 export const DOMAINS: {
   value: Domain;
@@ -140,3 +140,27 @@ export const ANSWER_SECTIONS = [
 ] as const;
 
 export type AnswerSectionKey = (typeof ANSWER_SECTIONS)[number]["key"];
+
+/** Case formats (spec §6). Only full_case is seeded today. */
+export const CASE_FORMATS: { value: CaseFormat; label: string; hint: string }[] = [
+  { value: "framework", label: "Framework", hint: "Structure only — build the issue tree" },
+  { value: "full_case", label: "Full Case", hint: "Clarify, structure, analyse, recommend" },
+  { value: "model", label: "Model", hint: "Spreadsheet build, graded on the numbers" },
+  { value: "drill", label: "Drill", hint: "Timed sprint — sizing and mental math" },
+  { value: "debug", label: "Debug", hint: "Find and fix the flaw" },
+];
+
+export const CASE_FORMAT_LABEL: Record<CaseFormat, string> = Object.fromEntries(
+  CASE_FORMATS.map((f) => [f.value, f.label]),
+) as Record<CaseFormat, string>;
+
+/**
+ * Firm styles. These describe the *kind of question* a firm is known for and
+ * imply no affiliation or endorsement — see the Terms.
+ */
+export const FIRM_STYLES = [
+  "MBB-style",
+  "Investment Banking-style",
+  "Big Tech PM-style",
+  "Startup-style",
+] as const;

@@ -12,7 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DIFFICULTIES, DOMAINS } from "@/lib/constants";
+import {
+  CASE_FORMATS,
+  DIFFICULTIES,
+  DOMAINS,
+  FIRM_STYLES,
+} from "@/lib/constants";
 
 const ANY = "__any";
 
@@ -52,7 +57,7 @@ export function CaseFilters({
     return () => clearTimeout(timer);
   }, [search, searchParams, update]);
 
-  const hasFilters = ["domain", "difficulty", "track", "status", "saved", "q"].some((k) =>
+  const hasFilters = ["domain", "difficulty", "track", "format", "firm", "status", "saved", "q"].some((k) =>
     searchParams.has(k),
   );
 
@@ -121,6 +126,40 @@ export function CaseFilters({
           </SelectContent>
         </Select>
       )}
+
+      <Select
+        value={searchParams.get("format") ?? ANY}
+        onValueChange={(value) => update("format", value)}
+      >
+        <SelectTrigger className="w-[150px]">
+          <SelectValue placeholder="Format" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ANY}>All formats</SelectItem>
+          {CASE_FORMATS.map((format) => (
+            <SelectItem key={format.value} value={format.value}>
+              {format.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={searchParams.get("firm") ?? ANY}
+        onValueChange={(value) => update("firm", value)}
+      >
+        <SelectTrigger className="w-[190px]">
+          <SelectValue placeholder="Firm style" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ANY}>All firm styles</SelectItem>
+          {FIRM_STYLES.map((style) => (
+            <SelectItem key={style} value={style}>
+              {style}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {signedIn && (
         <Select

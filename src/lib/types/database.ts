@@ -15,6 +15,12 @@ export type Domain =
   | "strategy";
 
 export type Difficulty = "easy" | "medium" | "hard";
+export type CaseFormat =
+  | "framework"
+  | "full_case"
+  | "model"
+  | "drill"
+  | "debug";
 export type UserRole = "student" | "admin";
 export type SubmissionStatus =
   | "draft"
@@ -106,6 +112,10 @@ export type CaseRow = {
   difficulty: Difficulty;
   category_id: string | null;
   company_track: string | null;
+  format: CaseFormat;
+  /** The question style a firm is known for. Implies no affiliation. */
+  firm_style: string | null;
+  is_pro: boolean;
   estimated_minutes: number;
   scenario: string;
   /** jsonb object — metric blocks and tables shown alongside the scenario. */
