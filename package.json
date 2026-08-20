@@ -15,7 +15,8 @@
     "seed": "tsx scripts/seed.ts",
     "seed:dry": "tsx scripts/seed.ts --dry-run",
     "seed:sql": "tsx scripts/seed.ts --emit-sql",
-    "verify:ai": "tsx --conditions=react-server scripts/verify-ai.ts"
+    "verify:ai": "tsx --conditions=react-server scripts/verify-ai.ts",
+    "seed:drills": "tsx scripts/drills.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",

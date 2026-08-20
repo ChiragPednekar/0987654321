@@ -20,6 +20,10 @@ import { Badge } from "@/components/ui/badge";
 import { BookmarkButton } from "@/components/case/bookmark-button";
 import { HintsPanel, type HintStub } from "@/components/case/hints-panel";
 import { ReportForm } from "@/components/case/report-form";
+import {
+  DrillRunner,
+  type DrillQuestion,
+} from "@/components/case/drill-runner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -116,6 +120,17 @@ export default async function CaseDetailPage({
         : row.case_hints;
       if (hint?.body) revealedBodies.set(row.hint_id, hint.body);
     }
+  }
+
+  let drillQuestions: DrillQuestion[] = [];
+  if (caseData.format === "drill") {
+    const { data: qs } = await supabase
+      .from("drill_questions")
+      .select("id, position, prompt, tolerance_pct, unit")
+      .eq("case_id", caseData.id)
+      .order("position");
+
+    drillQuestions = (qs ?? []) as DrillQuestion[];
   }
 
   const hints: HintStub[] = (hintRows ?? []).map((h) => ({
@@ -400,6 +415,16 @@ export default async function CaseDetailPage({
 
         {/* --------------------------------------------------- solution --- */}
         <TabsContent value="solution">
+          {caseData.format === "drill" && drillQuestions.length > 0 ? (
+            <div className="mt-4 max-w-3xl">
+              <DrillRunner
+                caseId={caseData.id}
+                caseSlug={caseData.slug}
+                questions={drillQuestions}
+                signedIn={Boolean(profile)}
+              />
+            </div>
+          ) : (
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <AnswerEditor
@@ -456,6 +481,7 @@ export default async function CaseDetailPage({
               </CardContent>
             </Card>
           </div>
+          )}
         </TabsContent>
 
         {/* ----------------------------------------------- top solutions --- */}

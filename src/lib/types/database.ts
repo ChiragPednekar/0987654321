@@ -162,6 +162,30 @@ export type AnswerSections = {
   recommendation?: string;
 };
 
+export type DrillQuestionRow = {
+  id: string;
+  case_id: string;
+  position: number;
+  prompt: string;
+  /** Withheld from anon/authenticated by column grant — server-side only. */
+  expected: number;
+  tolerance_pct: number;
+  unit: string | null;
+  explanation: string | null;
+  created_at: string;
+};
+
+export type DrillAttemptRow = {
+  id: string;
+  user_id: string;
+  case_id: string;
+  answers: Record<string, number>;
+  correct: number;
+  total: number;
+  duration_seconds: number;
+  created_at: string;
+};
+
 export type CaseHintRow = {
   id: string;
   case_id: string;
@@ -418,6 +442,18 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      drill_questions: {
+        Row: DrillQuestionRow;
+        Insert: Partial<DrillQuestionRow>;
+        Update: Partial<DrillQuestionRow>;
+        Relationships: [];
+      };
+      drill_attempts: {
+        Row: DrillAttemptRow;
+        Insert: Partial<DrillAttemptRow>;
+        Update: Partial<DrillAttemptRow>;
+        Relationships: [];
       };
       case_hints: {
         Row: CaseHintRow;
