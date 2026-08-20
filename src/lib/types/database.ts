@@ -127,12 +127,39 @@ export type RubricRow = {
   updated_at: string;
 }
 
+/**
+ * The sectioned answer format. Keys match ANSWER_SECTIONS in lib/constants so
+ * the editor, the stored row and the history view cannot drift apart.
+ */
+export type AnswerSections = {
+  framework?: string;
+  analysis?: string;
+  recommendation?: string;
+};
+
+export type BookmarkRow = {
+  user_id: string;
+  case_id: string;
+  created_at: string;
+};
+
+export type UniversityRow = {
+  id: string;
+  name: string;
+  short_name: string | null;
+  domain: string | null;
+  country: string | null;
+  created_at: string;
+};
+
 export type SubmissionRow = {
   id: string;
   user_id: string;
   case_id: string;
   contest_id: string | null;
   answer: string;
+  /** Structured parts when the student used the sectioned editor; {} for free text. */
+  answer_sections: AnswerSections;
   status: SubmissionStatus;
   attempt_number: number;
   time_spent_seconds: number;
@@ -327,6 +354,18 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      bookmarks: {
+        Row: BookmarkRow;
+        Insert: Partial<BookmarkRow>;
+        Update: Partial<BookmarkRow>;
+        Relationships: [];
+      };
+      universities: {
+        Row: UniversityRow;
+        Insert: Partial<UniversityRow>;
+        Update: Partial<UniversityRow>;
+        Relationships: [];
       };
       case_categories: {
         Row: CaseCategoryRow;

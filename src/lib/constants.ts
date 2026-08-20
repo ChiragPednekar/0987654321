@@ -100,3 +100,43 @@ export const LEADERBOARD_PAGE_SIZE = 50;
 
 /** Per-user evaluation throttle. */
 export const RATE_LIMIT = { windowMs: 60_000, maxEvaluations: 5 } as const;
+
+/**
+ * The structured answer format.
+ *
+ * A single textarea invites a wall of prose; naming the parts pushes students
+ * into the shape a rubric actually rewards, and gives the grader clean
+ * boundaries instead of having to infer them. Keys match the
+ * `answer_sections` jsonb column and the AnswerSections type.
+ */
+export const ANSWER_SECTIONS = [
+  {
+    key: "framework",
+    label: "Framework",
+    hint: "How you are breaking the problem down before touching numbers.",
+    placeholder:
+      "The two things that decide this: unit economics and runway.\n" +
+      "I'll size each, then stress the assumption that matters most.",
+    minChars: 60,
+  },
+  {
+    key: "analysis",
+    label: "Analysis",
+    hint: "The working. Compute the numbers rather than describing them.",
+    placeholder:
+      "Runway = cash ÷ monthly burn = ₹14 Cr ÷ ₹1.0 Cr = 14 months.\n" +
+      "Net new ARR = ₹72 Cr × 56% = ₹40 Cr, so burn multiple = 12 ÷ 40 = 0.3.",
+    minChars: 120,
+  },
+  {
+    key: "recommendation",
+    label: "Recommendation",
+    hint: "Commit to a course of action, and say what would change your mind.",
+    placeholder:
+      "Raise, but take ₹80-90 Cr rather than ₹116 Cr, and fund one market not two.\n" +
+      "I'd reverse this if NRR fell below 110% for two consecutive quarters.",
+    minChars: 60,
+  },
+] as const;
+
+export type AnswerSectionKey = (typeof ANSWER_SECTIONS)[number]["key"];

@@ -15,6 +15,15 @@ const bodySchema = z.object({
   case_id: z.string().uuid(),
   contest_id: z.string().uuid().optional().nullable(),
   answer: z.string().min(MIN_ANSWER_CHARS).max(MAX_ANSWER_CHARS),
+  // Present when the sectioned editor was used; {} for free text. Kept
+  // alongside `answer` rather than instead of it, so grading is unchanged.
+  answer_sections: z
+    .object({
+      framework: z.string().max(MAX_ANSWER_CHARS).optional(),
+      analysis: z.string().max(MAX_ANSWER_CHARS).optional(),
+      recommendation: z.string().max(MAX_ANSWER_CHARS).optional(),
+    })
+    .default({}),
   time_spent_seconds: z.number().int().min(0).max(86_400).default(0),
 });
 
@@ -140,6 +149,7 @@ export async function POST(request: NextRequest) {
       case_id: body.case_id,
       contest_id: body.contest_id ?? null,
       answer: body.answer,
+      answer_sections: body.answer_sections,
       status: "evaluating",
       time_spent_seconds: body.time_spent_seconds,
     })
