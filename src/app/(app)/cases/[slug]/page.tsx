@@ -16,6 +16,7 @@ import { ScorePanel } from "@/components/case/score-panel";
 import { ShareToggle } from "@/components/case/share-toggle";
 import { Discussion, type DiscussionComment } from "@/components/case/discussion";
 import { Badge } from "@/components/ui/badge";
+import { BookmarkButton } from "@/components/case/bookmark-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -85,15 +86,26 @@ export default async function CaseDetailPage({
     scores: ScoreRow | ScoreRow[] | null;
   }> = [];
 
+  let isBookmarked = false;
+
   if (profile) {
-    const { data } = await supabase
-      .from("submissions")
-      .select("id, created_at, attempt_number, is_public, answer, scores(*)")
-      .eq("user_id", profile.id)
-      .eq("case_id", caseData.id)
-      .order("created_at", { ascending: false });
+    const [{ data }, { data: bookmark }] = await Promise.all([
+      supabase
+        .from("submissions")
+        .select("id, created_at, attempt_number, is_public, answer, scores(*)")
+        .eq("user_id", profile.id)
+        .eq("case_id", caseData.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("bookmarks")
+        .select("case_id")
+        .eq("user_id", profile.id)
+        .eq("case_id", caseData.id)
+        .maybeSingle(),
+    ]);
 
     mySubmissions = (data ?? []) as typeof mySubmissions;
+    isBookmarked = Boolean(bookmark);
   }
 
   const [{ data: topSolutions }, { data: rawComments }, { data: myVotes }] =
@@ -196,12 +208,19 @@ export default async function CaseDetailPage({
             </div>
           </div>
 
-          {solved && (
-            <Badge variant="success" className="gap-1.5 py-1">
-              <CheckCircle2 className="size-3.5" />
-              Solved · {bestPercentage.toFixed(0)}%
-            </Badge>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            {solved && (
+              <Badge variant="success" className="gap-1.5 py-1">
+                <CheckCircle2 className="size-3.5" />
+                Solved · {bestPercentage.toFixed(0)}%
+              </Badge>
+            )}
+            <BookmarkButton
+              caseId={caseData.id}
+              initiallySaved={isBookmarked}
+              signedIn={Boolean(profile)}
+            />
+          </div>
         </div>
       </div>
 

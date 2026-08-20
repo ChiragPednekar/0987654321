@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { Bookmark, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,7 +52,7 @@ export function CaseFilters({
     return () => clearTimeout(timer);
   }, [search, searchParams, update]);
 
-  const hasFilters = ["domain", "difficulty", "track", "status", "q"].some((k) =>
+  const hasFilters = ["domain", "difficulty", "track", "status", "saved", "q"].some((k) =>
     searchParams.has(k),
   );
 
@@ -137,6 +137,21 @@ export function CaseFilters({
             <SelectItem value="todo">Todo</SelectItem>
           </SelectContent>
         </Select>
+      )}
+
+      {signedIn && (
+        <Button
+          type="button"
+          variant={searchParams.get("saved") === "1" ? "default" : "outline"}
+          size="sm"
+          onClick={() =>
+            update("saved", searchParams.get("saved") === "1" ? ANY : "1")
+          }
+          aria-pressed={searchParams.get("saved") === "1"}
+        >
+          <Bookmark />
+          Saved
+        </Button>
       )}
 
       {hasFilters && (

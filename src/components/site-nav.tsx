@@ -24,6 +24,7 @@ const LINKS = [
   { href: "/cases", label: "Cases" },
   { href: "/paths", label: "Paths" },
   { href: "/contests", label: "Contests" },
+  { href: "/progress", label: "Progress" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
 

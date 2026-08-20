@@ -22,6 +22,7 @@ type SearchParams = Promise<{
   difficulty?: string;
   track?: string;
   status?: string;
+  saved?: string;
   q?: string;
   page?: string;
 }>;
@@ -45,6 +46,24 @@ export default async function CasesPage({
       { count: "exact" },
     )
     .eq("is_published", true);
+
+  // ?saved=1 restricts the library to bookmarked cases.
+  if (params.saved === "1") {
+    if (!profile) {
+      query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+    } else {
+      const { data: saved } = await supabase
+        .from("bookmarks")
+        .select("case_id")
+        .eq("user_id", profile.id);
+
+      const ids = (saved ?? []).map((row) => row.case_id);
+      query = query.in(
+        "id",
+        ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"],
+      );
+    }
+  }
 
   if (params.domain) query = query.eq("domain", params.domain as Domain);
   if (params.difficulty)
