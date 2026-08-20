@@ -22,6 +22,15 @@ export type SubmissionStatus =
   | "evaluating"
   | "evaluated"
   | "failed";
+export type NotificationType =
+  | "grade_ready"
+  | "badge_earned"
+  | "level_up"
+  | "contest_starting"
+  | "contest_result"
+  | "comment_reply"
+  | "system";
+
 export type ContestStatus = "scheduled" | "live" | "grading" | "completed";
 export type LeaderboardPeriod = "all_time" | "weekly" | "monthly";
 export type ActivityType =
@@ -135,6 +144,18 @@ export type AnswerSections = {
   framework?: string;
   analysis?: string;
   recommendation?: string;
+};
+
+export type NotificationRow = {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  /** Always a path within the app, never an absolute URL. */
+  href: string | null;
+  read_at: string | null;
+  created_at: string;
 };
 
 export type BookmarkRow = {
@@ -354,6 +375,12 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      notifications: {
+        Row: NotificationRow;
+        Insert: Partial<NotificationRow>;
+        Update: Partial<NotificationRow>;
+        Relationships: [];
       };
       bookmarks: {
         Row: BookmarkRow;

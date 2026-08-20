@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
   const { data: caseData, error: caseError } = await admin
     .from("cases")
     .select(
-      "id, title, domain, difficulty, scenario, instructions, supporting_data, expected_framework, model_answer, is_published",
+      "id, slug, title, domain, difficulty, scenario, instructions, supporting_data, expected_framework, model_answer, is_published",
     )
     .eq("id", body.case_id)
     .maybeSingle();
@@ -187,6 +187,23 @@ export async function POST(request: NextRequest) {
       .from("submissions")
       .update({ status: "evaluated" })
       .eq("id", submission.id);
+
+    // Notify. Written with the service role so a user cannot forge one, and
+    // deliberately not awaited into the failure path: a notification that does
+    // not send must never cost someone their grade.
+    const pct = Math.round(result.percentage);
+    void admin
+      .from("notifications")
+      .insert({
+        user_id: user.id,
+        type: "grade_ready",
+        title: `Graded — ${result.totalScore}/${result.maxScore} (${pct}%)`,
+        body: caseData.title,
+        href: `/cases/${caseData.slug}?submission=${submission.id}#review`,
+      })
+      .then(({ error }) => {
+        if (error) console.error("notification insert failed", error.message);
+      });
 
     // Link the contest entry, if this was a contest run.
     if (body.contest_id) {

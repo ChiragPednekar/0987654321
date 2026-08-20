@@ -17,7 +17,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
-import type { UserRow } from "@/lib/types/database";
+import { NotificationBell } from "@/components/notification-bell";
+import type { NotificationRow, UserRow } from "@/lib/types/database";
 
 const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -29,7 +30,15 @@ const LINKS = [
   { href: "/leaderboard", label: "Leaderboard" },
 ];
 
-export function SiteNav({ profile }: { profile: UserRow | null }) {
+export function SiteNav({
+  profile,
+  notifications = [],
+  unreadCount = 0,
+}: {
+  profile: UserRow | null;
+  notifications?: NotificationRow[];
+  unreadCount?: number;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -80,6 +89,13 @@ export function SiteNav({ profile }: { profile: UserRow | null }) {
               <Flame className="size-3.5" />
               <span className="tabular">{profile.current_streak}</span>
             </div>
+          )}
+
+          {profile && (
+            <NotificationBell
+              initial={notifications}
+              unreadCount={unreadCount}
+            />
           )}
 
           <ThemeToggle />

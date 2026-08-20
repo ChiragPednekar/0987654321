@@ -17,6 +17,12 @@ import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
 import type { SkillPoint } from "@/components/skill-radar";
 import { SkillRadarLazy } from "@/components/skill-radar-lazy";
+import { DailyCaseCard, type DailyCase } from "@/components/daily-case-card";
+import {
+  SubmissionHeatmap,
+  type HeatmapCounts,
+} from "@/components/submission-heatmap";
+import { dailyIndex } from "@/lib/daily-case";
 import { DOMAINS } from "@/lib/constants";
 import { formatNumber, timeAgo } from "@/lib/utils";
 import type { ActivityType, Domain } from "@/lib/types/database";
@@ -98,6 +104,73 @@ export default async function DashboardPage() {
   const levelProgress =
     ((profile.xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
 
+  // ---- daily case --------------------------------------------------------
+  // Chosen by counting first and fetching one row at a deterministic offset,
+  // so this stays O(1) regardless of how large the library grows.
+  const { count: publishedCount } = await supabase
+    .from("cases")
+    .select("id", { count: "exact", head: true })
+    .eq("is_published", true);
+
+  let dailyCase: DailyCase | null = null;
+  let dailySolved = false;
+
+  if (publishedCount && publishedCount > 0) {
+    const offset = dailyIndex(publishedCount);
+    const { data: picked } = await supabase
+      .from("cases")
+      .select("id, slug, title, domain, difficulty, estimated_minutes")
+      .eq("is_published", true)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset)
+      .maybeSingle();
+
+    if (picked) {
+      const XP_BY_DIFFICULTY: Record<string, number> = {
+        easy: 30,
+        medium: 50,
+        hard: 80,
+      };
+
+      dailyCase = {
+        slug: picked.slug,
+        title: picked.title,
+        domain: picked.domain,
+        difficulty: picked.difficulty,
+        estimated_minutes: picked.estimated_minutes,
+        xpReward: XP_BY_DIFFICULTY[picked.difficulty] ?? 50,
+      };
+
+      const startOfDay = new Date();
+      startOfDay.setUTCHours(0, 0, 0, 0);
+
+      const { count: solvedToday } = await supabase
+        .from("submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", profile.id)
+        .eq("case_id", picked.id)
+        .gte("created_at", startOfDay.toISOString());
+
+      dailySolved = (solvedToday ?? 0) > 0;
+    }
+  }
+
+  // ---- 8-week activity ---------------------------------------------------
+  const since = new Date(Date.now() - 8 * 7 * 86_400_000);
+  const { data: recentSubmissions } = await supabase
+    .from("submissions")
+    .select("created_at")
+    .eq("user_id", profile.id)
+    .gte("created_at", since.toISOString())
+    .limit(1000);
+
+  const heatmapCounts: HeatmapCounts = {};
+  for (const row of recentSubmissions ?? []) {
+    const key = new Date(row.created_at).toISOString().slice(0, 10);
+    heatmapCounts[key] = (heatmapCounts[key] ?? 0) + 1;
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -115,6 +188,12 @@ export default async function DashboardPage() {
           <Link href="/cases">Solve a case</Link>
         </Button>
       </div>
+
+      {dailyCase && (
+        <div className="mt-6">
+          <DailyCaseCard dailyCase={dailyCase} solved={dailySolved} />
+        </div>
+      )}
 
       {/* ------------------------------------------------------- stats --- */}
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -144,6 +223,19 @@ export default async function DashboardPage() {
           icon={TrendingUp}
         />
       </div>
+
+      {/* ----------------------------------------------------- activity --- */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Last 8 weeks</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Consistency beats intensity. Every square is a day.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <SubmissionHeatmap counts={heatmapCounts} />
+        </CardContent>
+      </Card>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         {/* -------------------------------------------------- radar --- */}

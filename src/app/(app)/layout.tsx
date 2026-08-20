@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import type { NotificationRow } from "@/lib/types/database";
 import { SiteNav } from "@/components/site-nav";
 import { CommandPalette } from "@/components/command-palette";
 
@@ -10,9 +11,38 @@ export default async function AppLayout({
 }) {
   const profile = await getCurrentUser();
 
+  // Notifications ride along with the layout so the bell is populated on first
+  // paint rather than flashing empty and then filling in.
+  let notifications: NotificationRow[] = [];
+  let unreadCount = 0;
+
+  if (profile) {
+    const supabase = await createClient();
+    const [{ data }, { count }] = await Promise.all([
+      supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", profile.id)
+        .order("created_at", { ascending: false })
+        .limit(8),
+      supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", profile.id)
+        .is("read_at", null),
+    ]);
+
+    notifications = (data ?? []) as NotificationRow[];
+    unreadCount = count ?? 0;
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteNav profile={profile} />
+      <SiteNav
+        profile={profile}
+        notifications={notifications}
+        unreadCount={unreadCount}
+      />
       <CommandPalette />
       <main className="flex-1">{children}</main>
       <footer className="border-t border-border py-6">
