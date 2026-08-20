@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Markdown } from "@/components/markdown";
 import { AnswerEditor } from "@/components/case/answer-editor";
 import { ScorePanel } from "@/components/case/score-panel";
@@ -17,6 +18,8 @@ import { ShareToggle } from "@/components/case/share-toggle";
 import { Discussion, type DiscussionComment } from "@/components/case/discussion";
 import { Badge } from "@/components/ui/badge";
 import { BookmarkButton } from "@/components/case/bookmark-button";
+import { HintsPanel, type HintStub } from "@/components/case/hints-panel";
+import { ReportForm } from "@/components/case/report-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -87,6 +90,40 @@ export default async function CaseDetailPage({
   }> = [];
 
   let isBookmarked = false;
+
+  const { data: hintRows } = await supabase
+    .from("case_hints")
+    .select("id, step, penalty_pct")
+    .eq("case_id", caseData.id)
+    .order("step");
+
+  const revealedIds = new Set<string>();
+  const revealedBodies = new Map<string, string>();
+
+  if (profile) {
+    // Bodies of already-revealed hints need the service role for the same
+    // reason; this is still scoped to the viewer's own reveals.
+    const { data: reveals } = await createAdminClient()
+      .from("hint_reveals")
+      .select("hint_id, case_hints(body)")
+      .eq("user_id", profile.id)
+      .eq("case_id", caseData.id);
+
+    for (const row of reveals ?? []) {
+      revealedIds.add(row.hint_id);
+      const hint = Array.isArray(row.case_hints)
+        ? row.case_hints[0]
+        : row.case_hints;
+      if (hint?.body) revealedBodies.set(row.hint_id, hint.body);
+    }
+  }
+
+  const hints: HintStub[] = (hintRows ?? []).map((h) => ({
+    id: h.id,
+    step: h.step,
+    penalty_pct: h.penalty_pct,
+    body: revealedIds.has(h.id) ? (revealedBodies.get(h.id) ?? null) : null,
+  }));
 
   if (profile) {
     const [{ data }, { data: bookmark }] = await Promise.all([
@@ -237,6 +274,15 @@ export default async function CaseDetailPage({
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="hints">
+            Hints
+            {hints.length > 0 && (
+              <span className="ml-1.5 text-xs text-muted-foreground">
+                {hints.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="report">Report</TabsTrigger>
           <TabsTrigger value="review" id="review">
             AI Review
           </TabsTrigger>
@@ -488,6 +534,27 @@ export default async function CaseDetailPage({
         </TabsContent>
 
         {/* ----------------------------------------------------- review --- */}
+        <TabsContent value="hints">
+          <div className="mt-4 max-w-3xl">
+            <HintsPanel hints={hints} signedIn={Boolean(profile)} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="report">
+          <Card className="mt-4 max-w-3xl">
+            <CardHeader>
+              <CardTitle className="text-base">Report a problem</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Wrong rubric, ambiguous wording or numbers that do not add up —
+                flagging it is how bad cases get found.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ReportForm caseId={caseData.id} signedIn={Boolean(profile)} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="review">
           {selectedScore && rubric ? (
             <div className="grid gap-6 lg:grid-cols-3">

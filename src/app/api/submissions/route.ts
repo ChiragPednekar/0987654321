@@ -167,6 +167,30 @@ export async function POST(request: NextRequest) {
   try {
     const result = await evaluateSubmission(caseData, rubric, body.answer);
 
+    // Apply the hint penalty. Read from hint_reveals rather than trusting the
+    // client, and clamp the total deduction so a stack of hints can never push
+    // a score below zero.
+    const { data: reveals } = await admin
+      .from("hint_reveals")
+      .select("hint_id, case_hints(penalty_pct)")
+      .eq("user_id", user.id)
+      .eq("case_id", body.case_id);
+
+    const penaltyPct = Math.min(
+      50,
+      (reveals ?? []).reduce((sum, row) => {
+        const hint = Array.isArray(row.case_hints)
+          ? row.case_hints[0]
+          : row.case_hints;
+        return sum + (hint?.penalty_pct ?? 0);
+      }, 0),
+    );
+
+    const totalScore =
+      penaltyPct > 0
+        ? Math.max(0, Math.round(result.totalScore * (1 - penaltyPct / 100)))
+        : result.totalScore;
+
     // Scores are written with the service role: there is deliberately no RLS
     // policy that would let a user insert their own score.
     const { error: scoreError } = await admin.from("scores").insert({
@@ -174,9 +198,9 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       case_id: body.case_id,
       breakdown: result.breakdown,
-      total_score: result.totalScore,
+      total_score: totalScore,
       max_score: result.maxScore,
-      feedback: result.feedback,
+      feedback: { ...result.feedback, hint_penalty_pct: penaltyPct },
       model: result.model,
       tokens_used: result.tokensUsed,
     });
@@ -191,13 +215,14 @@ export async function POST(request: NextRequest) {
     // Notify. Written with the service role so a user cannot forge one, and
     // deliberately not awaited into the failure path: a notification that does
     // not send must never cost someone their grade.
-    const pct = Math.round(result.percentage);
+    const pct =
+      result.maxScore > 0 ? Math.round((totalScore / result.maxScore) * 100) : 0;
     void admin
       .from("notifications")
       .insert({
         user_id: user.id,
         type: "grade_ready",
-        title: `Graded — ${result.totalScore}/${result.maxScore} (${pct}%)`,
+        title: `Graded — ${totalScore}/${result.maxScore} (${pct}%)`,
         body: caseData.title,
         href: `/cases/${caseData.slug}?submission=${submission.id}#review`,
       })
@@ -241,9 +266,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       submission_id: submission.id,
-      total_score: result.totalScore,
+      total_score: totalScore,
       max_score: result.maxScore,
-      percentage: Math.round(result.percentage * 100) / 100,
+      percentage: pct,
+      hint_penalty_pct: penaltyPct,
       breakdown: result.breakdown,
       feedback: result.feedback,
     });

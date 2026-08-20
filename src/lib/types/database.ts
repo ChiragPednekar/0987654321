@@ -28,6 +28,12 @@ export type SubmissionStatus =
   | "evaluating"
   | "evaluated"
   | "failed";
+export type CaseReportType =
+  | "wrong_rubric"
+  | "ambiguous_prompt"
+  | "data_error"
+  | "other";
+
 export type NotificationType =
   | "grade_ready"
   | "badge_earned"
@@ -154,6 +160,33 @@ export type AnswerSections = {
   framework?: string;
   analysis?: string;
   recommendation?: string;
+};
+
+export type CaseHintRow = {
+  id: string;
+  case_id: string;
+  step: number;
+  body: string;
+  /** Percentage deducted from the final score if revealed. */
+  penalty_pct: number;
+  created_at: string;
+};
+
+export type HintRevealRow = {
+  user_id: string;
+  hint_id: string;
+  case_id: string;
+  revealed_at: string;
+};
+
+export type CaseReportRow = {
+  id: string;
+  case_id: string;
+  user_id: string;
+  type: CaseReportType;
+  description: string;
+  resolved: boolean;
+  created_at: string;
 };
 
 export type NotificationRow = {
@@ -385,6 +418,24 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      case_hints: {
+        Row: CaseHintRow;
+        Insert: Partial<CaseHintRow>;
+        Update: Partial<CaseHintRow>;
+        Relationships: [];
+      };
+      hint_reveals: {
+        Row: HintRevealRow;
+        Insert: Partial<HintRevealRow>;
+        Update: Partial<HintRevealRow>;
+        Relationships: [];
+      };
+      case_reports: {
+        Row: CaseReportRow;
+        Insert: Partial<CaseReportRow>;
+        Update: Partial<CaseReportRow>;
+        Relationships: [];
       };
       notifications: {
         Row: NotificationRow;
