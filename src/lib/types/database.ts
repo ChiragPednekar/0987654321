@@ -12,7 +12,8 @@ export type Domain =
   | "consulting"
   | "product_management"
   | "marketing"
-  | "strategy";
+  | "strategy"
+  | "operations";
 
 export type Difficulty = "easy" | "medium" | "hard";
 export type CaseFormat =

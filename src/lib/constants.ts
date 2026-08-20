@@ -42,6 +42,13 @@ export const DOMAINS: {
     color: "text-rose-500",
     description: "Moats, portfolios, transformation.",
   },
+  {
+    value: "operations",
+    label: "Operations",
+    short: "Ops",
+    color: "text-orange-500",
+    description: "Capacity, supply chain and cost-to-serve.",
+  },
 ];
 
 export const DOMAIN_LABEL: Record<Domain, string> = Object.fromEntries(

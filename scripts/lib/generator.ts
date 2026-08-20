@@ -84,18 +84,27 @@ export const COMPANIES: Company[] = [
 ];
 
 /** Currency unit matching the company's geography. */
-export function currency(company: Company): { symbol: string; big: string } {
+/**
+ * `multiplier` is how many base units one `big` unit is worth — needed
+ * whenever a case mixes a headline figure ("₹40 Cr of spend") with a
+ * per-unit one ("cost per customer"), which the marketing cases do.
+ */
+export function currency(company: Company): {
+  symbol: string;
+  big: string;
+  multiplier: number;
+} {
   switch (company.geo) {
     case "India":
-      return { symbol: "₹", big: "Cr" };
+      return { symbol: "₹", big: "Cr", multiplier: 10_000_000 };
     case "Europe":
-      return { symbol: "€", big: "M" };
+      return { symbol: "€", big: "M", multiplier: 1_000_000 };
     case "UK":
-      return { symbol: "£", big: "M" };
+      return { symbol: "£", big: "M", multiplier: 1_000_000 };
     case "Japan":
-      return { symbol: "¥", big: "B" };
+      return { symbol: "¥", big: "B", multiplier: 1_000_000_000 };
     default:
-      return { symbol: "$", big: "M" };
+      return { symbol: "$", big: "M", multiplier: 1_000_000 };
   }
 }
 

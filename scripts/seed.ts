@@ -17,6 +17,9 @@ import { expand, type Archetype } from "./lib/generator";
 import { FINANCE_ARCHETYPES } from "./templates/finance";
 import { CONSULTING_ARCHETYPES } from "./templates/consulting";
 import { PRODUCT_ARCHETYPES } from "./templates/product";
+import { STRATEGY_ARCHETYPES } from "./templates/strategy";
+import { MARKETING_ARCHETYPES } from "./templates/marketing";
+import { OPERATIONS_ARCHETYPES } from "./templates/operations";
 
 config({ path: ".env.local" });
 config({ path: ".env" });
@@ -35,6 +38,9 @@ const PLAN = [
   { archetypes: FINANCE_ARCHETYPES, count: 100, seed: 1_000, label: "Finance" },
   { archetypes: CONSULTING_ARCHETYPES, count: 100, seed: 2_000, label: "Consulting" },
   { archetypes: PRODUCT_ARCHETYPES, count: 100, seed: 3_000, label: "Product Management" },
+  { archetypes: STRATEGY_ARCHETYPES, count: 60, seed: 4_000, label: "Strategy" },
+  { archetypes: MARKETING_ARCHETYPES, count: 60, seed: 5_000, label: "Marketing" },
+  { archetypes: OPERATIONS_ARCHETYPES, count: 60, seed: 6_000, label: "Operations" },
 ];
 
 /**
