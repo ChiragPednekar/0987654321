@@ -10,7 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import { Markdown } from "@/components/markdown";
 import { AnswerEditor } from "@/components/case/answer-editor";
 import { ScorePanel } from "@/components/case/score-panel";
@@ -107,11 +107,18 @@ export default async function CaseDetailPage({
   if (profile) {
     // Bodies of already-revealed hints need the service role for the same
     // reason; this is still scoped to the viewer's own reveals.
-    const { data: reveals } = await createAdminClient()
-      .from("hint_reveals")
-      .select("hint_id, case_hints(body)")
-      .eq("user_id", profile.id)
-      .eq("case_id", caseData.id);
+    //
+    // Optional enrichment, so it must not be able to take the page down: with
+    // no service-role key configured the hints panel simply shows them as
+    // unrevealed rather than the whole case 500ing.
+    const admin = createAdminClientOrNull();
+    const { data: reveals } = admin
+      ? await admin
+          .from("hint_reveals")
+          .select("hint_id, case_hints(body)")
+          .eq("user_id", profile.id)
+          .eq("case_id", caseData.id)
+      : { data: null };
 
     for (const row of reveals ?? []) {
       revealedIds.add(row.hint_id);

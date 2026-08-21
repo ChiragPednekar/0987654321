@@ -25,3 +25,18 @@ export function createAdminClient() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
+
+/**
+ * Service-role client, or null when it is not configured.
+ *
+ * Use this for *optional* reads during page render — enrichment that a page
+ * can do without. `createAdminClient()` throws, which is correct for writes
+ * (a score that silently fails to save is worse than an error) but wrong for
+ * rendering: a missing environment variable should degrade a feature, not
+ * take the whole page down with a server-side exception.
+ */
+export function createAdminClientOrNull() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return null;
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  return createAdminClient();
+}
