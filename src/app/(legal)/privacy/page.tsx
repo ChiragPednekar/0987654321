@@ -61,8 +61,9 @@ export default function PrivacyPage() {
       <ul>
         <li>
           When you submit an answer, its text is sent to a third-party AI
-          provider (<strong>Anthropic</strong>) together with the case and its
-          rubric, so it can be graded. Do not put confidential employer
+          provider together with the case and its rubric, so it can be graded.
+          The provider currently in use is named under &quot;Who else processes
+          your data&quot; below. Do not put confidential employer
           information, personal data about other people, or anything you are
           under an NDA about into a case answer.
         </li>
@@ -90,7 +91,9 @@ export default function PrivacyPage() {
           <strong>Vercel</strong> — application hosting and request logs.
         </li>
         <li>
-          <strong>Anthropic</strong> — AI grading of submitted answers.
+          <strong>The configured AI provider</strong> — grading of submitted
+          answers. This is one of Anthropic, OpenAI or Google (Gemini),
+          depending on configuration. If it changes, this page is updated.
         </li>
         <li>
           <strong>Google</strong> — only if you choose Google sign-in.

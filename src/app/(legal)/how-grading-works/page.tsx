@@ -32,7 +32,7 @@ export default function HowGradingWorksPage() {
 
       <h2>2. The model sees the case, the rubric, and your answer</h2>
       <p>
-        Your answer is sent to Anthropic&apos;s API along with the scenario, the
+        Your answer is sent to the configured AI provider along with the scenario, the
         instructions, the rubric and its descriptors, and the model answer. It
         is asked to return points per criterion plus specific written feedback:
         what you did well, what was missing, and what to do differently next

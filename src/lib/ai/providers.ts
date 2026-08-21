@@ -29,7 +29,17 @@ async function callOpenAI({
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
 
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-  const client = new OpenAI({ apiKey });
+
+  // OPENAI_BASE_URL points the same client at any OpenAI-compatible endpoint —
+  // Groq, OpenRouter, Together, or a local Ollama — which is how the free
+  // options are reached without a second client implementation.
+  const baseURL = process.env.OPENAI_BASE_URL || undefined;
+  const client = new OpenAI({ apiKey, baseURL });
+
+  // Only OpenAI itself reliably implements strict json_schema. Compatible
+  // gateways mostly support plain JSON mode, so ask for the weaker guarantee
+  // there and let the zod parse plus retry loop catch anything malformed.
+  const strictSchema = !baseURL;
 
   const completion = await client.chat.completions.create({
     model,
@@ -39,14 +49,16 @@ async function callOpenAI({
       { role: "system", content: system },
       { role: "user", content: user },
     ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "case_evaluation",
-        strict: true,
-        schema: buildJsonSchema(criteria),
-      },
-    },
+    response_format: strictSchema
+      ? {
+          type: "json_schema",
+          json_schema: {
+            name: "case_evaluation",
+            strict: true,
+            schema: buildJsonSchema(criteria),
+          },
+        }
+      : { type: "json_object" },
   });
 
   const choice = completion.choices[0];
@@ -122,7 +134,76 @@ async function callAnthropic({
   };
 }
 
+/**
+ * Google Gemini. The only major provider with a genuinely free tier, which
+ * makes it the default recommendation for getting grading running at zero
+ * cost. Structured output uses responseSchema.
+ */
+async function callGemini({
+  system,
+  user,
+  criteria,
+}: ProviderArgs): Promise<ProviderResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+
+  // Gemini's responseSchema is an OpenAPI subset: it rejects
+  // additionalProperties, so strip it from the shared builder's output.
+  const schema = JSON.parse(
+    JSON.stringify(buildJsonSchema(criteria)),
+    (key, value) => (key === "additionalProperties" ? undefined : value),
+  );
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: user }] }],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: "application/json",
+          responseSchema: schema,
+        },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Gemini API error ${response.status}: ${detail}`);
+  }
+
+  const data = await response.json();
+  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) throw new Error("Model returned an empty response");
+
+  return {
+    raw,
+    model,
+    tokensUsed: data.usageMetadata?.totalTokenCount ?? 0,
+  };
+}
+
 export function callModel(args: ProviderArgs): Promise<ProviderResult> {
   const provider = (process.env.AI_PROVIDER || "openai").toLowerCase();
-  return provider === "anthropic" ? callAnthropic(args) : callOpenAI(args);
+
+  switch (provider) {
+    case "anthropic":
+      return callAnthropic(args);
+    case "gemini":
+    case "google":
+      return callGemini(args);
+    // "openai" and any OpenAI-compatible gateway (groq, openrouter, ollama)
+    // share one path, differing only by OPENAI_BASE_URL.
+    default:
+      return callOpenAI(args);
+  }
 }
