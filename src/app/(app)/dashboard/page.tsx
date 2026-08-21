@@ -24,6 +24,8 @@ import {
 } from "@/components/submission-heatmap";
 import { dailyIndex } from "@/lib/daily-case";
 import { QuoteCard } from "@/components/quote-card";
+import { WeeklyPointsLazy } from "@/components/weekly-points-lazy";
+import type { WeekPoint } from "@/components/weekly-points";
 import {
   TargetSchoolCard,
   type CohortStanding,
@@ -222,6 +224,39 @@ export default async function DashboardPage() {
     heatmapCounts[key] = (heatmapCounts[key] ?? 0) + 1;
   }
 
+  // ---- weekly points -----------------------------------------------------
+  const { data: recentScores } = await supabase
+    .from("scores")
+    .select("total_score, evaluated_at")
+    .eq("user_id", profile.id)
+    .gte("evaluated_at", new Date(Date.now() - 8 * 7 * 86_400_000).toISOString())
+    .limit(500);
+
+  const weekBuckets = new Map<string, { points: number; solved: number }>();
+  for (let i = 7; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 7 * 86_400_000);
+    const key = `${d.getUTCFullYear()}-${Math.floor(d.getTime() / (7 * 86_400_000))}`;
+    weekBuckets.set(key, { points: 0, solved: 0 });
+  }
+
+  for (const row of recentScores ?? []) {
+    const t = new Date(row.evaluated_at).getTime();
+    const key = `${new Date(t).getUTCFullYear()}-${Math.floor(t / (7 * 86_400_000))}`;
+    const bucket = weekBuckets.get(key);
+    if (bucket) {
+      bucket.points += row.total_score ?? 0;
+      bucket.solved += 1;
+    }
+  }
+
+  const weekly: WeekPoint[] = [...weekBuckets.entries()].map(
+    ([, value], index) => ({
+      label: index === 7 ? "This wk" : `-${7 - index}w`,
+      points: value.points,
+      solved: value.solved,
+    }),
+  );
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -274,6 +309,19 @@ export default async function DashboardPage() {
           icon={TrendingUp}
         />
       </div>
+
+      {/* ------------------------------------------------ weekly points --- */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Points by week</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Last 8 weeks. Points come from graded cases.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <WeeklyPointsLazy data={weekly} />
+        </CardContent>
+      </Card>
 
       {/* ----------------------------------------------------- activity --- */}
       <Card className="mt-6">

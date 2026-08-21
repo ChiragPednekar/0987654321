@@ -20,6 +20,7 @@ import { PRODUCT_ARCHETYPES } from "./templates/product";
 import { STRATEGY_ARCHETYPES } from "./templates/strategy";
 import { MARKETING_ARCHETYPES } from "./templates/marketing";
 import { OPERATIONS_ARCHETYPES } from "./templates/operations";
+import { DEBUG_ARCHETYPES } from "./templates/debug";
 
 config({ path: ".env.local" });
 config({ path: ".env" });
@@ -41,6 +42,7 @@ const PLAN = [
   { archetypes: STRATEGY_ARCHETYPES, count: 60, seed: 4_000, label: "Strategy" },
   { archetypes: MARKETING_ARCHETYPES, count: 60, seed: 5_000, label: "Marketing" },
   { archetypes: OPERATIONS_ARCHETYPES, count: 60, seed: 6_000, label: "Operations" },
+  { archetypes: DEBUG_ARCHETYPES, count: 24, seed: 7_000, label: "Debug" },
 ];
 
 /**
@@ -284,6 +286,7 @@ async function main() {
     difficulty: string;
     category_id: string | null;
     category_slug: string;
+    format: string;
     company_track: string;
     estimated_minutes: number;
     scenario: string;
@@ -316,6 +319,9 @@ async function main() {
         model_answer: item.modelAnswer,
         tags: item.archetype.tags,
         is_published: true,
+        // Debug archetypes are ids prefixed "debug-"; everything else the
+        // generator produces is a full case.
+        format: item.archetype.id.startsWith("debug-") ? "debug" : "full_case",
         rubric: item.archetype.rubric,
       });
     });
@@ -341,11 +347,20 @@ async function main() {
     if (weights.some((w) => !Number.isInteger(w) || w <= 0))
       problems.push(`${item.slug}: invalid rubric weight`);
 
-    // The scenario should not leak an unresolved template expression.
-    if (item.scenario.includes("undefined") || item.scenario.includes("NaN"))
-      problems.push(`${item.slug}: scenario contains undefined/NaN`);
-    if (item.model_answer.includes("undefined") || item.model_answer.includes("NaN"))
-      problems.push(`${item.slug}: model answer contains undefined/NaN`);
+    // Catch template interpolation that failed, without tripping on prose
+    // that legitimately uses the word — a debug case explaining that a broken
+    // terminal value is "undefined" is correct, not a bug.
+    //
+    // A failed interpolation always lands where a value was expected, so it
+    // shows up glued to a currency symbol, a digit, or a unit. NaN is never
+    // legitimate prose, so it is flagged unconditionally.
+    const interpolationFailure =
+      /[₹$€£¥]\s*undefined|undefined\s*(?:Cr|M|B|units|months)\b|undefined\s*[%×]|\bNaN\b/;
+
+    if (interpolationFailure.test(item.scenario))
+      problems.push(`${item.slug}: scenario contains a failed interpolation`);
+    if (interpolationFailure.test(item.model_answer))
+      problems.push(`${item.slug}: model answer contains a failed interpolation`);
   }
 
   if (problems.length > 0) {
