@@ -64,10 +64,13 @@ async function main() {
   }
 
   const provider = (process.env.AI_PROVIDER || "openai").toLowerCase();
+  // Keep this in step with callModel()'s switch in lib/ai/providers.
   const providerKey =
     provider === "anthropic"
       ? process.env.ANTHROPIC_API_KEY
-      : process.env.OPENAI_API_KEY;
+      : provider === "gemini" || provider === "google"
+        ? process.env.GEMINI_API_KEY
+        : process.env.OPENAI_API_KEY;
 
   if (!providerKey) {
     console.error(

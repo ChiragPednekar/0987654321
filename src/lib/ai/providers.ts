@@ -147,7 +147,7 @@ async function callGemini({
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
 
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
   // Gemini's responseSchema is an OpenAPI subset: it rejects
   // additionalProperties, so strip it from the shared builder's output.
