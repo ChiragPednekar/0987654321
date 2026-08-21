@@ -41,13 +41,25 @@ export async function getCurrentUser() {
 
   if (!user) return null;
 
+  // Every column of public.users that a signed-in user is granted to read.
+  // `email` is deliberately absent — 20250101000015_read_privileges.sql revokes
+  // it from anon and authenticated, because the row policy on users is
+  // `using (true)`, so a column readable there is readable for *everyone's*
+  // row, not just your own. Selecting it here would fail on privileges.
+  // Kept inline as one literal: supabase-js infers the row type from it.
   const { data: profile } = await supabase
     .from("users")
-    .select("*")
+    .select(
+      "id, full_name, avatar_url, university, career_goal, role, xp, level, total_score, cases_solved, cases_attempted, current_streak, longest_streak, last_solved_on, created_at, updated_at",
+    )
     .eq("id", user.id)
     .single();
 
-  return profile ?? null;
+  if (!profile) return null;
+
+  // The session already carries the address, so callers that show "you are
+  // signed in as …" keep working without the column being world-readable.
+  return { ...profile, email: user.email ?? "" };
 }
 
 /** Throws unless the caller is a signed-in admin. Use to guard admin routes. */

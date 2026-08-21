@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { CaseForm, type CaseFormInitial } from "@/components/admin/case-form";
 import { DeleteCaseButton } from "@/components/admin/delete-case-button";
 
@@ -20,9 +21,17 @@ export default async function EditCasePage({
 
   const supabase = await createClient();
 
+  // `model_answer` is revoked from anon and authenticated, so it cannot be read
+  // under the admin's own JWT — see 20250101000015_read_privileges.sql. The
+  // role check two lines above is the gate; this client is what gets past the
+  // grant. Deliberately the throwing variant: the form posts every field back,
+  // so opening the editor with model_answer silently blank would let a save
+  // wipe the real one. Failing loudly is the lesser harm.
+  const admin = createAdminClient();
+
   const [{ data: caseData }, { data: categories }, { data: rubric }, { count }] =
     await Promise.all([
-      supabase
+      admin
         .from("cases")
         .select(
           "id, slug, title, domain, difficulty, category_id, company_track, estimated_minutes, scenario, instructions, supporting_data, expected_framework, model_answer, tags, is_published",

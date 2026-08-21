@@ -73,7 +73,15 @@ export default async function CaseDetailPage({
 
   const { data: caseData } = await supabase
     .from("cases")
-    .select("*, rubrics(criteria, max_score, pass_score), case_categories(name)")
+    // Explicit column list rather than "*": `model_answer` is revoked from
+    // anon and authenticated (20250101000015_read_privileges.sql) so that the
+    // worked solution cannot be pulled straight out of PostgREST, and a "*"
+    // here would ask for it and fail.
+    // Must stay one string literal: supabase-js infers the row type from it,
+    // and a concatenated expression collapses to GenericStringError.
+    .select(
+      "id, slug, title, domain, difficulty, category_id, company_track, estimated_minutes, scenario, supporting_data, attachments, instructions, expected_framework, tags, is_published, created_by, total_submissions, total_solved, avg_score, completion_rate, created_at, updated_at, format, firm_style, is_pro, rubrics(criteria, max_score, pass_score), case_categories(name)",
+    )
     .eq("slug", slug)
     .maybeSingle();
 
