@@ -65,7 +65,7 @@ const GROUPS: { heading: string; items: Item[] }[] = [
   {
     heading: "Staff",
     items: [
-      { href: "/recruiter", label: "Recruiter", icon: Building2 },
+      { href: "/recruiter", label: "Recruiter", icon: Building2, role: "recruiter" },
       { href: "/admin", label: "Admin", icon: Users, role: "admin" },
     ],
   },

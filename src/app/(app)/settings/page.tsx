@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OpportunitiesToggle } from "@/components/settings/opportunities-toggle";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,18 @@ export default async function SettingsPage() {
         {/* ---- workspace ------------------------------------------------- */}
         <TabsContent value="workspace" className="mt-6 space-y-6">
           <AppearanceSettings />
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Recruiters</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <OpportunitiesToggle
+                userId={profile.id}
+                initial={profile.open_to_opportunities}
+              />
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

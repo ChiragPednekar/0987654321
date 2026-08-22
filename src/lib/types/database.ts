@@ -22,7 +22,7 @@ export type CaseFormat =
   | "model"
   | "drill"
   | "debug";
-export type UserRole = "student" | "admin";
+export type UserRole = "student" | "admin" | "recruiter";
 export type SubmissionStatus =
   | "draft"
   | "submitted"
