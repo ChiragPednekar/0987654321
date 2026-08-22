@@ -48,7 +48,7 @@ export default function PrivacyPage() {
           produced for each submission.
         </li>
         <li>
-          <strong>Activity</strong> — cases solved, XP, streaks, badges and
+          <strong>Activity</strong> — cases solved, CE, streaks, badges and
           leaderboard standing.
         </li>
       </ul>

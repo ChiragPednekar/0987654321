@@ -3,6 +3,7 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import type { NotificationRow } from "@/lib/types/database";
 import { SiteNav } from "@/components/site-nav";
 import { CommandPalette } from "@/components/command-palette";
+import { AppSidebar } from "@/components/app-sidebar";
 
 export default async function AppLayout({
   children,
@@ -44,7 +45,14 @@ export default async function AppLayout({
         unreadCount={unreadCount}
       />
       <CommandPalette />
-      <main className="flex-1">{children}</main>
+      {profile ? (
+        <div className="flex flex-1">
+          <AppSidebar role={profile.role} />
+          <main className="min-w-0 flex-1">{children}</main>
+        </div>
+      ) : (
+        <main className="flex-1">{children}</main>
+      )}
       <footer className="border-t border-border py-6">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 text-xs text-muted-foreground sm:px-6">
           <span>CaseCode — practise business cases, get graded, improve.</span>

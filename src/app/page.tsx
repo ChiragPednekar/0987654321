@@ -23,7 +23,7 @@ const FEATURES = [
   {
     icon: BarChart3,
     title: "Progress you can see",
-    body: "A skill radar across five domains, streaks, XP and levels. You find out which muscle is weak before an interviewer does.",
+    body: "A skill radar across five domains, streaks, CE and levels. You find out which muscle is weak before an interviewer does.",
   },
   {
     icon: Target,

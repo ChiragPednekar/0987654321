@@ -29,7 +29,7 @@ export function ProfileForm({
     const supabase = createClient();
 
     // RLS restricts this update to the caller's own row, and there is no
-    // policy allowing a user to change `role`, `xp` or any score column.
+    // policy allowing a user to change `role`, `ce` or any score column.
     const { error } = await supabase
       .from("users")
       .update({

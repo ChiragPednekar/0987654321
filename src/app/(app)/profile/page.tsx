@@ -6,6 +6,7 @@ import { ProfileForm } from "@/components/profile-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatNumber } from "@/lib/utils";
+import { Sparkline } from "@/components/sparkline";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -22,13 +23,32 @@ export default async function ProfilePage() {
 
   const supabase = await createClient();
 
-  const [{ data: badges }, { data: earned }] = await Promise.all([
-    supabase.from("badges").select("*").order("sort_order"),
-    supabase
-      .from("achievements")
-      .select("badge_id, earned_at")
-      .eq("user_id", profile.id),
-  ]);
+  const [{ data: badges }, { data: earned }, { data: history }] =
+    await Promise.all([
+      supabase.from("badges").select("*").order("sort_order"),
+      supabase
+        .from("achievements")
+        .select("badge_id, earned_at")
+        .eq("user_id", profile.id),
+      // Oldest-first so the sparklines read left to right. Capped at 30: past
+      // that the line is denser than it is informative at this size.
+      supabase
+        .from("scores")
+        .select("percentage, evaluated_at")
+        .eq("user_id", profile.id)
+        .order("evaluated_at", { ascending: true })
+        .limit(30),
+    ]);
+
+  const scoreTrend = (history ?? []).map((row) => Number(row.percentage));
+
+  // CE is cumulative, so the interesting shape is the running total rather
+  // than the per-case award. Reconstructed from score history rather than
+  // stored per-day, which would need a snapshot table for one sparkline.
+  const ceTrend = scoreTrend.reduce<number[]>((acc, pct) => {
+    acc.push((acc[acc.length - 1] ?? 0) + pct);
+    return acc;
+  }, []);
 
   const earnedIds = new Map(
     (earned ?? []).map((row) => [row.badge_id, row.earned_at]),
@@ -39,16 +59,29 @@ export default async function ProfilePage() {
       <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-4">
-        {[
-          ["Level", profile.level],
-          ["XP", formatNumber(profile.xp)],
-          ["Solved", formatNumber(profile.cases_solved)],
-          ["Best streak", profile.longest_streak],
-        ].map(([label, value]) => (
-          <Card key={label as string}>
+        {(
+          [
+            ["Level", profile.level, null],
+            ["CE", formatNumber(profile.ce), ceTrend],
+            ["Solved", formatNumber(profile.cases_solved), null],
+            ["Avg score", scoreTrend.length
+              ? `${Math.round(scoreTrend.reduce((a, b) => a + b, 0) / scoreTrend.length)}%`
+              : "—", scoreTrend],
+          ] as [string, string | number, number[] | null][]
+        ).map(([label, value, trend]) => (
+          <Card key={label}>
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground">{label}</p>
-              <p className="mt-1 text-2xl font-semibold tabular">{value}</p>
+              <div className="mt-1 flex items-end justify-between gap-2">
+                <p className="text-2xl font-semibold tabular">{value}</p>
+                {trend ? (
+                  <Sparkline
+                    values={trend}
+                    label={`${label} across your last ${trend.length} graded cases`}
+                    className="mb-1"
+                  />
+                ) : null}
+              </div>
             </CardContent>
           </Card>
         ))}

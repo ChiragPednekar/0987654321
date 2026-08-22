@@ -50,7 +50,7 @@ export async function getCurrentUser() {
   const { data: profile } = await supabase
     .from("users")
     .select(
-      "id, full_name, avatar_url, university, career_goal, role, xp, level, total_score, cases_solved, cases_attempted, current_streak, longest_streak, last_solved_on, created_at, updated_at",
+      "id, full_name, avatar_url, university, career_goal, role, ce, level, total_score, cases_solved, cases_attempted, current_streak, longest_streak, last_solved_on, created_at, updated_at",
     )
     .eq("id", user.id)
     .single();

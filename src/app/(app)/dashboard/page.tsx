@@ -105,11 +105,11 @@ export default async function DashboardPage() {
         radarData.reduce((sum, d) => sum + d.solved, 0)
       : 0;
 
-  // XP progress toward the next level (matches level_for_xp in SQL).
-  const currentLevelXp = 50 * (profile.level - 1) ** 2;
-  const nextLevelXp = 50 * profile.level ** 2;
+  // CE progress toward the next level (matches level_for_ce in SQL).
+  const currentLevelCe = 50 * (profile.level - 1) ** 2;
+  const nextLevelCe = 50 * profile.level ** 2;
   const levelProgress =
-    ((profile.xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
+    ((profile.ce - currentLevelCe) / (nextLevelCe - currentLevelCe)) * 100;
 
   // ---- daily case --------------------------------------------------------
   // Chosen by counting first and fetching one row at a deterministic offset,
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
       .maybeSingle();
 
     if (picked) {
-      const XP_BY_DIFFICULTY: Record<string, number> = {
+      const CE_BY_DIFFICULTY: Record<string, number> = {
         easy: 30,
         medium: 50,
         hard: 80,
@@ -146,7 +146,7 @@ export default async function DashboardPage() {
         domain: picked.domain,
         difficulty: picked.difficulty,
         estimated_minutes: picked.estimated_minutes,
-        xpReward: XP_BY_DIFFICULTY[picked.difficulty] ?? 50,
+        ceReward: CE_BY_DIFFICULTY[picked.difficulty] ?? 50,
       };
 
       const startOfDay = new Date();
@@ -375,7 +375,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* ---------------------------------------------- level + xp --- */}
+        {/* ---------------------------------------------- level + ce --- */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -384,8 +384,8 @@ export default async function DashboardPage() {
             <CardContent className="space-y-3">
               <Progress value={Math.min(100, Math.max(0, levelProgress))} />
               <p className="text-xs text-muted-foreground tabular">
-                {formatNumber(profile.xp)} XP ·{" "}
-                {formatNumber(Math.max(0, nextLevelXp - profile.xp))} to level{" "}
+                {formatNumber(profile.ce)} CE ·{" "}
+                {formatNumber(Math.max(0, nextLevelCe - profile.ce))} to level{" "}
                 {profile.level + 1}
               </p>
             </CardContent>
@@ -475,9 +475,9 @@ export default async function DashboardPage() {
                         )}
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        {item.xp_delta > 0 && (
+                        {item.ce_delta > 0 && (
                           <Badge variant="secondary" className="tabular">
-                            +{item.xp_delta}
+                            +{item.ce_delta}
                           </Badge>
                         )}
                         <span className="text-xs text-muted-foreground">

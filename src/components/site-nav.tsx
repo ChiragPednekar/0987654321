@@ -60,7 +60,16 @@ export function SiteNav({
           <span className="text-[15px] font-semibold tracking-tight">CaseCode</span>
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        {/* Signed-in users navigate from the sidebar; showing the same links
+            twice on desktop is just noise. The mobile sheet below still
+            carries them, because there is no sidebar at that width. */}
+        <nav
+          className={
+            profile
+              ? "hidden"
+              : "hidden items-center gap-1 md:flex"
+          }
+        >
           {LINKS.map((link) => {
             const active = pathname.startsWith(link.href);
             return (
@@ -124,7 +133,7 @@ export function SiteNav({
                     {profile.email}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground tabular">
-                    Level {profile.level} · {profile.xp.toLocaleString()} XP
+                    Level {profile.level} · {profile.ce.toLocaleString()} CE
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

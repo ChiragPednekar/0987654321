@@ -89,7 +89,7 @@ export type UserRow = {
   university: string | null;
   career_goal: string | null;
   role: UserRole;
-  xp: number;
+  ce: number;
   level: number;
   total_score: number;
   cases_solved: number;
@@ -369,7 +369,7 @@ export type BadgeRow = {
   icon: string;
   tier: "bronze" | "silver" | "gold" | "platinum";
   criteria: Json;
-  xp_reward: number;
+  ce_reward: number;
   sort_order: number;
   created_at: string;
 }
@@ -387,7 +387,7 @@ export type UserActivityRow = {
   type: ActivityType;
   case_id: string | null;
   metadata: Json;
-  xp_delta: number;
+  ce_delta: number;
   created_at: string;
 }
 
@@ -818,8 +818,8 @@ export interface Database {
     };
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
-      level_for_xp: { Args: { p_xp: number }; Returns: number };
-      xp_for_level: { Args: { p_level: number }; Returns: number };
+      level_for_ce: { Args: { p_ce: number }; Returns: number };
+      ce_for_level: { Args: { p_level: number }; Returns: number };
       refresh_leaderboards: { Args: Record<string, never>; Returns: undefined };
       sync_contest_statuses: { Args: Record<string, never>; Returns: undefined };
       finalize_contest: { Args: { p_contest_id: string }; Returns: number };

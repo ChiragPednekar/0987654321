@@ -41,7 +41,7 @@ export default async function PublicProfilePage({
   const { data: user } = await supabase
     .from("users")
     .select(
-      "id, full_name, avatar_url, university, career_goal, xp, level, total_score, cases_solved, cases_attempted, current_streak, longest_streak, created_at",
+      "id, full_name, avatar_url, university, career_goal, ce, level, total_score, cases_solved, cases_attempted, current_streak, longest_streak, created_at",
     )
     .eq("id", id)
     .maybeSingle();

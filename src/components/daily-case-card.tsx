@@ -17,7 +17,7 @@ export interface DailyCase {
   domain: string;
   difficulty: string;
   estimated_minutes: number;
-  xpReward: number;
+  ceReward: number;
 }
 
 function format(ms: number) {
@@ -86,7 +86,7 @@ export function DailyCaseCard({
               {dailyCase.estimated_minutes} min
             </span>
             <span className="text-muted-foreground">
-              +{dailyCase.xpReward} XP
+              +{dailyCase.ceReward} CE
             </span>
           </div>
         </div>
