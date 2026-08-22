@@ -24,6 +24,11 @@ import {
   DrillRunner,
   type DrillQuestion,
 } from "@/components/case/drill-runner";
+import {
+  ModelWorkspace,
+  type ModelCell,
+} from "@/components/case/model-workspace";
+import { CaseChat } from "@/components/case/case-chat";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -146,6 +151,18 @@ export default async function CaseDetailPage({
       .order("position");
 
     drillQuestions = (qs ?? []) as DrillQuestion[];
+  }
+
+  let modelCells: ModelCell[] = [];
+  if (caseData.format === "model") {
+    const { data: cs } = await supabase
+      .from("model_cells")
+      .select("id, row_index, col_index, label, tolerance_pct, unit")
+      .eq("case_id", caseData.id)
+      .order("row_index")
+      .order("col_index");
+
+    modelCells = (cs ?? []) as ModelCell[];
   }
 
   const hints: HintStub[] = (hintRows ?? []).map((h) => ({
@@ -295,6 +312,7 @@ export default async function CaseDetailPage({
         <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
           <TabsTrigger value="problem">Problem</TabsTrigger>
           <TabsTrigger value="solution">My Solution</TabsTrigger>
+          <TabsTrigger value="interview">Interview</TabsTrigger>
           <TabsTrigger value="top">Top Solutions</TabsTrigger>
           <TabsTrigger value="discussion">
             Discussion
@@ -428,6 +446,13 @@ export default async function CaseDetailPage({
           </div>
         </TabsContent>
 
+        {/* -------------------------------------------------- interview --- */}
+        <TabsContent value="interview">
+          <div className="mt-4 max-w-4xl">
+            <CaseChat caseId={caseData.id} signedIn={Boolean(profile)} />
+          </div>
+        </TabsContent>
+
         {/* --------------------------------------------------- solution --- */}
         <TabsContent value="solution">
           {caseData.format === "drill" && drillQuestions.length > 0 ? (
@@ -436,6 +461,15 @@ export default async function CaseDetailPage({
                 caseId={caseData.id}
                 caseSlug={caseData.slug}
                 questions={drillQuestions}
+                signedIn={Boolean(profile)}
+              />
+            </div>
+          ) : caseData.format === "model" && modelCells.length > 0 ? (
+            <div className="mt-4 max-w-4xl">
+              <ModelWorkspace
+                caseId={caseData.id}
+                caseSlug={caseData.slug}
+                cells={modelCells}
                 signedIn={Boolean(profile)}
               />
             </div>

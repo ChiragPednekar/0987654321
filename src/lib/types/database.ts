@@ -90,6 +90,8 @@ export type UserRow = {
   career_goal: string | null;
   role: UserRole;
   ce: number;
+  open_to_opportunities: boolean;
+  plan: PlanTier;
   level: number;
   total_score: number;
   cases_solved: number;
@@ -443,6 +445,72 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      model_cells: {
+        Row: ModelCellRow;
+        Insert: Partial<ModelCellRow>;
+        Update: Partial<ModelCellRow>;
+        Relationships: [];
+      };
+      model_attempts: {
+        Row: ModelAttemptRow;
+        Insert: Partial<ModelAttemptRow>;
+        Update: Partial<ModelAttemptRow>;
+        Relationships: [];
+      };
+      chat_sessions: {
+        Row: ChatSessionRow;
+        Insert: Partial<ChatSessionRow>;
+        Update: Partial<ChatSessionRow>;
+        Relationships: [];
+      };
+      chat_messages: {
+        Row: ChatMessageRow;
+        Insert: Partial<ChatMessageRow>;
+        Update: Partial<ChatMessageRow>;
+        Relationships: [];
+      };
+      classrooms: {
+        Row: ClassroomRow;
+        Insert: Partial<ClassroomRow>;
+        Update: Partial<ClassroomRow>;
+        Relationships: [];
+      };
+      classroom_members: {
+        Row: ClassroomMemberRow;
+        Insert: Partial<ClassroomMemberRow>;
+        Update: Partial<ClassroomMemberRow>;
+        Relationships: [];
+      };
+      classroom_assignments: {
+        Row: ClassroomAssignmentRow;
+        Insert: Partial<ClassroomAssignmentRow>;
+        Update: Partial<ClassroomAssignmentRow>;
+        Relationships: [];
+      };
+      groups: {
+        Row: GroupRow;
+        Insert: Partial<GroupRow>;
+        Update: Partial<GroupRow>;
+        Relationships: [];
+      };
+      group_members: {
+        Row: GroupMemberRow;
+        Insert: Partial<GroupMemberRow>;
+        Update: Partial<GroupMemberRow>;
+        Relationships: [];
+      };
+      group_posts: {
+        Row: GroupPostRow;
+        Insert: Partial<GroupPostRow>;
+        Update: Partial<GroupPostRow>;
+        Relationships: [];
+      };
+      subscriptions: {
+        Row: SubscriptionRow;
+        Insert: Partial<SubscriptionRow>;
+        Update: Partial<SubscriptionRow>;
+        Relationships: [];
       };
       drill_questions: {
         Row: DrillQuestionRow;
@@ -846,3 +914,134 @@ export interface Database {
     CompositeTypes: Record<string, never>;
   };
 }
+
+// ---------------------------------------------------------------- §5 model --
+
+export type ModelCellRow = {
+  id: string;
+  case_id: string;
+  row_index: number;
+  col_index: number;
+  label: string;
+  expected: number;
+  tolerance_pct: number;
+  unit: string | null;
+  formula: string | null;
+  explanation: string | null;
+  created_at: string;
+};
+
+export type ModelAttemptRow = {
+  id: string;
+  user_id: string;
+  case_id: string;
+  cells: Json;
+  correct: number;
+  total: number;
+  duration_seconds: number;
+  created_at: string;
+};
+
+// ----------------------------------------------------------------- §6 chat --
+
+export type ChatRole = "interviewer" | "candidate";
+
+export type ChatSessionRow = {
+  id: string;
+  user_id: string;
+  case_id: string;
+  created_at: string;
+  ended_at: string | null;
+  verdict: string | null;
+  score: number | null;
+};
+
+export type ChatMessageRow = {
+  id: string;
+  session_id: string;
+  role: ChatRole;
+  content: string;
+  created_at: string;
+};
+
+// ------------------------------------------------------------ §11 classroom --
+
+export type ClassroomRole = "teacher" | "student";
+
+export type ClassroomRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  owner_id: string;
+  join_code: string;
+  archived: boolean;
+  created_at: string;
+};
+
+export type ClassroomMemberRow = {
+  classroom_id: string;
+  user_id: string;
+  role: ClassroomRole;
+  joined_at: string;
+};
+
+export type ClassroomAssignmentRow = {
+  id: string;
+  classroom_id: string;
+  case_id: string;
+  due_at: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+// --------------------------------------------------------------- §10 groups --
+
+export type GroupRow = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  owner_id: string;
+  is_private: boolean;
+  member_count: number;
+  created_at: string;
+};
+
+export type GroupMemberRow = {
+  group_id: string;
+  user_id: string;
+  joined_at: string;
+};
+
+export type GroupPostRow = {
+  id: string;
+  group_id: string;
+  user_id: string;
+  body: string;
+  upvotes: number;
+  created_at: string;
+};
+
+// ---------------------------------------------------------------- §16 billing --
+
+export type PlanTier = "free" | "pro";
+
+export type SubscriptionRow = {
+  id: string;
+  user_id: string;
+  plan: PlanTier;
+  status:
+    | "created"
+    | "authenticated"
+    | "active"
+    | "pending"
+    | "halted"
+    | "cancelled"
+    | "completed"
+    | "expired";
+  razorpay_subscription_id: string | null;
+  razorpay_payment_id: string | null;
+  current_period_end: string | null;
+  created_at: string;
+  updated_at: string;
+};
