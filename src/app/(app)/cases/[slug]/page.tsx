@@ -92,6 +92,43 @@ export default async function CaseDetailPage({
 
   if (!caseData) notFound();
 
+  // Pro gate (spec §16). The flag existed and rendered a badge but let anyone
+  // straight through; a plan that unlocks nothing is not a plan. Admins keep
+  // access so they can review what they are selling.
+  const locked =
+    caseData.is_pro &&
+    profile?.plan !== "pro" &&
+    profile?.role !== "admin";
+
+  if (locked) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-6">
+        <Badge variant="warning">Pro</Badge>
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight">
+          {caseData.title}
+        </h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          This case is part of CaseCode Pro. Everything you have already solved
+          stays free — Pro adds the cases marked with this badge.
+        </p>
+        <div className="mt-6 flex justify-center gap-3">
+          <Link
+            href="/pricing"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
+            See Pro
+          </Link>
+          <Link
+            href="/cases"
+            className="rounded-md border border-border px-4 py-2 text-sm"
+          >
+            Back to cases
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const rubric = (
     Array.isArray(caseData.rubrics) ? caseData.rubrics[0] : caseData.rubrics
   ) as { criteria: RubricCriteria; max_score: number; pass_score: number } | null;

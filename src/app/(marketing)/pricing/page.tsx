@@ -2,6 +2,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UpgradeButton } from "@/components/billing/upgrade-button";
+import { getCurrentUser } from "@/lib/supabase/server";
+import { razorpayConfigured } from "@/lib/billing/razorpay";
 import { Card } from "@/components/ui/card";
 
 export const metadata: Metadata = {
@@ -24,7 +27,10 @@ const LATER = [
   "Rubrics reviewed by ex-consultants and ex-bankers",
 ];
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const profile = await getCurrentUser();
+  const paymentsLive = razorpayConfigured();
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
       <div className="text-center">
@@ -69,9 +75,9 @@ export default function PricingPage() {
           <div>
             <h2 className="text-base font-semibold">Pro</h2>
             <p className="mt-1 text-3xl font-semibold tracking-tight">
-              Later
+              ₹499
               <span className="ml-1.5 text-sm font-normal text-muted-foreground">
-                / not yet priced
+                / year
               </span>
             </p>
           </div>
@@ -85,9 +91,20 @@ export default function PricingPage() {
             ))}
           </ul>
 
-          <Button variant="outline" className="mt-6 w-full" disabled>
-            Not available yet
-          </Button>
+          {paymentsLive ? (
+            <UpgradeButton
+              signedIn={Boolean(profile)}
+              alreadyPro={profile?.plan === "pro"}
+              email={profile?.email}
+              name={profile?.full_name}
+            />
+          ) : (
+            /* No keys configured on this deployment: showing a button that
+               cannot charge anyone would be worse than showing none. */
+            <Button variant="outline" className="mt-6 w-full" disabled>
+              Not available yet
+            </Button>
+          )}
         </Card>
       </div>
 
