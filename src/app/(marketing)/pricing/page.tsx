@@ -13,16 +13,20 @@ export const metadata: Metadata = {
 };
 
 const FREE = [
-  "All 300 cases across Finance, Consulting and Product",
+  "All 508 cases across six domains, including drills and model builds",
   "Rubric-based AI grading with per-criterion feedback",
   "Progress tracking, streaks and skill radar",
   "Campus and global leaderboards",
-  "Weekly contests",
+  "Weekly contests, study groups and classrooms",
 ];
 
-const LATER = [
+// Only the first entry is live today. The rest stay on the page because they
+// are what Pro is being built toward, but they are marked as such below rather
+// than implied to be included.
+const PRO_NOW = ["Live case interview with an AI interviewer, on every case"];
+
+const PRO_SOON = [
   "Unlimited re-attempts with fresh case variants",
-  "Timed interview simulation",
   "Pattern analytics across your submissions",
   "Rubrics reviewed by ex-consultants and ex-bankers",
 ];
@@ -83,10 +87,19 @@ export default async function PricingPage() {
           </div>
 
           <ul className="mt-6 flex-1 space-y-2.5 text-sm">
-            {LATER.map((item) => (
+            {PRO_NOW.map((item) => (
+              <li key={item} className="flex gap-2.5">
+                <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+                <span>{item}</span>
+              </li>
+            ))}
+            {PRO_SOON.map((item) => (
               <li key={item} className="flex gap-2.5">
                 <Check className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" />
-                <span className="text-muted-foreground">{item}</span>
+                <span className="text-muted-foreground">
+                  {item}{" "}
+                  <span className="text-xs opacity-70">(planned)</span>
+                </span>
               </li>
             ))}
           </ul>
@@ -109,8 +122,8 @@ export default async function PricingPage() {
       </div>
 
       <p className="mt-10 text-center text-sm text-muted-foreground">
-        Early users keep free access to everything listed above when paid plans
-        arrive.{" "}
+        Every case stays free to solve and get graded — that does not change.
+        Pro adds the live interviewer.{" "}
         <Link href="/how-grading-works" className="underline underline-offset-4">
           How grading works
         </Link>

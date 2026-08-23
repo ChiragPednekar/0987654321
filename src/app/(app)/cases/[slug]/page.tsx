@@ -486,7 +486,11 @@ export default async function CaseDetailPage({
         {/* -------------------------------------------------- interview --- */}
         <TabsContent value="interview">
           <div className="mt-4 max-w-4xl">
-            <CaseChat caseId={caseData.id} signedIn={Boolean(profile)} />
+            <CaseChat
+              caseId={caseData.id}
+              signedIn={Boolean(profile)}
+              isPro={profile?.plan === "pro" || profile?.role === "admin"}
+            />
           </div>
         </TabsContent>
 

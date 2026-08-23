@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Loader2, Send, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,9 +26,12 @@ interface Turn {
 export function CaseChat({
   caseId,
   signedIn,
+  isPro,
 }: {
   caseId: string;
   signedIn: boolean;
+  /** Pro (or admin). The route enforces this too; this only saves a round trip. */
+  isPro: boolean;
 }) {
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [turns, setTurns] = React.useState<Turn[]>([]);
@@ -89,6 +93,28 @@ export function CaseChat({
     if (!message || busy || closed) return;
     setDraft("");
     void send(message);
+  }
+
+  if (signedIn && !isPro) {
+    return (
+      <Card>
+        <CardContent className="space-y-4 p-6 text-sm">
+          <p className="font-medium">Live case interview — Pro</p>
+          <p className="text-muted-foreground">
+            An interviewer walks you through the case one question at a time,
+            pushing on your reasoning the way a real one would, then closes with
+            written feedback.
+          </p>
+          <p className="text-muted-foreground">
+            Every case on CaseCode stays free to solve and get graded. Pro adds
+            the live interviewer.
+          </p>
+          <Button asChild>
+            <Link href="/pricing">See Pro</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (turns.length === 0) {

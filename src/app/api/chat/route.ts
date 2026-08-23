@@ -79,6 +79,27 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Pro gate. The interviewer is the one feature here with a real marginal
+  // cost per use — every turn is a model call — and /pricing already lists
+  // "Timed interview simulation" under Pro, so this is what was advertised.
+  // Admins pass so they can review what is being sold.
+  const { data: buyer } = await admin
+    .from("users")
+    .select("plan, role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (buyer?.plan !== "pro" && buyer?.role !== "admin") {
+    return NextResponse.json(
+      {
+        error:
+          "The live interviewer is part of CaseCode Pro.",
+        upgrade: true,
+      },
+      { status: 402 },
+    );
+  }
+
   const { data: caseData } = await admin
     .from("cases")
     .select(
