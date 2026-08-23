@@ -48,6 +48,7 @@ export interface CaseFormInitial {
   model_answer: string | null;
   tags: string[] | null;
   is_published: boolean;
+  is_pro: boolean;
   rubric: {
     criteria: Record<string, number>;
     descriptors: Record<string, string> | null;
@@ -156,6 +157,7 @@ export function CaseForm({
             .map((t) => t.trim())
             .filter(Boolean),
           is_published: formData.get("is_published") === "on",
+          is_pro: formData.get("is_pro") === "on",
           rubric: {
             criteria: Object.fromEntries(
               cleaned.map((c, i) => [keys[i], c.weight]),
@@ -454,15 +456,30 @@ export function CaseForm({
       </Card>
 
       <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            name="is_published"
-            className="size-4"
-            defaultChecked={initial ? initial.is_published : true}
-          />
-          Publish immediately
-        </label>
+        <div className="flex flex-wrap items-center gap-6">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="is_published"
+              className="size-4"
+              defaultChecked={initial ? initial.is_published : true}
+            />
+            Publish immediately
+          </label>
+
+          {/* Gated by the case page: a non-Pro student sees the upsell instead
+              of the case. Defaults off so a new case is never accidentally
+              paywalled. */}
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="is_pro"
+              className="size-4"
+              defaultChecked={initial ? initial.is_pro : false}
+            />
+            Pro only
+          </label>
+        </div>
         <Button type="submit" disabled={saving}>
           {saving && <Loader2 className="animate-spin" />}
           {isEdit ? "Save changes" : "Create case"}

@@ -34,7 +34,7 @@ export default async function EditCasePage({
       admin
         .from("cases")
         .select(
-          "id, slug, title, domain, difficulty, category_id, company_track, estimated_minutes, scenario, instructions, supporting_data, expected_framework, model_answer, tags, is_published",
+          "id, slug, title, domain, difficulty, category_id, company_track, estimated_minutes, scenario, instructions, supporting_data, expected_framework, model_answer, tags, is_published, is_pro",
         )
         .eq("id", id)
         .maybeSingle(),

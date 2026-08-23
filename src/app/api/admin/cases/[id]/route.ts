@@ -15,6 +15,7 @@ const patchSchema = z.object({
   supporting_data: z.record(z.string(), z.unknown()).optional(),
   expected_framework: z.string().nullable().optional(),
   model_answer: z.string().nullable().optional(),
+  is_pro: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
   is_published: z.boolean().optional(),
   rubric: z

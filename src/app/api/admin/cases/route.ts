@@ -31,6 +31,7 @@ const caseSchema = z.object({
     .default([]),
   expected_framework: z.string().nullable().optional(),
   model_answer: z.string().nullable().optional(),
+  is_pro: z.boolean().optional(),
   tags: z.array(z.string()).default([]),
   is_published: z.boolean().default(false),
   rubric: z.object({
