@@ -211,11 +211,10 @@ language sql stable security definer set search_path = public, pg_temp as $$
   join public.users u on u.id = m.user_id
   where m.institution_id = p_institution
     and m.role = 'student'
-    and public.is_institution_staff(p_institution)
   order by u.cases_solved desc, u.ce desc;
 $$;
-revoke execute on function public.institution_roster(uuid) from anon;
-grant execute on function public.institution_roster(uuid) to authenticated;
+revoke execute on function public.institution_roster(uuid)
+  from public, anon, authenticated;
 
 /** Cohort performance by domain — where the batch is actually weak. */
 create or replace function public.institution_domain_breakdown(p_institution uuid)
@@ -234,9 +233,22 @@ language sql stable security definer set search_path = public, pg_temp as $$
   from public.institution_members m
   join public.domain_progress dp on dp.user_id = m.user_id
   where m.institution_id = p_institution
-    and public.is_institution_staff(p_institution)
   group by dp.domain
   order by avg(dp.avg_percentage) asc nulls last;
 $$;
-revoke execute on function public.institution_domain_breakdown(uuid) from anon;
-grant execute on function public.institution_domain_breakdown(uuid) to authenticated;
+revoke execute on function public.institution_domain_breakdown(uuid)
+  from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Correction (same day): the two rollups above guarded themselves with
+-- is_institution_staff(), which reads auth.uid(). The dashboard calls them
+-- through the service-role client, where auth.uid() is null, so the guard could
+-- never pass and the roster always came back empty.
+--
+-- They are server-side rollups the application calls *after* establishing that
+-- the viewer is staff — (app)/institution/page.tsx checks institution_members
+-- before reading anything. The page is the gate; these are the query. EXECUTE
+-- is revoked from PUBLIC as well, because Postgres grants it to PUBLIC on every
+-- new function by default and revoking from `anon` alone left them reachable
+-- with the publishable key.
+-- ---------------------------------------------------------------------------
