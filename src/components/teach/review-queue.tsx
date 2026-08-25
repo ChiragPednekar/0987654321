@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ChevronDown, Clock, Loader2 } from "lucide-react";
+import { CheckCircle2, ChevronDown, Clock, Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,25 +22,52 @@ import type { AssignmentReviewRow } from "@/lib/types/database";
  * who have not submitted are listed too — they are the ones a teacher most
  * needs to see, and hiding them would make the class look complete.
  */
+type Filter =
+  | "all" | "not_started" | "submitted" | "ai_graded"
+  | "awaiting" | "reviewed" | "resubmission_requested";
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "not_started", label: "Not started" },
+  { value: "awaiting", label: "Awaiting review" },
+  { value: "ai_graded", label: "AI graded" },
+  { value: "reviewed", label: "Reviewed" },
+  { value: "resubmission_requested", label: "Resubmission requested" },
+];
+
 export function ReviewQueue({
   assignmentId,
   maxMarks,
+  allowResubmission = true,
   rows,
 }: {
   assignmentId: string;
   maxMarks: number | null;
+  /** Hides the send-back action when the assignment forbids another attempt. */
+  allowResubmission?: boolean;
   rows: AssignmentReviewRow[];
 }) {
   const router = useRouter();
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState<string | null>(null);
+  const [filter, setFilter] = React.useState<Filter>("all");
+  const [query, setQuery] = React.useState("");
 
-  async function save(studentId: string, form: HTMLFormElement) {
+  async function save(
+    studentId: string,
+    form: HTMLFormElement,
+    requestResubmission = false,
+  ) {
     const f = new FormData(form);
     const rawMarks = String(f.get("marks") ?? "").trim();
     const remarks = String(f.get("remarks") ?? "").trim();
 
-    if (!rawMarks && !remarks) {
+    // Sending work back without saying why is not feedback.
+    if (requestResubmission && !remarks) {
+      toast.error("Say what needs changing before sending it back.");
+      return;
+    }
+    if (!requestResubmission && !rawMarks && !remarks) {
       toast.error("Add a mark or a remark before saving.");
       return;
     }
@@ -56,6 +83,7 @@ export function ReviewQueue({
             student_id: studentId,
             marks: rawMarks === "" ? null : Number(rawMarks),
             remarks: remarks || null,
+            request_resubmission: requestResubmission,
           }),
         },
       );
@@ -64,7 +92,11 @@ export function ReviewQueue({
         toast.error(body.error ?? "Could not save.");
         return;
       }
-      toast.success("Saved — the student has been notified.");
+      toast.success(
+        requestResubmission
+          ? "Sent back — the student has been notified."
+          : "Saved — the student has been notified.",
+      );
       setOpenId(null);
       router.refresh();
     } catch {
@@ -85,9 +117,75 @@ export function ReviewQueue({
     );
   }
 
+  const visible = rows.filter((row) => {
+    const matchesQuery =
+      !query.trim() ||
+      `${row.full_name ?? ""} ${row.email}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase());
+    if (!matchesQuery) return false;
+
+    switch (filter) {
+      case "all": return true;
+      case "not_started": return !row.submitted_at;
+      // "Awaiting" is the working queue: handed in and not yet marked,
+      // whether or not the AI has finished.
+      case "awaiting":
+        return row.submitted_at && (row.status === "submitted" || row.status === "ai_graded");
+      default: return row.status === filter;
+    }
+  });
+
   return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        {FILTERS.map((f) => {
+          const count =
+            f.value === "all"
+              ? rows.length
+              : f.value === "not_started"
+                ? rows.filter((r) => !r.submitted_at).length
+                : f.value === "awaiting"
+                  ? rows.filter((r) => r.submitted_at && (r.status === "submitted" || r.status === "ai_graded")).length
+                  : rows.filter((r) => r.status === f.value).length;
+          return (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setFilter(f.value)}
+              aria-pressed={filter === f.value}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs transition-colors",
+                filter === f.value
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {f.label}
+              <span className="ml-1.5 tabular opacity-70">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search by name or email…"
+        aria-label="Search students"
+        className="w-full max-w-xs rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+      />
+
+      {visible.length === 0 ? (
+        <Card>
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            Nothing matches this filter.
+          </CardContent>
+        </Card>
+      ) : null}
+
     <ul className="space-y-3">
-      {rows.map((row) => {
+      {visible.map((row) => {
         const open = openId === row.user_id;
         const notStarted = !row.submitted_at;
         const reviewed = row.status === "reviewed";
@@ -118,6 +216,7 @@ export function ReviewQueue({
                         ? "not started"
                         : `submitted ${timeAgo(row.submitted_at!)}`}
                       {row.is_late ? " · late" : ""}
+                      {row.attempt_number > 1 ? ` · attempt ${row.attempt_number}` : ""}
                     </p>
                   </div>
 
@@ -134,10 +233,15 @@ export function ReviewQueue({
                         ? `${row.faculty_marks}${maxMarks ? `/${maxMarks}` : ""}`
                         : "reviewed"}
                     </Badge>
+                  ) : row.status === "resubmission_requested" ? (
+                    <Badge variant="outline" className="shrink-0">
+                      <RotateCcw className="mr-1 size-3" />
+                      sent back
+                    </Badge>
                   ) : notStarted ? null : (
                     <Badge variant="warning" className="shrink-0">
                       <Clock className="mr-1 size-3" />
-                      to mark
+                      {row.status === "ai_graded" ? "to mark" : "grading"}
                     </Badge>
                   )}
 
@@ -214,12 +318,29 @@ export function ReviewQueue({
                         />
                       </div>
 
-                      <Button type="submit" size="sm" disabled={busy === row.user_id}>
-                        {busy === row.user_id ? (
-                          <Loader2 className="animate-spin" />
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="submit" size="sm" disabled={busy === row.user_id}>
+                          {busy === row.user_id ? (
+                            <Loader2 className="animate-spin" />
+                          ) : null}
+                          {reviewed ? "Update" : "Save and notify"}
+                        </Button>
+                        {allowResubmission ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={busy === row.user_id}
+                            onClick={(e) => {
+                              const form = (e.currentTarget as HTMLElement).closest("form");
+                              if (form) void save(row.user_id, form, true);
+                            }}
+                          >
+                            <RotateCcw className="size-4" />
+                            Ask for another attempt
+                          </Button>
                         ) : null}
-                        {reviewed ? "Update" : "Save and notify"}
-                      </Button>
+                      </div>
                     </form>
                   </div>
                 ) : null}
@@ -229,5 +350,6 @@ export function ReviewQueue({
         );
       })}
     </ul>
+    </div>
   );
 }

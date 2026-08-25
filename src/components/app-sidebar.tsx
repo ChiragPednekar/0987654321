@@ -66,7 +66,7 @@ const GROUPS: { heading: string; items: Item[] }[] = [
   {
     heading: "Staff",
     items: [
-      { href: "/teach", label: "Teaching", icon: ClipboardCheck },
+      { href: "/teacher", label: "Teaching", icon: ClipboardCheck },
       { href: "/institution", label: "Placement", icon: GraduationCap },
       { href: "/recruiter", label: "Recruiter", icon: Building2, role: "recruiter" },
       { href: "/admin", label: "Admin", icon: Users, role: "admin" },
@@ -108,7 +108,7 @@ export function AppSidebar({
     ...group,
     items: group.items.filter((item) => {
       if (item.href === "/institution") return isInstitutionStaff;
-      if (item.href === "/teach") return isTeacher;
+      if (item.href === "/teacher") return isTeacher;
       return !item.role || item.role === role;
     }),
   })).filter((group) => group.items.length > 0);

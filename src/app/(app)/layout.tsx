@@ -50,12 +50,18 @@ export default async function AppLayout({
         .in("role", ["owner", "staff"]);
       isInstitutionStaff = (staffRows ?? 0) > 0;
 
-      const { count: taught } = await admin
-        .from("classroom_members")
-        .select("user_id", { count: "exact", head: true })
-        .eq("user_id", profile.id)
-        .eq("role", "teacher");
-      isTeacher = (taught ?? 0) > 0;
+      // The platform role is the gate. Batch ownership is kept as a fallback
+      // so anyone already teaching keeps the link if their role is not set yet.
+      if (profile.role === "teacher" || profile.role === "admin") {
+        isTeacher = true;
+      } else {
+        const { count: taught } = await admin
+          .from("classroom_members")
+          .select("user_id", { count: "exact", head: true })
+          .eq("user_id", profile.id)
+          .eq("role", "teacher");
+        isTeacher = (taught ?? 0) > 0;
+      }
     }
   }
 

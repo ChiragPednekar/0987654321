@@ -1118,6 +1118,7 @@ export type AssignmentReviewRow = {
   answer: string | null;
   submitted_at: string | null;
   is_late: boolean;
+  attempt_number: number;
   status: AssignmentStatus | null;
   ai_score: number | null;
   ai_max: number | null;
