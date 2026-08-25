@@ -45,7 +45,7 @@ export function AssignCaseForm({ classroomId }: { classroomId: string }) {
     return () => clearTimeout(timer);
   }, [query]);
 
-  async function assign(caseId: string, dueAt: string) {
+  async function assign(caseId: string, dueAt: string, maxMarks: string) {
     setBusy(true);
     try {
       const response = await fetch(`/api/classrooms/${classroomId}/assignments`, {
@@ -54,6 +54,8 @@ export function AssignCaseForm({ classroomId }: { classroomId: string }) {
         body: JSON.stringify({
           case_id: caseId,
           due_at: dueAt ? new Date(dueAt).toISOString() : null,
+          // Blank means practice only — the assignment carries no marks.
+          max_marks: maxMarks ? Number(maxMarks) : null,
         }),
       });
       const payload = await response.json();
@@ -93,9 +95,18 @@ export function AssignCaseForm({ classroomId }: { classroomId: string }) {
             autoComplete="off"
           />
         </div>
-        <div>
-          <Label htmlFor="due">Due date (optional)</Label>
-          <Input id="due" type="date" />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="due">Due date</Label>
+            <Input id="due" type="date" />
+          </div>
+          <div>
+            <Label htmlFor="max-marks">Out of</Label>
+            <Input id="max-marks" type="number" min={1} step="0.5" placeholder="20" />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Blank = practice
+            </p>
+          </div>
         </div>
 
         <ul className="space-y-1">
@@ -107,7 +118,10 @@ export function AssignCaseForm({ classroomId }: { classroomId: string }) {
                 onClick={() => {
                   const due = (document.getElementById("due") as HTMLInputElement)
                     ?.value;
-                  void assign(hit.id, due);
+                  const marks = (
+                    document.getElementById("max-marks") as HTMLInputElement
+                  )?.value;
+                  void assign(hit.id, due, marks);
                 }}
                 className="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
               >

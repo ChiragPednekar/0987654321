@@ -494,6 +494,12 @@ export interface Database {
         Update: Partial<ClassroomMemberRow>;
         Relationships: [];
       };
+      assignment_submissions: {
+        Row: AssignmentSubmissionRow;
+        Insert: Partial<AssignmentSubmissionRow>;
+        Update: Partial<AssignmentSubmissionRow>;
+        Relationships: [];
+      };
       classroom_assignments: {
         Row: ClassroomAssignmentRow;
         Insert: Partial<ClassroomAssignmentRow>;
@@ -907,6 +913,14 @@ export interface Database {
         };
         Returns: InstitutionCommercialsRow[];
       };
+      assignment_review_queue: {
+        Args: { p_assignment: string };
+        Returns: AssignmentReviewRow[];
+      };
+      classroom_assignment_stats: {
+        Args: { p_classroom: string };
+        Returns: ClassroomAssignmentStatsRow[];
+      };
       quota_status: {
         Args: {
           p_user: string;
@@ -1030,7 +1044,53 @@ export type ClassroomAssignmentRow = {
   case_id: string;
   due_at: string | null;
   note: string | null;
+  /** Null means practice only — the assignment carries no marks. */
+  max_marks: number | null;
   created_at: string;
+};
+
+export type AssignmentStatus = "submitted" | "reviewed";
+
+export type AssignmentSubmissionRow = {
+  id: string;
+  assignment_id: string;
+  user_id: string;
+  submission_id: string | null;
+  status: AssignmentStatus;
+  submitted_at: string;
+  is_late: boolean;
+  faculty_marks: number | null;
+  faculty_remarks: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+};
+
+/** One row of the faculty review queue (public.assignment_review_queue). */
+export type AssignmentReviewRow = {
+  user_id: string;
+  full_name: string | null;
+  email: string;
+  submission_id: string | null;
+  answer: string | null;
+  submitted_at: string | null;
+  is_late: boolean;
+  status: AssignmentStatus | null;
+  ai_score: number | null;
+  ai_max: number | null;
+  ai_percentage: number | null;
+  faculty_marks: number | null;
+  faculty_remarks: string | null;
+  reviewed_at: string | null;
+};
+
+/** Per-assignment counts (public.classroom_assignment_stats). */
+export type ClassroomAssignmentStatsRow = {
+  assignment_id: string;
+  enrolled: number;
+  submitted: number;
+  reviewed: number;
+  avg_ai: number | null;
+  avg_marks: number | null;
 };
 
 // --------------------------------------------------------------- §10 groups --

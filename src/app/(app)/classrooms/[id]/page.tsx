@@ -6,6 +6,7 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AssignCaseForm } from "@/components/classroom/assign-case-form";
+import { StudentAssignmentStatus } from "@/components/classroom/student-assignment-status";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { Difficulty, Domain } from "@/lib/types/database";
@@ -33,8 +34,12 @@ export default async function ClassroomPage({ params }: PageProps) {
   // the existence of a classroom is itself private.
   if (!room) notFound();
 
-  const [{ data: membership }, { data: roster }, { data: assignments }] =
-    await Promise.all([
+  const [
+    { data: membership },
+    { data: roster },
+    { data: assignments },
+    { data: myWork },
+  ] = await Promise.all([
       supabase
         .from("classroom_members")
         .select("role")
@@ -47,12 +52,22 @@ export default async function ClassroomPage({ params }: PageProps) {
         .eq("classroom_id", id),
       supabase
         .from("classroom_assignments")
-        .select("id, due_at, note, cases(slug, title, domain, difficulty)")
+        .select("id, due_at, note, max_marks, cases(slug, title, domain, difficulty)")
         .eq("classroom_id", id)
         .order("due_at", { ascending: true }),
+      // RLS limits this to the viewer's own rows, so a student sees their
+      // status and nobody else's.
+      supabase
+        .from("assignment_submissions")
+        .select("assignment_id, status, faculty_marks, faculty_remarks, is_late, submitted_at")
+        .eq("user_id", profile.id),
     ]);
 
   const isTeacher = membership?.role === "teacher";
+
+  const mine = new Map(
+    (myWork ?? []).map((w) => [w.assignment_id, w]),
+  );
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -113,6 +128,25 @@ export default async function ClassroomPage({ params }: PageProps) {
                     {row.note ? (
                       <span className="text-xs text-muted-foreground">{row.note}</span>
                     ) : null}
+                    {row.max_marks ? (
+                      <span className="text-xs text-muted-foreground tabular">
+                        out of {row.max_marks}
+                      </span>
+                    ) : null}
+
+                    {isTeacher ? (
+                      <Link
+                        href={`/teach/${row.id}`}
+                        className="text-xs underline underline-offset-4"
+                      >
+                        Review submissions
+                      </Link>
+                    ) : (
+                      <StudentAssignmentStatus
+                        work={mine.get(row.id) ?? null}
+                        maxMarks={row.max_marks ? Number(row.max_marks) : null}
+                      />
+                    )}
                   </li>
                 );
               })}

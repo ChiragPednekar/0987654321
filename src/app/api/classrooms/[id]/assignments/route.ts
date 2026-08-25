@@ -7,6 +7,8 @@ const bodySchema = z.object({
   case_id: z.string().uuid(),
   due_at: z.string().datetime().optional().nullable(),
   note: z.string().trim().max(500).optional(),
+  // Null means practice only — the assignment carries no marks.
+  max_marks: z.number().positive().max(1000).optional().nullable(),
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -58,6 +60,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       case_id: body.case_id,
       due_at: body.due_at ?? null,
       note: body.note ?? null,
+      max_marks: body.max_marks ?? null,
     },
     { onConflict: "classroom_id,case_id" },
   );

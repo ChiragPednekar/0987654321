@@ -8,6 +8,7 @@ import {
   BookMarked,
   Building2,
   ChevronLeft,
+  ClipboardCheck,
   GraduationCap,
   LayoutDashboard,
   Library,
@@ -65,6 +66,7 @@ const GROUPS: { heading: string; items: Item[] }[] = [
   {
     heading: "Staff",
     items: [
+      { href: "/teach", label: "Teaching", icon: ClipboardCheck },
       { href: "/institution", label: "Placement", icon: GraduationCap },
       { href: "/recruiter", label: "Recruiter", icon: Building2, role: "recruiter" },
       { href: "/admin", label: "Admin", icon: Users, role: "admin" },
@@ -75,10 +77,13 @@ const GROUPS: { heading: string; items: Item[] }[] = [
 export function AppSidebar({
   role,
   isInstitutionStaff = false,
+  isTeacher = false,
 }: {
   role: UserRole | null;
   /** Placement-cell staff on a campus licence. */
   isInstitutionStaff?: boolean;
+  /** Teaches at least one batch. */
+  isTeacher?: boolean;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = React.useState(false);
@@ -103,6 +108,7 @@ export function AppSidebar({
     ...group,
     items: group.items.filter((item) => {
       if (item.href === "/institution") return isInstitutionStaff;
+      if (item.href === "/teach") return isTeacher;
       return !item.role || item.role === role;
     }),
   })).filter((group) => group.items.length > 0);
