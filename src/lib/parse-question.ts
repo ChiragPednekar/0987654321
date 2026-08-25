@@ -92,6 +92,15 @@ function sniff(name: string, bytes: Uint8Array): "docx" | "text" {
   return "text";
 }
 
+/**
+ * `convertToMarkdown` ships in mammoth but is missing from its type
+ * definitions (1.12.1). Declared narrowly here rather than reaching for `any`,
+ * so the call site stays typed.
+ */
+type MammothMarkdown = {
+  convertToMarkdown(input: { buffer: Buffer }): Promise<{ value: string }>;
+};
+
 async function readDocx(bytes: Uint8Array): Promise<string> {
   try {
     // convertToMarkdown, not extractRawText: Word carries section headings as
@@ -99,9 +108,9 @@ async function readDocx(bytes: Uint8Array): Promise<string> {
     // document with a proper "Instructions" heading arrived as an undecorated
     // line and fell into the scenario. Markdown keeps the structure as `#`
     // without producing HTML, which is markup nobody asked to render.
-    const result = await mammoth.convertToMarkdown({
-      buffer: Buffer.from(bytes),
-    });
+    const result = await (mammoth as unknown as MammothMarkdown).convertToMarkdown(
+      { buffer: Buffer.from(bytes) },
+    );
     return result.value;
   } catch {
     throw new UploadError(
