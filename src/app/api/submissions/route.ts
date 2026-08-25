@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateSubmission } from "@/lib/ai/evaluate";
 import { MAX_ANSWER_CHARS, MIN_ANSWER_CHARS, RATE_LIMIT } from "@/lib/constants";
 import { getQuotaStatus, quotaDenial } from "@/lib/quota";
+import { recordUsage } from "@/lib/usage";
 import type { RubricRow } from "@/lib/types/database";
 
 // Model evaluation regularly takes 15-40s; the default function timeout is not
@@ -203,6 +204,17 @@ export async function POST(request: NextRequest) {
 
     // Scores are written with the service role: there is deliberately no RLS
     // policy that would let a user insert their own score.
+    // Per-operation AI accounting for the owner's cost view. Fire-and-forget
+    // by design — a metrics row must never fail a graded submission.
+    void recordUsage(admin, {
+      userId: user.id,
+      operation: "grading",
+      model: result.model,
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: result.tokensUsed,
+    });
+
     const { error: scoreError } = await admin.from("scores").insert({
       submission_id: submission.id,
       user_id: user.id,

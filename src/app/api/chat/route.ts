@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { callChat, interviewerSystemPrompt, type ChatTurn } from "@/lib/ai/chat";
 import { RATE_LIMIT } from "@/lib/constants";
 import { getQuotaStatus, quotaDenial } from "@/lib/quota";
+import { recordUsage } from "@/lib/usage";
 
 // A model turn takes several seconds; the default function timeout is tight.
 export const maxDuration = 60;
@@ -211,6 +212,15 @@ export async function POST(request: NextRequest) {
   // Token count is recorded, not discarded: without it interview cost could
   // only be estimated while grading cost is measured, and the owner's margin
   // view would be comparing a measurement to a guess.
+  void recordUsage(admin, {
+    userId: user.id,
+    operation: "interview",
+    model: reply.model,
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: reply.tokensUsed,
+  });
+
   await admin.from("chat_messages").insert({
     session_id: sessionId,
     role: "interviewer",

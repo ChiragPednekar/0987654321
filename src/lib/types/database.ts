@@ -22,7 +22,7 @@ export type CaseFormat =
   | "model"
   | "drill"
   | "debug";
-export type UserRole = "student" | "admin" | "recruiter";
+export type UserRole = "student" | "teacher" | "admin" | "recruiter";
 export type SubmissionStatus =
   | "draft"
   | "submitted"
@@ -122,6 +122,8 @@ export type CaseRow = {
   category_id: string | null;
   company_track: string | null;
   format: CaseFormat;
+  visibility: CaseVisibility;
+  owner_classroom_id: string | null;
   /** The question style a firm is known for. Implies no affiliation. */
   firm_style: string | null;
   is_pro: boolean;
@@ -492,6 +494,18 @@ export interface Database {
         Row: ClassroomMemberRow;
         Insert: Partial<ClassroomMemberRow>;
         Update: Partial<ClassroomMemberRow>;
+        Relationships: [];
+      };
+      usage_events: {
+        Row: UsageEventRow;
+        Insert: Partial<UsageEventRow>;
+        Update: Partial<UsageEventRow>;
+        Relationships: [];
+      };
+      audit_log: {
+        Row: AuditLogRow;
+        Insert: Partial<AuditLogRow>;
+        Update: Partial<AuditLogRow>;
         Relationships: [];
       };
       assignment_submissions: {
@@ -913,6 +927,19 @@ export interface Database {
         };
         Returns: InstitutionCommercialsRow[];
       };
+      platform_overview: {
+        Args: { p_days?: number };
+        Returns: PlatformOverviewRow[];
+      };
+      admin_user_list: {
+        Args: {
+          p_search?: string | null;
+          p_role?: string | null;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: AdminUserRow[];
+      };
       assignment_review_queue: {
         Args: { p_assignment: string };
         Returns: AssignmentReviewRow[];
@@ -1042,14 +1069,29 @@ export type ClassroomAssignmentRow = {
   id: string;
   classroom_id: string;
   case_id: string;
+  title: string | null;
+  instructions: string | null;
+  starts_at: string | null;
   due_at: string | null;
   note: string | null;
+  allow_resubmission: boolean;
+  max_attempts: number | null;
+  is_published: boolean;
+  created_by: string | null;
+  updated_at: string;
   /** Null means practice only — the assignment carries no marks. */
   max_marks: number | null;
   created_at: string;
 };
 
-export type AssignmentStatus = "submitted" | "reviewed";
+/** The full review lifecycle a teacher filters on. */
+export type AssignmentStatus =
+  | "submitted"
+  | "ai_graded"
+  | "reviewed"
+  | "resubmission_requested";
+
+export type CaseVisibility = "platform" | "private";
 
 export type AssignmentSubmissionRow = {
   id: string;
@@ -1059,6 +1101,8 @@ export type AssignmentSubmissionRow = {
   status: AssignmentStatus;
   submitted_at: string;
   is_late: boolean;
+  attempt_number: number;
+  returned_at: string | null;
   faculty_marks: number | null;
   faculty_remarks: string | null;
   reviewed_by: string | null;
@@ -1220,4 +1264,68 @@ export type InstitutionCommercialsRow = {
   grading_tokens: number;
   interview_tokens: number;
   ai_cost_inr: number;
+};
+
+// ------------------------------------------------------ usage and audit --
+
+export type UsageOperation = "grading" | "interview";
+
+export type UsageEventRow = {
+  id: string;
+  user_id: string | null;
+  institution_id: string | null;
+  operation: UsageOperation;
+  model: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  cost_inr: number;
+  created_at: string;
+};
+
+export type AuditLogRow = {
+  id: string;
+  actor_id: string | null;
+  actor_email: string | null;
+  action: string;
+  resource: string;
+  resource_id: string | null;
+  metadata: Json;
+  created_at: string;
+};
+
+/** Platform-wide operational totals (public.platform_overview). */
+export type PlatformOverviewRow = {
+  total_users: number;
+  students: number;
+  teachers: number;
+  admins: number;
+  active_users: number;
+  new_users: number;
+  never_started: number;
+  total_institutions: number;
+  active_licences: number;
+  expired_licences: number;
+  suspended_licences: number;
+  seats_licensed: number;
+  seats_used: number;
+  gradings: number;
+  interviews: number;
+  total_tokens: number;
+  ai_cost_inr: number;
+};
+
+/** One row of the paginated admin user list (public.admin_user_list). */
+export type AdminUserRow = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: UserRole;
+  plan: PlanTier;
+  institution: string | null;
+  cases_solved: number;
+  ce: number;
+  last_active: string | null;
+  created_at: string;
+  total_count: number;
 };
