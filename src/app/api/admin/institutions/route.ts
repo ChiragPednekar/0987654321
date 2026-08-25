@@ -18,6 +18,13 @@ const bodySchema = z.object({
   licence_starts_on: z.string().date().optional().nullable(),
   licence_ends_on: z.string().date().optional().nullable(),
   grants_pro: z.boolean().default(true),
+  // Contract terms. Nullable because a licence can be created before the
+  // commercials are settled.
+  contract_value_inr: z.number().int().min(0).optional().nullable(),
+  billing_contact_email: z.string().email().optional().nullable(),
+  grading_quota: z.number().int().min(0).optional().nullable(),
+  interview_quota: z.number().int().min(0).optional().nullable(),
+  notes: z.string().trim().max(4_000).optional().nullable(),
   /** Email of the placement-cell contact who gets staff access. */
   staff_email: z.string().email().optional(),
 });
@@ -71,6 +78,11 @@ export async function POST(request: NextRequest) {
       licence_starts_on: body.licence_starts_on ?? null,
       licence_ends_on: body.licence_ends_on ?? null,
       grants_pro: body.grants_pro,
+      contract_value_inr: body.contract_value_inr ?? null,
+      billing_contact_email: body.billing_contact_email ?? null,
+      grading_quota: body.grading_quota ?? null,
+      interview_quota: body.interview_quota ?? null,
+      notes: body.notes ?? null,
     })
     .select("id, slug, name")
     .single();

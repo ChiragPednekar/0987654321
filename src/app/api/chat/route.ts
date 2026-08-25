@@ -208,10 +208,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Token count is recorded, not discarded: without it interview cost could
+  // only be estimated while grading cost is measured, and the owner's margin
+  // view would be comparing a measurement to a guess.
   await admin.from("chat_messages").insert({
     session_id: sessionId,
     role: "interviewer",
     content: reply.content,
+    tokens_used: reply.tokensUsed,
+    model: reply.model,
   });
 
   const turnCount = turns.length + 1;

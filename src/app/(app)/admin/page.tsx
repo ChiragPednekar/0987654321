@@ -1,8 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { BookOpen, FileText, TrendingUp, Users } from "lucide-react";
+import {
+  BookOpen,
+  Building2,
+  Cpu,
+  FileText,
+  IndianRupee,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
+import { MODEL_RATES, PLATFORM_INFRA_INR_PER_YEAR } from "@/lib/constants";
+import type { InstitutionCommercialsRow } from "@/lib/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,21 +52,95 @@ export default async function AdminPage() {
       .limit(5),
   ]);
 
+  // Business view. Optional enrichment — without a service-role key the page
+  // still renders as the content-only admin it was before.
+  let licences: InstitutionCommercialsRow[] = [];
+  let activeUsers30d = 0;
+  const svc = createAdminClientOrNull();
+  if (svc) {
+    const [{ data: rows }, { data: recent }] = await Promise.all([
+      svc.rpc("institution_commercials", {
+        p_in_rate_per_million: MODEL_RATES.inputPerMillionUsd,
+        p_out_rate_per_million: MODEL_RATES.outputPerMillionUsd,
+        p_usd_inr: MODEL_RATES.usdInr,
+      }),
+      svc
+        .from("scores")
+        .select("user_id")
+        .gte(
+          "evaluated_at",
+          new Date(Date.now() - 30 * 86_400_000).toISOString(),
+        ),
+    ]);
+    licences = (rows ?? []) as InstitutionCommercialsRow[];
+    activeUsers30d = new Set((recent ?? []).map((r) => r.user_id)).size;
+  }
+
+  const liveLicences = licences.filter(
+    (l) =>
+      !l.is_suspended &&
+      (!l.licence_ends_on || new Date(l.licence_ends_on) >= new Date()),
+  );
+  const arr = liveLicences.reduce((a, l) => a + (l.contract_value_inr ?? 0), 0);
+  const aiSpend = licences.reduce((a, l) => a + Number(l.ai_cost_inr), 0);
+  const rupees = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage cases, rubrics and contests.
+            Licences, revenue, usage and content.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/cases/new">New case</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/admin/licences">
+              <Building2 className="size-4" />
+              Licences
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/cases/new">New case</Link>
+          </Button>
+        </div>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      {svc ? (
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label="Annual contract value"
+            value={rupees(arr)}
+            sublabel={`${liveLicences.length} live ${liveLicences.length === 1 ? "licence" : "licences"}`}
+            icon={IndianRupee}
+          />
+          <StatCard
+            label="AI spend to date"
+            value={rupees(aiSpend)}
+            sublabel={`+ ${rupees(PLATFORM_INFRA_INR_PER_YEAR)}/yr infra`}
+            icon={Cpu}
+          />
+          <StatCard
+            label="Gross margin"
+            value={
+              arr > 0
+                ? `${Math.round(((arr - aiSpend - PLATFORM_INFRA_INR_PER_YEAR) / arr) * 100)}%`
+                : "—"
+            }
+            sublabel="after AI and infra"
+            icon={TrendingUp}
+          />
+          <StatCard
+            label="Active students"
+            value={formatNumber(activeUsers30d)}
+            sublabel="graded something in 30 days"
+            icon={Users}
+          />
+        </div>
+      ) : null}
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <StatCard
           label="Cases"
           value={formatNumber(caseCount ?? 0)}

@@ -899,6 +899,14 @@ export interface Database {
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       has_pro: { Args: { p_user: string }; Returns: boolean };
+      institution_commercials: {
+        Args: {
+          p_in_rate_per_million: number;
+          p_out_rate_per_million: number;
+          p_usd_inr: number;
+        };
+        Returns: InstitutionCommercialsRow[];
+      };
       quota_status: {
         Args: {
           p_user: string;
@@ -990,6 +998,8 @@ export type ChatMessageRow = {
   session_id: string;
   role: ChatRole;
   content: string;
+  tokens_used: number;
+  model: string | null;
   created_at: string;
 };
 
@@ -1090,6 +1100,10 @@ export type InstitutionRow = {
   grants_pro: boolean;
   grading_quota: number | null;
   interview_quota: number | null;
+  contract_value_inr: number | null;
+  billing_contact_email: string | null;
+  notes: string | null;
+  is_suspended: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -1129,4 +1143,21 @@ export type QuotaStatusRow = {
   interview_limit: number;
   gradings_used: number;
   interviews_used: number;
+};
+
+/** One licence's commercials — measured usage and cost against contract value. */
+export type InstitutionCommercialsRow = {
+  institution_id: string;
+  name: string;
+  seats_licensed: number;
+  seats_used: number;
+  active_30d: number;
+  contract_value_inr: number | null;
+  licence_ends_on: string | null;
+  is_suspended: boolean;
+  gradings: number;
+  interviews: number;
+  grading_tokens: number;
+  interview_tokens: number;
+  ai_cost_inr: number;
 };

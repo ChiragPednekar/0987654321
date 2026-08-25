@@ -144,6 +144,25 @@ export const QUOTA = {
 export type QuotaTier = "free" | "pro";
 
 /**
+ * Model list prices, for the owner's margin view.
+ *
+ * Google's published rates for gemini-3.6-flash. They roughly double on
+ * 2027-01-01 ($1.50 / $7.50), so this is a date-sensitive constant — when that
+ * lands, change it here and every cost figure in the admin area follows.
+ *
+ * USD_INR is a working assumption, not a live rate. Everything derived from it
+ * is labelled as approximate in the UI for that reason.
+ */
+export const MODEL_RATES = {
+  inputPerMillionUsd: 0.75,
+  outputPerMillionUsd: 3.75,
+  usdInr: 88,
+} as const;
+
+/** Fixed platform infrastructure, so margin is not flattered by omitting it. */
+export const PLATFORM_INFRA_INR_PER_YEAR = (20 + 25) * 12 * MODEL_RATES.usdInr;
+
+/**
  * The structured answer format.
  *
  * A single textarea invites a wall of prose; naming the parts pushes students
