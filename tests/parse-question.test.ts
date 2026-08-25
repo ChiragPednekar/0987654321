@@ -43,12 +43,13 @@ function extractFields(raw: string): ParsedQuestion {
       .replace(/:$/, "")
       .trim();
     if (!bare || bare.length > 60) return null;
-    const looksLikeHeading =
+    const decorated =
       /^#{1,6}\s/.test(line) ||
       /^\*\*.+\*\*$/.test(line.trim()) ||
       line.trim().endsWith(":") ||
       (bare === bare.toUpperCase() && /[A-Z]/.test(bare));
-    if (!looksLikeHeading) return null;
+    const bareSectionName = bare.length <= 30;
+    if (!decorated && !bareSectionName) return null;
     for (const s of SECTIONS) if (s.patterns.some((p) => p.test(bare))) return s.field;
     return null;
   }
@@ -238,6 +239,21 @@ describe("things it must not get wrong", () => {
 
   it("rejects an empty document", () => {
     expect(() => extractFields("   \n\n  ")).toThrow(/empty/i);
+  });
+
+  it("reads an undecorated section name, as a Word export produces", () => {
+    const parsed = extractFields(
+      "Margin Case\n\nMargin fell seven points.\n\nInstructions\n\nFind the driver.",
+    );
+    expect(parsed.instructions).toBe("Find the driver.");
+    expect(parsed.scenario).not.toContain("Find the driver");
+  });
+
+  it("still refuses a long line that merely starts with a section word", () => {
+    const parsed = extractFields(
+      "Ops Case\n\nTask forces were formed in 2019 to review the supply chain, and they reported in 2021.",
+    );
+    expect(parsed.instructions).toBeNull();
   });
 
   it("rejects a document that is only headings", () => {

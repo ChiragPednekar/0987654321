@@ -94,9 +94,12 @@ function sniff(name: string, bytes: Uint8Array): "docx" | "text" {
 
 async function readDocx(bytes: Uint8Array): Promise<string> {
   try {
-    // extractRawText, not convertToHtml: the editor takes plain text, and HTML
-    // from an untrusted document is markup nobody asked to render.
-    const result = await mammoth.extractRawText({
+    // convertToMarkdown, not extractRawText: Word carries section headings as
+    // paragraph *styles*, and extractRawText drops styling entirely — so a
+    // document with a proper "Instructions" heading arrived as an undecorated
+    // line and fell into the scenario. Markdown keeps the structure as `#`
+    // without producing HTML, which is markup nobody asked to render.
+    const result = await mammoth.convertToMarkdown({
       buffer: Buffer.from(bytes),
     });
     return result.value;
@@ -153,13 +156,19 @@ export function extractFields(raw: string): ParsedQuestion {
     // A heading is short. A paragraph that happens to begin with "Task" is not.
     if (!bare || bare.length > 60) return null;
 
-    const looksLikeHeading =
+    const decorated =
       /^#{1,6}\s/.test(line) ||
       /^\*\*.+\*\*$/.test(line.trim()) ||
       line.trim().endsWith(":") ||
       (bare === bare.toUpperCase() && /[A-Z]/.test(bare));
 
-    if (!looksLikeHeading) return null;
+    // An undecorated line still counts if it is short and reads as nothing but
+    // a section name — "Instructions" on its own line is a heading in any
+    // document, and a plain-text export of a Word file has no other marker.
+    // The length cap is what keeps "Task forces were formed in 2019…" out.
+    const bareSectionName = bare.length <= 30;
+
+    if (!decorated && !bareSectionName) return null;
 
     for (const section of SECTIONS) {
       if (section.patterns.some((p) => p.test(bare))) return section.field;
@@ -183,7 +192,9 @@ export function extractFields(raw: string): ParsedQuestion {
     }
 
     // A first line under 120 chars with no terminal full stop is almost always
-    // a title. One that ends in a full stop is almost always prose.
+    // a title. One that ends in a full stop is almost always prose. Word
+    // documents often carry the title as a plain paragraph, so this is the
+    // only thing that catches it.
     if (line.length <= 120 && !/[.!?]$/.test(line)) {
       title = line.replace(/^\*\*(.+)\*\*$/, "$1").trim();
       bodyStart = i + 1;
