@@ -65,13 +65,21 @@ const GROUPS: { heading: string; items: Item[] }[] = [
   {
     heading: "Staff",
     items: [
+      { href: "/institution", label: "Placement", icon: GraduationCap },
       { href: "/recruiter", label: "Recruiter", icon: Building2, role: "recruiter" },
       { href: "/admin", label: "Admin", icon: Users, role: "admin" },
     ],
   },
 ];
 
-export function AppSidebar({ role }: { role: UserRole | null }) {
+export function AppSidebar({
+  role,
+  isInstitutionStaff = false,
+}: {
+  role: UserRole | null;
+  /** Placement-cell staff on a campus licence. */
+  isInstitutionStaff?: boolean;
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = React.useState(false);
   // Rendered expanded on the server; the stored preference is applied after
@@ -93,7 +101,10 @@ export function AppSidebar({ role }: { role: UserRole | null }) {
 
   const groups = GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.role || item.role === role),
+    items: group.items.filter((item) => {
+      if (item.href === "/institution") return isInstitutionStaff;
+      return !item.role || item.role === role;
+    }),
   })).filter((group) => group.items.length > 0);
 
   return (

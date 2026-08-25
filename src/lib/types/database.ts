@@ -446,6 +446,18 @@ export interface Database {
           },
         ];
       };
+      institutions: {
+        Row: InstitutionRow;
+        Insert: Partial<InstitutionRow>;
+        Update: Partial<InstitutionRow>;
+        Relationships: [];
+      };
+      institution_members: {
+        Row: InstitutionMemberRow;
+        Insert: Partial<InstitutionMemberRow>;
+        Update: Partial<InstitutionMemberRow>;
+        Relationships: [];
+      };
       model_cells: {
         Row: ModelCellRow;
         Insert: Partial<ModelCellRow>;
@@ -886,6 +898,14 @@ export interface Database {
     };
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
+      has_pro: { Args: { p_user: string }; Returns: boolean };
+      institution_role_of: { Args: { p_institution: string }; Returns: InstitutionRole | null };
+      is_institution_staff: { Args: { p_institution: string }; Returns: boolean };
+      institution_roster: { Args: { p_institution: string }; Returns: InstitutionRosterRow[] };
+      institution_domain_breakdown: {
+        Args: { p_institution: string };
+        Returns: InstitutionDomainRow[];
+      };
       level_for_ce: { Args: { p_ce: number }; Returns: number };
       ce_for_level: { Args: { p_level: number }; Returns: number };
       refresh_leaderboards: { Args: Record<string, never>; Returns: undefined };
@@ -1044,4 +1064,49 @@ export type SubscriptionRow = {
   current_period_end: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// ---------------------------------------------------------- §institutions --
+
+export type InstitutionRole = "owner" | "staff" | "student";
+
+export type InstitutionRow = {
+  id: string;
+  name: string;
+  slug: string;
+  email_domain: string | null;
+  seats_licensed: number;
+  licence_starts_on: string | null;
+  licence_ends_on: string | null;
+  grants_pro: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InstitutionMemberRow = {
+  institution_id: string;
+  user_id: string;
+  role: InstitutionRole;
+  joined_at: string;
+};
+
+/** One row of the placement-cell roster (public.institution_roster). */
+export type InstitutionRosterRow = {
+  user_id: string;
+  full_name: string | null;
+  email: string;
+  cases_solved: number;
+  cases_attempted: number;
+  ce: number;
+  avg_percentage: number | null;
+  last_active: string | null;
+  interviews: number;
+};
+
+/** Cohort performance per domain (public.institution_domain_breakdown). */
+export type InstitutionDomainRow = {
+  domain: Domain;
+  students: number;
+  cases_solved: number;
+  avg_percentage: number | null;
 };

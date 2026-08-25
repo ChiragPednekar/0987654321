@@ -82,14 +82,14 @@ export async function POST(request: NextRequest) {
   // Pro gate. The interviewer is the one feature here with a real marginal
   // cost per use — every turn is a model call — and /pricing already lists
   // "Timed interview simulation" under Pro, so this is what was advertised.
-  // Admins pass so they can review what is being sold.
-  const { data: buyer } = await admin
-    .from("users")
-    .select("plan, role")
-    .eq("id", user.id)
-    .maybeSingle();
+  //
+  // has_pro() covers both routes to access: a retail `users.plan = 'pro'`, and
+  // membership of an institution whose licence is in date. Derived in SQL
+  // rather than checked here so an expiring campus licence needs no cron job —
+  // the day after licence_ends_on it simply stops returning true.
+  const { data: allowed } = await admin.rpc("has_pro", { p_user: user.id });
 
-  if (buyer?.plan !== "pro" && buyer?.role !== "admin") {
+  if (!allowed) {
     return NextResponse.json(
       {
         error:

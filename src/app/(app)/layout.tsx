@@ -4,6 +4,7 @@ import type { NotificationRow } from "@/lib/types/database";
 import { SiteNav } from "@/components/site-nav";
 import { CommandPalette } from "@/components/command-palette";
 import { AppSidebar } from "@/components/app-sidebar";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
 
 export default async function AppLayout({
   children,
@@ -16,6 +17,9 @@ export default async function AppLayout({
   // paint rather than flashing empty and then filling in.
   let notifications: NotificationRow[] = [];
   let unreadCount = 0;
+  // Drives the Placement link. Optional enrichment, so a missing service-role
+  // key hides the link rather than taking the whole shell down.
+  let isInstitutionStaff = false;
 
   if (profile) {
     const supabase = await createClient();
@@ -35,6 +39,16 @@ export default async function AppLayout({
 
     notifications = (data ?? []) as NotificationRow[];
     unreadCount = count ?? 0;
+
+    const admin = createAdminClientOrNull();
+    if (admin) {
+      const { count: staffRows } = await admin
+        .from("institution_members")
+        .select("user_id", { count: "exact", head: true })
+        .eq("user_id", profile.id)
+        .in("role", ["owner", "staff"]);
+      isInstitutionStaff = (staffRows ?? 0) > 0;
+    }
   }
 
   return (
@@ -47,7 +61,10 @@ export default async function AppLayout({
       <CommandPalette />
       {profile ? (
         <div className="flex flex-1">
-          <AppSidebar role={profile.role} />
+          <AppSidebar
+            role={profile.role}
+            isInstitutionStaff={isInstitutionStaff}
+          />
           <main className="min-w-0 flex-1">{children}</main>
         </div>
       ) : (
