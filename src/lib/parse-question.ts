@@ -111,13 +111,26 @@ async function readDocx(bytes: Uint8Array): Promise<string> {
     const result = await (mammoth as unknown as MammothMarkdown).convertToMarkdown(
       { buffer: Buffer.from(bytes) },
     );
-    return result.value;
+    return unescapeMarkdown(result.value);
   } catch {
     throw new UploadError(
       "That Word document could not be read. Try saving it again, or paste the text instead.",
       422,
     );
   }
+}
+
+/**
+ * Undoes mammoth's defensive markdown escaping.
+ *
+ * It escapes any character that *could* be markdown syntax, so ordinary prose
+ * comes back as `mid\\-market retailer\\.` — which renders correctly but is
+ * what the teacher sees while editing. Teachers do not write deliberate
+ * markdown escapes in a case brief, so removing them is a clear win; the worst
+ * case is a literal backslash that was never meant to be there anyway.
+ */
+function unescapeMarkdown(text: string): string {
+  return text.replace(/\\([-._*+#!\[\]()>`])/g, "$1");
 }
 
 /**
@@ -201,10 +214,12 @@ export function extractFields(raw: string): ParsedQuestion {
     }
 
     // A first line under 120 chars with no terminal full stop is almost always
-    // a title. One that ends in a full stop is almost always prose. Word
-    // documents often carry the title as a plain paragraph, so this is the
-    // only thing that catches it.
-    if (line.length <= 120 && !/[.!?]$/.test(line)) {
+    // a title; one that ends in a full stop is almost always prose. Only a
+    // period counts — case titles are very often questions ("Why Are Margins
+    // Falling?"), and rejecting those left every such document untitled.
+    // Word carries the title as a plain paragraph, so this is the only thing
+    // that catches it.
+    if (line.length <= 120 && !/\.$/.test(line)) {
       title = line.replace(/^\*\*(.+)\*\*$/, "$1").trim();
       bodyStart = i + 1;
     }

@@ -64,7 +64,7 @@ function extractFields(raw: string): ParsedQuestion {
       bodyStart = i + 1;
       break;
     }
-    if (line.length <= 120 && !/[.!?]$/.test(line)) {
+    if (line.length <= 120 && !/\.$/.test(line)) {
       title = line.replace(/^\*\*(.+)\*\*$/, "$1").trim();
       bodyStart = i + 1;
     }
@@ -254,6 +254,13 @@ describe("things it must not get wrong", () => {
       "Ops Case\n\nTask forces were formed in 2019 to review the supply chain, and they reported in 2021.",
     );
     expect(parsed.instructions).toBeNull();
+  });
+
+  it("accepts a title that is a question, which case titles often are", () => {
+    const parsed = extractFields(
+      "Northwind Retail: Why Are Margins Falling?\n\nMargin fell seven points.",
+    );
+    expect(parsed.title).toBe("Northwind Retail: Why Are Margins Falling?");
   });
 
   it("rejects a document that is only headings", () => {
