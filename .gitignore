@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the template. It carries only placeholders — verified against
+# .env.local before committing — and it is the only record of which variables a
+# deploy actually needs. Ignoring it meant the Razorpay setup was documented
+# nowhere in the repo.
+!.env.example
 
 # vercel
 .vercel
