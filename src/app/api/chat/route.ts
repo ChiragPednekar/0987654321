@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { callChat, interviewerSystemPrompt, type ChatTurn } from "@/lib/ai/chat";
 import { RATE_LIMIT } from "@/lib/constants";
+import { getQuotaStatus, quotaDenial } from "@/lib/quota";
 
 // A model turn takes several seconds; the default function timeout is tight.
 export const maxDuration = 60;
@@ -87,17 +88,25 @@ export async function POST(request: NextRequest) {
   // membership of an institution whose licence is in date. Derived in SQL
   // rather than checked here so an expiring campus licence needs no cron job —
   // the day after licence_ends_on it simply stops returning true.
-  const { data: allowed } = await admin.rpc("has_pro", { p_user: user.id });
+  const quota = await getQuotaStatus(admin, user.id);
 
-  if (!allowed) {
+  if (!quota.isPro) {
     return NextResponse.json(
       {
-        error:
-          "The live interviewer is part of CaseCode Pro.",
+        error: "The live interviewer is part of CaseCode Pro.",
         upgrade: true,
       },
       { status: 402 },
     );
+  }
+
+  // Counted per session, not per turn: an interview is one unit of work to a
+  // student, and charging them per message would make them terse in exactly
+  // the exchange where they should be talking freely. Only a NEW session
+  // consumes quota, so continuing one already under way is never refused
+  // half-way through.
+  if (!body.session_id && quota.interviewsLeft <= 0) {
+    return NextResponse.json(quotaDenial("interviews", quota), { status: 402 });
   }
 
   const { data: caseData } = await admin

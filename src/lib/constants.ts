@@ -105,8 +105,43 @@ export const MIN_ANSWER_CHARS = 200;
 export const CASES_PER_PAGE = 20;
 export const LEADERBOARD_PAGE_SIZE = 50;
 
-/** Per-user evaluation throttle. */
+/** Per-user evaluation throttle. Stops bursts; says nothing about the year. */
 export const RATE_LIMIT = { windowMs: 60_000, maxEvaluations: 5 } as const;
+
+/**
+ * Annual fair-use quota, measured over a rolling 365 days.
+ *
+ * RATE_LIMIT alone caps 5 evaluations a minute and nothing else, which permits
+ * 7,200 a day — roughly Rs 19,00,000 of model spend from one account in a year.
+ * That is not a limit, it is an unbounded liability sitting behind a
+ * fixed-price contract.
+ *
+ * Measured cost per call on gemini-3.6-flash, worst case (a full 20,000-char
+ * answer: 5,271 input + 1,126 output tokens):
+ *
+ *   graded answer  Rs 0.72        interview (9 turns)  Rs 2.16
+ *
+ * So the Pro ceiling below is a hard Rs 288 of model spend per user per year:
+ *
+ *   250 x 0.72  =  Rs 180
+ *    50 x 2.16  =  Rs 108
+ *
+ * A rolling window rather than a calendar month on purpose. Placement season
+ * is bursty — thirty cases in November and two in June is the pattern worth
+ * encouraging — and a monthly cap would throttle exactly the students the
+ * college is paying for. The contract is annual, so the ceiling is annual.
+ *
+ * Generous by design: 250 graded answers is roughly five a week sustained for a
+ * year, well past what an engaged student reaches. This exists to bound the
+ * tail, not to ration normal use.
+ */
+export const QUOTA = {
+  windowDays: 365,
+  free: { gradings: 60, interviews: 0 },
+  pro: { gradings: 250, interviews: 50 },
+} as const;
+
+export type QuotaTier = "free" | "pro";
 
 /**
  * The structured answer format.

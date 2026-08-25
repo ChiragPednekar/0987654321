@@ -899,6 +899,15 @@ export interface Database {
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       has_pro: { Args: { p_user: string }; Returns: boolean };
+      quota_status: {
+        Args: {
+          p_user: string;
+          p_window_days: number;
+          p_default_gradings: number;
+          p_default_interviews: number;
+        };
+        Returns: QuotaStatusRow[];
+      };
       institution_role_of: { Args: { p_institution: string }; Returns: InstitutionRole | null };
       is_institution_staff: { Args: { p_institution: string }; Returns: boolean };
       institution_roster: { Args: { p_institution: string }; Returns: InstitutionRosterRow[] };
@@ -1079,6 +1088,8 @@ export type InstitutionRow = {
   licence_starts_on: string | null;
   licence_ends_on: string | null;
   grants_pro: boolean;
+  grading_quota: number | null;
+  interview_quota: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -1109,4 +1120,13 @@ export type InstitutionDomainRow = {
   students: number;
   cases_solved: number;
   avg_percentage: number | null;
+};
+
+/** One row of public.quota_status — the annual fair-use ceiling and its usage. */
+export type QuotaStatusRow = {
+  is_pro: boolean;
+  grading_limit: number;
+  interview_limit: number;
+  gradings_used: number;
+  interviews_used: number;
 };

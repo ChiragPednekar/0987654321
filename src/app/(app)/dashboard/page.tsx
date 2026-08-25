@@ -10,6 +10,9 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
+import { getQuotaStatus, type QuotaStatus } from "@/lib/quota";
+import { QuotaCard } from "@/components/quota-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -257,6 +260,12 @@ export default async function DashboardPage() {
     }),
   );
 
+  // Optional enrichment — a missing service-role key hides the allowance card
+  // rather than taking the whole dashboard down.
+  let quota: QuotaStatus | null = null;
+  const quotaAdmin = createAdminClientOrNull();
+  if (quotaAdmin) quota = await getQuotaStatus(quotaAdmin, profile.id);
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -335,6 +344,12 @@ export default async function DashboardPage() {
           <SubmissionHeatmap counts={heatmapCounts} />
         </CardContent>
       </Card>
+
+      {quota ? (
+        <div className="mt-6">
+          <QuotaCard quota={quota} />
+        </div>
+      ) : null}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         {/* -------------------------------------------------- radar --- */}

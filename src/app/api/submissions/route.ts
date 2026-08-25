@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateSubmission } from "@/lib/ai/evaluate";
 import { MAX_ANSWER_CHARS, MIN_ANSWER_CHARS, RATE_LIMIT } from "@/lib/constants";
+import { getQuotaStatus, quotaDenial } from "@/lib/quota";
 import type { RubricRow } from "@/lib/types/database";
 
 // Model evaluation regularly takes 15-40s; the default function timeout is not
@@ -66,8 +67,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ---- load the case and its rubric ---------------------------------------
   const admin = createAdminClient();
+
+  // ---- annual fair-use quota ----------------------------------------------
+  // RATE_LIMIT above stops a burst; this bounds the year. Without it a single
+  // account can run up unbounded model spend behind a fixed-price licence.
+  const quota = await getQuotaStatus(admin, user.id);
+  if (quota.gradingsLeft <= 0) {
+    return NextResponse.json(quotaDenial("gradings", quota), { status: 402 });
+  }
+
+  // ---- load the case and its rubric ---------------------------------------
 
   const { data: caseData, error: caseError } = await admin
     .from("cases")
