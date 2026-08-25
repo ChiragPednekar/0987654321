@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { DOMAINS, DIFFICULTIES } from "@/lib/constants";
+import { QuestionUpload, type ParsedQuestion } from "@/components/teacher/question-upload";
 import { cn } from "@/lib/utils";
 
 interface Criterion {
@@ -43,6 +44,40 @@ export function QuestionEditor({
   const [busy, setBusy] = React.useState(false);
   const [criteria, setCriteria] = React.useState<Criterion[]>(DEFAULT_RUBRIC);
   const [hints, setHints] = React.useState<string[]>([]);
+
+  // Only the fields an upload can fill are controlled. The rest stay
+  // uncontrolled, because nothing outside the form ever needs to set them.
+  const [filled, setFilled] = React.useState({
+    title: "",
+    scenario: "",
+    instructions: "",
+    expected_framework: "",
+    model_answer: "",
+  });
+
+  /**
+   * An upload fills the form; it never publishes. The rubric is deliberately
+   * left alone — the spec requires the teacher to define it, and a guessed
+   * rubric is worse than an empty one because it looks considered.
+   */
+  function applyParsed(parsed: ParsedQuestion) {
+    setFilled({
+      title: parsed.title ?? "",
+      scenario: parsed.scenario,
+      instructions: parsed.instructions ?? "",
+      expected_framework: parsed.expectedFramework ?? "",
+      model_answer: parsed.modelAnswer ?? "",
+    });
+  }
+
+  function field(name: keyof typeof filled) {
+    return {
+      value: filled[name],
+      onChange: (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+      ) => setFilled((prev) => ({ ...prev, [name]: e.target.value })),
+    };
+  }
 
   const total = criteria.reduce((a, c) => a + (Number(c.weight) || 0), 0);
 
@@ -119,7 +154,10 @@ export function QuestionEditor({
   }
 
   return (
-    <form onSubmit={(e) => submit(e, true)} className="space-y-8">
+    <div className="space-y-6">
+      <QuestionUpload onParsed={applyParsed} />
+
+      <form onSubmit={(e) => submit(e, true)} className="space-y-8">
       <section className="space-y-4">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
           Basics
@@ -128,7 +166,8 @@ export function QuestionEditor({
           <div className="sm:col-span-2">
             <Label htmlFor="title">Title</Label>
             <Input id="title" name="title" required minLength={4} maxLength={200}
-              placeholder="Northwind Retail: Why Are Margins Falling?" />
+              placeholder="Northwind Retail: Why Are Margins Falling?"
+              {...field("title")} />
           </div>
           <div>
             <Label htmlFor="classroom_id">Batch</Label>
@@ -181,20 +220,24 @@ export function QuestionEditor({
         <div>
           <Label htmlFor="scenario">Scenario</Label>
           <Textarea id="scenario" name="scenario" required rows={10} minLength={50}
-            placeholder="The situation, the numbers, and what the client wants to know. Markdown works." />
+            placeholder="The situation, the numbers, and what the client wants to know. Markdown works."
+            {...field("scenario")} />
         </div>
         <div>
           <Label htmlFor="instructions">What the student must do</Label>
-          <Textarea id="instructions" name="instructions" required rows={3} minLength={10} />
+          <Textarea id="instructions" name="instructions" required rows={3} minLength={10}
+            {...field("instructions")} />
         </div>
         <div>
           <Label htmlFor="expected_framework">Strong approaches (optional)</Label>
-          <Textarea id="expected_framework" name="expected_framework" rows={2} />
+          <Textarea id="expected_framework" name="expected_framework" rows={2}
+            {...field("expected_framework")} />
         </div>
         <div>
           <Label htmlFor="model_answer">Reference answer (optional)</Label>
           <Textarea id="model_answer" name="model_answer" rows={6}
-            placeholder="Students never see this. It is given to the grader as a strong example, not the only correct one." />
+            placeholder="Students never see this. It is given to the grader as a strong example, not the only correct one."
+            {...field("model_answer")} />
         </div>
       </section>
 
@@ -295,6 +338,7 @@ export function QuestionEditor({
           Save as draft
         </Button>
       </div>
-    </form>
+      </form>
+    </div>
   );
 }
