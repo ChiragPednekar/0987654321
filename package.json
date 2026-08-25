@@ -2,7 +2,7 @@
   "name": "casecode",
   "version": "0.1.0",
   "private": true,
-  "description": "CaseCode \u2014 LeetCode for business cases. AI-evaluated business case practice platform.",
+  "description": "CaseCode — LeetCode for business cases. AI-evaluated business case practice platform.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -59,7 +59,7 @@
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@vitest/coverage-v8": "^4.1.11",
-    "dotenv": "^17.2.2",
+    "dotenv": "^17.4.2",
     "eslint": "^9.36.0",
     "eslint-config-next": "15.5.23",
     "tailwindcss": "^4.1.13",

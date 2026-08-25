@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import {
   BookOpen,
@@ -10,10 +9,13 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import { MODEL_RATES, PLATFORM_INFRA_INR_PER_YEAR } from "@/lib/constants";
-import type { InstitutionCommercialsRow } from "@/lib/types/database";
+import type {
+  InstitutionCommercialsRow,
+  PlatformOverviewRow,
+} from "@/lib/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,10 +25,7 @@ import { formatNumber, timeAgo } from "@/lib/utils";
 export const metadata: Metadata = { title: "Admin" };
 
 export default async function AdminPage() {
-  const profile = await getCurrentUser();
-  if (!profile) redirect("/login?next=/admin");
-  if (profile.role !== "admin") redirect("/dashboard");
-
+  // The layout has already established that this is the platform owner.
   const supabase = await createClient();
 
   const [
@@ -55,25 +54,21 @@ export default async function AdminPage() {
   // Business view. Optional enrichment — without a service-role key the page
   // still renders as the content-only admin it was before.
   let licences: InstitutionCommercialsRow[] = [];
-  let activeUsers30d = 0;
+  let overview: PlatformOverviewRow | null = null;
   const svc = createAdminClientOrNull();
   if (svc) {
-    const [{ data: rows }, { data: recent }] = await Promise.all([
+    const [{ data: rows }, { data: ov }] = await Promise.all([
       svc.rpc("institution_commercials", {
         p_in_rate_per_million: MODEL_RATES.inputPerMillionUsd,
         p_out_rate_per_million: MODEL_RATES.outputPerMillionUsd,
         p_usd_inr: MODEL_RATES.usdInr,
       }),
-      svc
-        .from("scores")
-        .select("user_id")
-        .gte(
-          "evaluated_at",
-          new Date(Date.now() - 30 * 86_400_000).toISOString(),
-        ),
+      // Aggregated in the database rather than counted in JavaScript, so the
+      // page keeps working once the tables are large.
+      svc.rpc("platform_overview", { p_days: 30 }),
     ]);
     licences = (rows ?? []) as InstitutionCommercialsRow[];
-    activeUsers30d = new Set((recent ?? []).map((r) => r.user_id)).size;
+    overview = ((ov ?? []) as PlatformOverviewRow[])[0] ?? null;
   }
 
   const liveLicences = licences.filter(
@@ -82,7 +77,9 @@ export default async function AdminPage() {
       (!l.licence_ends_on || new Date(l.licence_ends_on) >= new Date()),
   );
   const arr = liveLicences.reduce((a, l) => a + (l.contract_value_inr ?? 0), 0);
-  const aiSpend = licences.reduce((a, l) => a + Number(l.ai_cost_inr), 0);
+  // Measured from usage_events; the per-licence figures below are the same
+  // numbers grouped by contract.
+  const aiSpend = Number(overview?.ai_cost_inr ?? 0);
   const rupees = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
   return (
@@ -133,8 +130,41 @@ export default async function AdminPage() {
           />
           <StatCard
             label="Active students"
-            value={formatNumber(activeUsers30d)}
-            sublabel="graded something in 30 days"
+            value={formatNumber(Number(overview?.active_users ?? 0))}
+            sublabel={`of ${formatNumber(Number(overview?.total_users ?? 0))} accounts`}
+            icon={Users}
+          />
+        </div>
+      ) : null}
+
+      {overview ? (
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label="Seats"
+            value={`${formatNumber(Number(overview.seats_used))} / ${formatNumber(Number(overview.seats_licensed))}`}
+            sublabel={
+              Number(overview.seats_licensed) > 0
+                ? `${Math.round((Number(overview.seats_used) / Number(overview.seats_licensed)) * 100)}% utilisation`
+                : "no licences yet"
+            }
+            icon={Building2}
+          />
+          <StatCard
+            label="Institutions"
+            value={formatNumber(Number(overview.active_licences))}
+            sublabel={`${overview.expired_licences} expired · ${overview.suspended_licences} suspended`}
+            icon={Building2}
+          />
+          <StatCard
+            label="AI calls"
+            value={formatNumber(Number(overview.gradings) + Number(overview.interviews))}
+            sublabel={`${formatNumber(Number(overview.gradings))} graded · ${formatNumber(Number(overview.interviews))} interviews`}
+            icon={Cpu}
+          />
+          <StatCard
+            label="Roles"
+            value={formatNumber(Number(overview.students))}
+            sublabel={`${overview.teachers} teachers · ${overview.never_started} never started`}
             icon={Users}
           />
         </div>

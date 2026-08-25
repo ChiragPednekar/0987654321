@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { RosterTable } from "@/components/institution/roster-table";
 import { DOMAIN_LABEL } from "@/lib/constants";
-import { formatNumber, timeAgo } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils";
 import type {
   Domain,
   InstitutionDomainRow,

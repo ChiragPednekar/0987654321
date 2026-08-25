@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/teacher/empty-state";
 import { DOMAIN_LABEL } from "@/lib/constants";
-import { cn, formatNumber, timeAgo } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils";
 import type { Domain } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Teacher dashboard" };
