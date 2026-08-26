@@ -10,7 +10,21 @@ import type { Database } from "@/lib/types/database";
  * to published rows. Submitting an answer requires auth, enforced in the API
  * route and by RLS, not here.
  */
-const PROTECTED_PREFIXES = ["/dashboard", "/profile", "/admin"];
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/profile",
+  "/settings",
+  "/bookmarks",
+  "/notifications",
+  "/progress",
+  "/groups",
+  "/classrooms",
+  "/institution",
+  "/teacher",
+  "/teach",
+  "/admin",
+  "/recruiter",
+];
 
 const AUTH_ROUTES = ["/login", "/signup"];
 
@@ -51,31 +65,53 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  if (!user && PROTECTED_PREFIXES.some((p) => pathname.startsWith(p))) {
+  const isProtected = PROTECTED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+
+  // Unauthenticated user trying to reach a protected area -> bounce to /login
+  if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
-  if (user && AUTH_ROUTES.some((p) => pathname.startsWith(p))) {
+  const isAuthRoute = AUTH_ROUTES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+
+  // Authenticated user hitting login/signup -> send to dashboard (unless error or logout param present)
+  if (user && isAuthRoute) {
+    if (
+      request.nextUrl.searchParams.has("error") ||
+      request.nextUrl.searchParams.has("logout")
+    ) {
+      return response;
+    }
+    const nextParam = request.nextUrl.searchParams.get("next");
+    const isSafeNext =
+      nextParam &&
+      nextParam.startsWith("/") &&
+      !AUTH_ROUTES.some((p) => nextParam.startsWith(p));
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = isSafeNext ? nextParam : "/dashboard";
     url.search = "";
     return NextResponse.redirect(url);
   }
 
   // Admin area: check the role, not just the session.
-  if (user && pathname.startsWith("/admin")) {
+  if (user && (pathname === "/admin" || pathname.startsWith("/admin/"))) {
     const { data: profile } = await supabase
       .from("users")
       .select("role")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (profile?.role !== "admin") {
+    if (profile && profile.role !== "admin") {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
+      url.search = "";
       return NextResponse.redirect(url);
     }
   }

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/types/database";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
 
 /**
  * Server client for RSCs, route handlers and server actions.
@@ -37,9 +38,10 @@ export async function getCurrentUser() {
   const supabase = await createClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
-  if (!user) return null;
+  if (authError || !user) return null;
 
   // Every column of public.users that a signed-in user is granted to read.
   // `email` is deliberately absent — 20250101000015_read_privileges.sql revokes
@@ -53,9 +55,41 @@ export async function getCurrentUser() {
       "id, full_name, avatar_url, university, career_goal, role, ce, level, total_score, cases_solved, cases_attempted, current_streak, longest_streak, last_solved_on, open_to_opportunities, plan, deactivated_at, created_at, updated_at",
     )
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (!profile) return null;
+  if (!profile) {
+    // If the public.users record is missing (e.g. trigger didn't run or table was rebuilt),
+    // self-heal by creating the profile using the admin client.
+    const admin = createAdminClientOrNull();
+    if (admin) {
+      const fullName =
+        (user.user_metadata?.full_name as string) ??
+        (user.user_metadata?.name as string) ??
+        user.email?.split("@")[0] ??
+        "User";
+      const avatarUrl = (user.user_metadata?.avatar_url as string) ?? null;
+      await admin.from("users").upsert(
+        {
+          id: user.id,
+          email: user.email ?? "",
+          full_name: fullName,
+          avatar_url: avatarUrl,
+        },
+        { onConflict: "id" },
+      );
+      const { data: createdProfile } = await admin
+        .from("users")
+        .select(
+          "id, full_name, avatar_url, university, career_goal, role, ce, level, total_score, cases_solved, cases_attempted, current_streak, longest_streak, last_solved_on, open_to_opportunities, plan, deactivated_at, created_at, updated_at",
+        )
+        .eq("id", user.id)
+        .maybeSingle();
+      if (createdProfile) {
+        return { ...createdProfile, email: user.email ?? "" };
+      }
+    }
+    return null;
+  }
 
   // The session already carries the address, so callers that show "you are
   // signed in as …" keep working without the column being world-readable.

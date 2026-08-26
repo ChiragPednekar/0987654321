@@ -51,9 +51,38 @@ export async function requireActor(): Promise<Actor> {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!profile) throw new AuthzError("Account not found", 401);
+  if (!profile) {
+    const fullName =
+      (user.user_metadata?.full_name as string) ??
+      (user.user_metadata?.name as string) ??
+      user.email?.split("@")[0] ??
+      "User";
+    const avatarUrl = (user.user_metadata?.avatar_url as string) ?? null;
+    await admin.from("users").upsert(
+      {
+        id: user.id,
+        email: user.email ?? "",
+        full_name: fullName,
+        avatar_url: avatarUrl,
+      },
+      { onConflict: "id" },
+    );
+    const { data: createdProfile } = await admin
+      .from("users")
+      .select("id, email, role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (createdProfile) {
+      return {
+        id: createdProfile.id,
+        email: createdProfile.email ?? user.email ?? "",
+        role: createdProfile.role,
+      };
+    }
+    throw new AuthzError("Account not found", 401);
+  }
 
-  return { id: profile.id, email: profile.email, role: profile.role };
+  return { id: profile.id, email: profile.email ?? user.email ?? "", role: profile.role };
 }
 
 /** The single platform owner. */
