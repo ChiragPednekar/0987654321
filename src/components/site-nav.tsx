@@ -18,9 +18,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationBell } from "@/components/notification-bell";
-import type { NotificationRow, UserRow } from "@/lib/types/database";
+import type { NotificationRow, UserRole, UserRow } from "@/lib/types/database";
+import { roleHome } from "@/lib/role-home";
 
-const LINKS = [
+/**
+ * Top-bar links, per role.
+ *
+ * The third and last place that assumed everyone was a student — the sidebar
+ * and the command palette were the other two. A shared "Dashboard" link here
+ * meant the platform owner's own header pointed at the student product, and the
+ * logo did the same.
+ *
+ * Signed-out visitors get the marketing set: the public library is the top of
+ * the funnel and stays reachable without an account.
+ */
+const PUBLIC_LINKS = [
+  { href: "/cases", label: "Cases" },
+  { href: "/paths", label: "Paths" },
+  { href: "/contests", label: "Contests" },
+  { href: "/leaderboard", label: "Leaderboard" },
+];
+
+const STUDENT_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/cases", label: "Cases" },
   { href: "/paths", label: "Paths" },
@@ -29,6 +48,33 @@ const LINKS = [
   { href: "/bookmarks", label: "Bookmarks" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
+
+const TEACHER_LINKS = [
+  { href: "/teacher", label: "Dashboard" },
+  { href: "/teacher/batches", label: "Batches" },
+  { href: "/teacher/assignments", label: "Assignments" },
+  { href: "/teacher/questions", label: "Questions" },
+  { href: "/cases", label: "Cases" },
+];
+
+const ADMIN_LINKS = [
+  { href: "/admin", label: "Dashboard" },
+  { href: "/admin/licences", label: "Licences" },
+  { href: "/admin/users", label: "Users" },
+  { href: "/admin/cases", label: "Case library" },
+  { href: "/admin/usage", label: "AI usage" },
+];
+
+function linksFor(role: UserRole | null | undefined) {
+  switch (role) {
+    case "admin":
+      return ADMIN_LINKS;
+    case "teacher":
+      return TEACHER_LINKS;
+    default:
+      return STUDENT_LINKS;
+  }
+}
 
 export function SiteNav({
   profile,
@@ -43,6 +89,10 @@ export function SiteNav({
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
+  const LINKS = profile ? linksFor(profile.role) : PUBLIC_LINKS;
+  // The wordmark goes to your own dashboard, not always the student one.
+  const homeHref = profile ? roleHome(profile.role) : "/";
+
   async function signOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -53,7 +103,7 @@ export function SiteNav({
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4 sm:px-6">
-        <Link href={profile ? "/dashboard" : "/"} className="flex items-center gap-2">
+        <Link href={homeHref} className="flex items-center gap-2">
           <div className="grid size-7 place-items-center rounded-md bg-primary font-mono text-sm font-bold text-primary-foreground">
             C
           </div>
