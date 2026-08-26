@@ -39,7 +39,47 @@ export default async function AssignmentDetail({
   if (!assignment) notFound();
 
   const { data } = await admin.rpc("assignment_review_queue", { p_assignment: id });
-  const rows = (data ?? []) as AssignmentReviewRow[];
+  const queue = (data ?? []) as AssignmentReviewRow[];
+
+  /**
+   * The AI's per-criterion split and written feedback, read straight from
+   * `scores`.
+   *
+   * 20250101000025 extends assignment_review_queue to return these, but the
+   * function is only as new as the last migration actually applied to the
+   * database in front of it — and a teacher marking work is exactly the wrong
+   * moment to discover the deployment is a migration behind. Reading the two
+   * columns here means the breakdown shows up either way, and the page stops
+   * depending on which version of the RPC it is talking to.
+   *
+   * One extra query for the whole queue, not one per student.
+   */
+  const submissionIds = queue
+    .map((row) => row.submission_id)
+    .filter((value): value is string => Boolean(value));
+
+  const { data: scoreRows } = submissionIds.length
+    ? await admin
+        .from("scores")
+        .select("submission_id, breakdown, feedback")
+        .in("submission_id", submissionIds)
+    : { data: [] };
+
+  const detailBySubmission = new Map(
+    (scoreRows ?? []).map((s) => [s.submission_id, s]),
+  );
+
+  const rows: AssignmentReviewRow[] = queue.map((row) => {
+    const detail = row.submission_id
+      ? detailBySubmission.get(row.submission_id)
+      : undefined;
+    return {
+      ...row,
+      // Prefer whatever the RPC gave us; fall back to the direct read.
+      ai_breakdown: row.ai_breakdown ?? detail?.breakdown ?? null,
+      ai_feedback: row.ai_feedback ?? detail?.feedback ?? null,
+    };
+  });
 
   const c = Array.isArray(assignment.cases) ? assignment.cases[0] : assignment.cases;
   const room = Array.isArray(assignment.classrooms)

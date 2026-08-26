@@ -56,11 +56,23 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
   const admin = createAdminClient();
 
-  const { data: target } = await admin
+  // Deliberately does not select `deactivated_at`. Selecting a column the
+  // database may not have turns a working lookup into an error, and the error
+  // path here reported "Account not found" — which is both wrong and the least
+  // helpful thing it could have said.
+  const { data: target, error: lookupError } = await admin
     .from("users")
-    .select("id, email, role, deactivated_at")
+    .select("id, email, role")
     .eq("id", id)
     .maybeSingle();
+
+  if (lookupError) {
+    console.error("[admin] account lookup failed", lookupError);
+    return NextResponse.json(
+      { error: "Could not read that account." },
+      { status: 500 },
+    );
+  }
 
   if (!target) {
     return NextResponse.json({ error: "Account not found" }, { status: 404 });
@@ -75,6 +87,20 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     .eq("id", id);
 
   if (error) {
+    // 42703 is "column does not exist": the deactivation columns arrive with
+    // 20250101000026, and a deployment can be ahead of its database. Say so
+    // precisely rather than surfacing a raw Postgres error to an admin who has
+    // no way to interpret it.
+    if (error.code === "42703") {
+      console.error("[admin] deactivation columns missing", error.message);
+      return NextResponse.json(
+        {
+          error:
+            "Account deactivation is not available yet — this database is missing the deactivation columns. Apply migration 20250101000026_user_deactivation.sql, then try again.",
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

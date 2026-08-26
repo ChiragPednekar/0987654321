@@ -1132,9 +1132,15 @@ export type AssignmentReviewRow = {
   ai_score: number | null;
   ai_max: number | null;
   ai_percentage: number | null;
-  /** Per-criterion points, keyed the same way as the rubric. */
-  ai_breakdown: RubricCriteria | null;
-  ai_feedback: EvaluationFeedback | null;
+  /**
+   * Per-criterion points and written feedback.
+   *
+   * Optional because the deployed assignment_review_queue may predate
+   * 20250101000025, which is when it started returning them. The page fills
+   * them in from `scores` when the RPC does not.
+   */
+  ai_breakdown?: RubricCriteria | null;
+  ai_feedback?: EvaluationFeedback | null;
   faculty_marks: number | null;
   faculty_remarks: string | null;
   reviewed_at: string | null;
