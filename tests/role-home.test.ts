@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ROLE_HOMES, isForeignHome, roleHome } from "@/lib/role-home";
+import { ROLE_HOMES, canOpenHome, mustRedirectFromHome, roleHome } from "@/lib/role-home";
 
 /**
  * The three dashboards are separate entities.
@@ -47,61 +47,61 @@ describe("each role has its own home", () => {
   });
 });
 
-describe("a role is bounced off another role's home", () => {
-  it("moves an admin standing on the student dashboard to /admin", () => {
-    expect(isForeignHome("/dashboard", "admin")).toBe(true);
-  });
-
-  it("moves a teacher standing on the student dashboard to /teacher", () => {
-    expect(isForeignHome("/dashboard", "teacher")).toBe(true);
-  });
-
-  it("moves a student off /admin and /teacher", () => {
-    expect(isForeignHome("/admin", "student")).toBe(true);
-    expect(isForeignHome("/teacher", "student")).toBe(true);
-  });
-
-  it("leaves each role alone on its own home", () => {
-    expect(isForeignHome("/admin", "admin")).toBe(false);
-    expect(isForeignHome("/teacher", "teacher")).toBe(false);
-    expect(isForeignHome("/dashboard", "student")).toBe(false);
-    expect(isForeignHome("/recruiter", "recruiter")).toBe(false);
-  });
-
-  it("never bounces a page that is not a role home", () => {
-    // Shared surfaces stay shared — a teacher browsing the case library or a
-    // batch page must not be yanked back to their dashboard.
-    for (const path of ["/cases", "/classrooms", "/teacher/batches", "/admin/users"]) {
-      for (const role of ["student", "teacher", "admin"] as const) {
-        expect(isForeignHome(path, role)).toBe(false);
-      }
+describe("privilege flows downward", () => {
+  it("lets the platform owner open every dashboard", () => {
+    // requireTeacherActor() has always allowed an admin into the teaching
+    // area so the owner can see what teachers see. Bouncing them here would
+    // silently override that — which it did, until this test existed.
+    for (const path of ROLE_HOMES) {
+      expect(canOpenHome(path, "admin")).toBe(true);
+      expect(mustRedirectFromHome(path, "admin")).toBe(false);
     }
   });
 
-  it("does not bounce when the role is unknown", () => {
-    // The middleware must redirect nowhere on a failed lookup. Guessing is how
-    // a bad read becomes an infinite redirect.
-    expect(isForeignHome("/admin", null)).toBe(true);
-    expect(isForeignHome("/dashboard", null)).toBe(false);
+  it("lets a teacher open the teaching and student areas", () => {
+    expect(canOpenHome("/teacher", "teacher")).toBe(true);
+    expect(canOpenHome("/dashboard", "teacher")).toBe(true);
+  });
+
+  it("keeps a teacher out of the admin dashboard", () => {
+    expect(canOpenHome("/admin", "teacher")).toBe(false);
+    expect(mustRedirectFromHome("/admin", "teacher")).toBe(true);
+  });
+
+  it("keeps a student out of the teaching and admin dashboards", () => {
+    for (const path of ["/teacher", "/admin", "/recruiter"]) {
+      expect(canOpenHome(path, "student")).toBe(false);
+      expect(mustRedirectFromHome(path, "student")).toBe(true);
+    }
+  });
+
+  it("lets every signed-in account open the student dashboard", () => {
+    for (const role of ["student", "teacher", "admin", "recruiter"] as const) {
+      expect(canOpenHome("/dashboard", role)).toBe(true);
+    }
+  });
+
+  it("never bounces a page that is not a role home", () => {
+    for (const path of ["/cases", "/classrooms", "/teacher/batches", "/admin/users"]) {
+      for (const role of ["student", "teacher", "admin"] as const) {
+        expect(mustRedirectFromHome(path, role)).toBe(false);
+      }
+    }
   });
 });
 
 describe("no redirect can loop", () => {
-  it("every role's home is stable under the bounce rule", () => {
-    // The property that matters: applying the rule to a role's own home is
-    // always a no-op, so target !== pathname can never oscillate.
+  it("every role may open its own home", () => {
     for (const role of ["student", "teacher", "admin", "recruiter"] as const) {
-      const home = roleHome(role);
-      expect(isForeignHome(home, role)).toBe(false);
+      expect(mustRedirectFromHome(roleHome(role), role)).toBe(false);
     }
   });
 
   it("a bounce always lands somewhere that does not bounce again", () => {
     for (const role of ["student", "teacher", "admin", "recruiter"] as const) {
       for (const path of ROLE_HOMES) {
-        if (!isForeignHome(path, role)) continue;
-        const target = roleHome(role);
-        expect(isForeignHome(target, role)).toBe(false);
+        if (!mustRedirectFromHome(path, role)) continue;
+        expect(mustRedirectFromHome(roleHome(role), role)).toBe(false);
       }
     }
   });

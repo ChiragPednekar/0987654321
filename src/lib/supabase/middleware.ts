@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/types/database";
-import { ROLE_HOMES, isForeignHome, roleHome } from "@/lib/role-home";
+import { ROLE_HOMES, mustRedirectFromHome, roleHome } from "@/lib/role-home";
 
 /**
  * Only personal and administrative surfaces require a session.
@@ -83,11 +83,15 @@ export async function updateSession(request: NextRequest) {
   /**
    * Role routing.
    *
-   * The three dashboards are separate entities. A role's own home is the only
-   * one it lands on: an admin who opens /dashboard goes to /admin, a teacher
-   * goes to /teacher, and a student who opens either is sent back to
-   * /dashboard. Without this every role landed on the student dashboard after
-   * login, because the login form pushes a fixed default.
+   * The three dashboards are separate entities, so each account LANDS on its
+   * own after login — the login form resolves that, and roleHome() is the one
+   * answer both use.
+   *
+   * This is the weaker, second question: may this role open this dashboard at
+   * all? Privilege flows downward, so a student is sent back from /teacher and
+   * /admin while the platform owner is never bounced anywhere. Making the
+   * bounce as strict as the landing locked the owner out of the teaching area
+   * that requireTeacherActor() has always let them see.
    *
    * The lookup only runs on the four home paths and inside /admin, so ordinary
    * navigation still costs no extra query.
@@ -111,8 +115,11 @@ export async function updateSession(request: NextRequest) {
 
     let target: string | null = null;
 
-    if (role && isForeignHome(pathname, role)) {
-      // Standing on another role's landing page — go to your own.
+    if (role && mustRedirectFromHome(pathname, role)) {
+      // Standing on a dashboard this role may not open — go to your own.
+      // Privilege flows downward, so the platform owner is never bounced: an
+      // admin opening /teacher sees the teaching area, which is what
+      // requireTeacherActor() has always allowed.
       target = roleHome(role);
     } else if (
       role &&

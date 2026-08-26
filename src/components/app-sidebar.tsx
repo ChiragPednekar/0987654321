@@ -123,6 +123,21 @@ const ADMIN_GROUPS: { heading: string; items: Item[] }[] = [
   },
 ];
 
+/**
+ * The owner's way into the other two products.
+ *
+ * Without this the platform owner has no link to the teaching or student
+ * dashboards at all — they would have to type the URL, which is exactly the
+ * dead end that made the separation feel like a lockout rather than a layout.
+ */
+const ADMIN_INSPECT: { heading: string; items: Item[] } = {
+  heading: "Other dashboards",
+  items: [
+    { href: "/teacher", label: "Teacher view", icon: ClipboardCheck },
+    { href: "/dashboard", label: "Student view", icon: GraduationCap },
+  ],
+};
+
 const RECRUITER_GROUPS: { heading: string; items: Item[] }[] = [
   {
     heading: "Hiring",
@@ -168,7 +183,7 @@ export function AppSidebar({
   // menu and gain the teaching section rather than swapping products.
   const base =
     role === "admin"
-      ? ADMIN_GROUPS
+      ? [...ADMIN_GROUPS, ADMIN_INSPECT]
       : role === "recruiter"
         ? RECRUITER_GROUPS
         : role === "teacher"
