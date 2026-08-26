@@ -89,6 +89,24 @@ describe("quota denial messages", () => {
     expect(denial.error).toContain(String(QUOTA.pro.gradings));
   });
 
+  it("does not offer a Pro upgrade to a closed account", () => {
+    // A grading limit of zero cannot be a tier — every free account gets graded
+    // answers — so it only happens when the account is closed. Telling that
+    // person to buy Pro for mock interviews, which is what this used to say,
+    // is both wrong and unactionable.
+    const closed: QuotaStatus = {
+      ...base,
+      isPro: false,
+      gradingLimit: 0,
+      gradingsUsed: 2,
+      gradingsLeft: 0,
+    };
+    const denial = quotaDenial("gradings", closed);
+    expect(denial.error).not.toMatch(/Pro/);
+    expect(denial.error).toMatch(/not currently able to submit/i);
+    expect(denial.quota.upgrade).toBe(false);
+  });
+
   it("says interviews are a Pro feature rather than 'you ran out'", () => {
     // A free user at a zero limit never had an allowance to exhaust, and
     // "you have used 0 of 0" would be a confusing way to sell an upgrade.

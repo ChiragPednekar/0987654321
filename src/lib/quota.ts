@@ -109,10 +109,21 @@ export function quotaDenial(
   const limit = kind === "gradings" ? status.gradingLimit : status.interviewLimit;
   const noun = kind === "gradings" ? "graded answers" : "mock interviews";
 
-  // A free user at a zero limit has not "run out" — they never had any.
-  const message =
-    limit === 0
-      ? `Mock interviews are part of CaseCode Pro.`
+  /**
+   * A zero limit has two quite different causes, and they need different words.
+   *
+   * A free user has no interview allowance and never did — that is an upgrade
+   * prompt. But a *grading* limit of zero cannot be a tier: every free account
+   * gets graded answers. It only happens when the account has been closed, and
+   * telling someone in that position to buy Pro for mock interviews is both
+   * wrong and useless, which is exactly what this said before.
+   */
+  const closed = kind === "gradings" && limit === 0;
+
+  const message = closed
+    ? "This account is not currently able to submit answers. If you think that is a mistake, contact your administrator."
+    : limit === 0
+      ? "Mock interviews are part of CaseCode Pro."
       : `You have used all ${limit} ${noun} for the year (${used} of ${limit}). ` +
         (status.isPro
           ? `Your allowance frees up as older attempts pass the ${QUOTA.windowDays}-day window.`
@@ -124,7 +135,8 @@ export function quotaDenial(
       used,
       limit,
       window_days: QUOTA.windowDays,
-      upgrade: !status.isPro,
+      // Nothing to upgrade to when the account itself is closed.
+      upgrade: !closed && !status.isPro,
     },
   };
 }
