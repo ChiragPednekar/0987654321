@@ -72,7 +72,7 @@ export default async function AppLayout({
         notifications={notifications}
         unreadCount={unreadCount}
       />
-      <CommandPalette />
+      <CommandPalette role={profile?.role ?? null} />
       {profile ? (
         <div className="flex flex-1">
           <AppSidebar

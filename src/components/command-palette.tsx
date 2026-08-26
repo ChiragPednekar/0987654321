@@ -15,10 +15,28 @@ import {
 } from "lucide-react";
 import { DOMAIN_LABEL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import type { Domain } from "@/lib/types/database";
+import type { Domain, UserRole } from "@/lib/types/database";
 import type { SearchResponse } from "@/app/api/search/route";
 
-const PAGES = [
+type Page = { title: string; href: string; icon: React.ComponentType<{ className?: string }> };
+
+/**
+ * Jump targets, per role.
+ *
+ * The palette used to offer one hard-coded list headed by "Dashboard ->
+ * /dashboard", so a teacher or the platform owner pressing Cmd+K was invited
+ * straight into the student product. The middleware would bounce them back, but
+ * offering a door that slams is worse than not offering it.
+ *
+ * "Dashboard" therefore means *your* dashboard, and each role sees only pages
+ * it can actually open.
+ */
+const COMMON: Page[] = [
+  { title: "Settings", href: "/settings", icon: Settings },
+  { title: "How grading works", href: "/how-grading-works", icon: FileText },
+];
+
+const STUDENT_PAGES: Page[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Case Library", href: "/cases", icon: BookOpen },
   { title: "Skill Tracks", href: "/paths", icon: Route },
@@ -26,14 +44,42 @@ const PAGES = [
   { title: "Leaderboard", href: "/leaderboard", icon: Users },
   { title: "Progress", href: "/progress", icon: FileText },
   { title: "Bookmarks", href: "/bookmarks", icon: BookOpen },
-  { title: "Settings", href: "/settings", icon: Settings },
-  { title: "How grading works", href: "/how-grading-works", icon: FileText },
 ];
+
+const TEACHER_PAGES: Page[] = [
+  { title: "Dashboard", href: "/teacher", icon: LayoutDashboard },
+  { title: "Batches", href: "/teacher/batches", icon: Users },
+  { title: "Assignments", href: "/teacher/assignments", icon: FileText },
+  { title: "Question bank", href: "/teacher/questions", icon: BookOpen },
+  { title: "Case Library", href: "/cases", icon: BookOpen },
+  { title: "Classrooms", href: "/classrooms", icon: Users },
+];
+
+const ADMIN_PAGES: Page[] = [
+  { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { title: "Users", href: "/admin/users", icon: Users },
+  { title: "Licences", href: "/admin/licences", icon: FileText },
+  { title: "Renewals", href: "/admin/renewals", icon: FileText },
+  { title: "AI usage", href: "/admin/usage", icon: Trophy },
+  { title: "Case library", href: "/admin/cases", icon: BookOpen },
+];
+
+function pagesFor(role: UserRole | null | undefined): Page[] {
+  switch (role) {
+    case "admin":
+      return [...ADMIN_PAGES, ...COMMON];
+    case "teacher":
+      return [...TEACHER_PAGES, ...COMMON];
+    default:
+      return [...STUDENT_PAGES, ...COMMON];
+  }
+}
 
 const EMPTY: SearchResponse = { cases: [], tracks: [] };
 
-export function CommandPalette() {
+export function CommandPalette({ role }: { role?: UserRole | null }) {
   const router = useRouter();
+  const PAGES = React.useMemo(() => pagesFor(role), [role]);
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<SearchResponse>(EMPTY);
