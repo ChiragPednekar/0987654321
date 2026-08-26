@@ -49,16 +49,36 @@ export async function getCurrentUser() {
   // `using (true)`, so a column readable there is readable for *everyone's*
   // row, not just your own. Selecting it here would fail on privileges.
   // Kept inline as one literal: supabase-js infers the row type from it.
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("users")
     .select(
-      "id, full_name, avatar_url, university, career_goal, role, ce, level, total_score, cases_solved, cases_attempted, current_streak, longest_streak, last_solved_on, open_to_opportunities, plan, deactivated_at, created_at, updated_at",
+      "id, full_name, avatar_url, university, career_goal, role, ce, level, total_score, cases_solved, cases_attempted, current_streak, longest_streak, last_solved_on, open_to_opportunities, plan, created_at, updated_at",
     )
     .eq("id", user.id)
     .maybeSingle();
 
   if (profile) {
     return { ...profile, email: user.email ?? "" };
+  }
+
+  /**
+   * A *failed* read is not a missing profile, and the difference matters.
+   *
+   * Everything below treats "no row" as "this account has no profile yet" and
+   * synthesises one — which defaults `role` to "student". When the select
+   * itself errors, that fallback silently demotes every signed-in user: the
+   * platform owner is handed a student's navigation and a dashboard of zeros,
+   * with nothing anywhere saying why. That is exactly what a stray
+   * `deactivated_at` in this column list did in production.
+   *
+   * The fallback still runs, because being logged out is worse. But it says so.
+   */
+  if (profileError) {
+    console.error("[auth] profile read failed — falling back to a synthetic profile", {
+      user_id: user.id,
+      code: profileError.code,
+      message: profileError.message,
+    });
   }
 
   // If the public.users record is missing (e.g. trigger didn't run or table was rebuilt),
@@ -85,7 +105,7 @@ export async function getCurrentUser() {
       const { data: createdProfile } = await admin
         .from("users")
         .select(
-          "id, full_name, avatar_url, university, career_goal, role, ce, level, total_score, cases_solved, cases_attempted, current_streak, longest_streak, last_solved_on, open_to_opportunities, plan, deactivated_at, created_at, updated_at",
+          "id, full_name, avatar_url, university, career_goal, role, ce, level, total_score, cases_solved, cases_attempted, current_streak, longest_streak, last_solved_on, open_to_opportunities, plan, created_at, updated_at",
         )
         .eq("id", user.id)
         .maybeSingle();

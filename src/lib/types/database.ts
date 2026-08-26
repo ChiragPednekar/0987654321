@@ -100,11 +100,12 @@ export type UserRow = {
   longest_streak: number;
   last_solved_on: string | null;
   /**
-   * Set when an admin closes the account. has_pro() and quota_status() both
-   * check it, so a deactivated user loses Pro and drops to a zero grading
-   * allowance without any route needing its own guard.
+   * Set when an admin closes the account. Optional because the signed-in
+   * user's own profile read deliberately omits it: enforcement lives in
+   * has_pro() and quota_status(), so no page needs to read it, and selecting a
+   * column production might not have costs every user their real profile.
    */
-  deactivated_at: string | null;
+  deactivated_at?: string | null;
   /** Admin-only context. Not granted to `authenticated`, so profile reads omit it. */
   deactivated_reason?: string | null;
   created_at: string;
