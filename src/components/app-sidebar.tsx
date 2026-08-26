@@ -38,7 +38,20 @@ type Item = {
   role?: UserRole;
 };
 
-const GROUPS: { heading: string; items: Item[] }[] = [
+/**
+ * Navigation, per role.
+ *
+ * The three dashboards are separate entities, so the sidebar shows one of them
+ * — not all three with the irrelevant parts filtered out. Previously every role
+ * got the student menu with a "Dashboard" link hard-wired to /dashboard, so the
+ * most obvious link in an admin's own nav dropped them into the student
+ * experience.
+ *
+ * Teacher keeps Classrooms and Groups: the teacher and student sides are one
+ * product sharing data — a batch created here is the batch a student joins.
+ * Admin keeps neither; the platform owner administers the platform.
+ */
+const STUDENT_GROUPS: { heading: string; items: Item[] }[] = [
   {
     heading: "Practise",
     items: [
@@ -63,13 +76,59 @@ const GROUPS: { heading: string; items: Item[] }[] = [
       { href: "/classrooms", label: "Classrooms", icon: GraduationCap },
     ],
   },
+];
+
+const TEACHER_GROUPS: { heading: string; items: Item[] }[] = [
   {
-    heading: "Staff",
+    heading: "Teaching",
     items: [
-      { href: "/teacher", label: "Teaching", icon: ClipboardCheck },
-      { href: "/institution", label: "Placement", icon: GraduationCap },
-      { href: "/recruiter", label: "Recruiter", icon: Building2, role: "recruiter" },
-      { href: "/admin", label: "Admin", icon: Users, role: "admin" },
+      { href: "/teacher", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/teacher/batches", label: "Batches", icon: GraduationCap },
+      { href: "/teacher/assignments", label: "Assignments", icon: ClipboardCheck },
+      { href: "/teacher/questions", label: "Question bank", icon: Library },
+    ],
+  },
+  {
+    heading: "Library",
+    items: [
+      { href: "/cases", label: "Cases", icon: Library },
+      { href: "/paths", label: "Paths", icon: Route },
+    ],
+  },
+  {
+    heading: "Community",
+    items: [
+      { href: "/classrooms", label: "Classrooms", icon: MessagesSquare },
+      { href: "/institution", label: "Placement", icon: Building2 },
+    ],
+  },
+];
+
+const ADMIN_GROUPS: { heading: string; items: Item[] }[] = [
+  {
+    heading: "Platform",
+    items: [
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/admin/users", label: "Users", icon: Users },
+      { href: "/admin/cases", label: "Case library", icon: Library },
+    ],
+  },
+  {
+    heading: "Commercial",
+    items: [
+      { href: "/admin/licences", label: "Licences", icon: Building2 },
+      { href: "/admin/renewals", label: "Renewals", icon: BarChart3 },
+      { href: "/admin/usage", label: "AI usage", icon: Trophy },
+    ],
+  },
+];
+
+const RECRUITER_GROUPS: { heading: string; items: Item[] }[] = [
+  {
+    heading: "Hiring",
+    items: [
+      { href: "/recruiter", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/cases", label: "Cases", icon: Library },
     ],
   },
 ];
@@ -104,14 +163,37 @@ export function AppSidebar({
     });
   }
 
-  const groups = GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => {
-      if (item.href === "/institution") return isInstitutionStaff;
-      if (item.href === "/teacher") return isTeacher;
-      return !item.role || item.role === role;
-    }),
-  })).filter((group) => group.items.length > 0);
+  // One role, one menu. `isTeacher` still matters for someone who teaches a
+  // batch without carrying the platform teacher role — they keep the student
+  // menu and gain the teaching section rather than swapping products.
+  const base =
+    role === "admin"
+      ? ADMIN_GROUPS
+      : role === "recruiter"
+        ? RECRUITER_GROUPS
+        : role === "teacher"
+          ? TEACHER_GROUPS
+          : STUDENT_GROUPS;
+
+  const extra: { heading: string; items: Item[] }[] =
+    role !== "admin" && role !== "teacher" && isTeacher
+      ? [
+          {
+            heading: "Teaching",
+            items: [{ href: "/teacher", label: "Teaching", icon: ClipboardCheck }],
+          },
+        ]
+      : [];
+
+  const groups = [...base, ...extra]
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (item.href === "/institution") return isInstitutionStaff;
+        return !item.role || item.role === role;
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <aside

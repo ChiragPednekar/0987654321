@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/types/database";
+import { ROLE_HOMES, isForeignHome, roleHome } from "@/lib/role-home";
 
 /**
  * Only personal and administrative surfaces require a session.
@@ -79,17 +80,52 @@ export async function updateSession(request: NextRequest) {
     return redirectResponse;
   }
 
-  // Admin area: check the role, not just the session.
-  if (user && (pathname === "/admin" || pathname.startsWith("/admin/"))) {
+  /**
+   * Role routing.
+   *
+   * The three dashboards are separate entities. A role's own home is the only
+   * one it lands on: an admin who opens /dashboard goes to /admin, a teacher
+   * goes to /teacher, and a student who opens either is sent back to
+   * /dashboard. Without this every role landed on the student dashboard after
+   * login, because the login form pushes a fixed default.
+   *
+   * The lookup only runs on the four home paths and inside /admin, so ordinary
+   * navigation still costs no extra query.
+   */
+  const needsRole =
+    (ROLE_HOMES as readonly string[]).includes(pathname) ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/");
+
+  if (user && needsRole) {
     const { data: profile } = await supabase
       .from("users")
       .select("role")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (profile && profile.role !== "admin") {
+    // A failed or missing lookup deliberately redirects nowhere. Guessing a
+    // role here is how a bad read turns into a redirect loop, which is exactly
+    // what 96c5e43 had to undo.
+    const role = profile?.role ?? null;
+
+    let target: string | null = null;
+
+    if (role && isForeignHome(pathname, role)) {
+      // Standing on another role's landing page — go to your own.
+      target = roleHome(role);
+    } else if (
+      role &&
+      role !== "admin" &&
+      (pathname === "/admin" || pathname.startsWith("/admin/"))
+    ) {
+      // Anything under /admin is the platform owner's alone.
+      target = roleHome(role);
+    }
+
+    if (target && target !== pathname) {
       const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
+      url.pathname = target;
       url.search = "";
       const redirectResponse = NextResponse.redirect(url);
       response.cookies.getAll().forEach((cookie) => {

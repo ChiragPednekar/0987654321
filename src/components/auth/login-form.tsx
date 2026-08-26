@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { roleHome } from "@/lib/role-home";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +22,7 @@ export function LoginForm({ next }: { next: string }) {
     const formData = new FormData(event.currentTarget);
     const supabase = createClient();
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: String(formData.get("email")),
       password: String(formData.get("password")),
     });
@@ -32,7 +33,34 @@ export function LoginForm({ next }: { next: string }) {
       return;
     }
 
-    router.push(next);
+    /**
+     * Land on the dashboard that belongs to this account.
+     *
+     * `next` is honoured when the user was actually going somewhere — they
+     * clicked a link, got bounced to /login, and should end up where they
+     * meant to. But its default is /dashboard, which for a teacher or the
+     * platform owner is somebody else's product. Resolving the role here means
+     * signing in as an admin lands on /admin, not on a student dashboard
+     * showing zeros.
+     *
+     * The middleware would correct it a moment later anyway; doing it here
+     * saves the visible bounce.
+     */
+    let destination = next;
+
+    if (!next || next === "/dashboard") {
+      const userId = data.user?.id;
+      if (userId) {
+        const { data: profile } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", userId)
+          .maybeSingle();
+        destination = roleHome(profile?.role ?? null);
+      }
+    }
+
+    router.push(destination);
     router.refresh();
   }
 
