@@ -87,11 +87,18 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     .eq("id", id);
 
   if (error) {
-    // 42703 is "column does not exist": the deactivation columns arrive with
-    // 20250101000026, and a deployment can be ahead of its database. Say so
-    // precisely rather than surfacing a raw Postgres error to an admin who has
-    // no way to interpret it.
-    if (error.code === "42703") {
+    // The deactivation columns arrive with 20250101000026, and a deployment can
+    // be ahead of its database. Two different codes mean the same thing here:
+    // Postgres answers 42703 ("column does not exist") when it plans the
+    // statement, while PostgREST answers PGRST204 earlier, from its own schema
+    // cache, without ever reaching the database. The message differs too, so
+    // both are matched rather than either alone.
+    const missingColumn =
+      error.code === "42703" ||
+      error.code === "PGRST204" ||
+      /deactivated_at/.test(error.message ?? "");
+
+    if (missingColumn) {
       console.error("[admin] deactivation columns missing", error.message);
       return NextResponse.json(
         {
