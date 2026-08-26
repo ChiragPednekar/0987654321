@@ -53,7 +53,13 @@ export default async function CasesPage({
       "id, slug, title, domain, difficulty, company_track, firm_style, format, is_pro, estimated_minutes, completion_rate, total_submissions",
       { count: "exact" },
     )
-    .eq("is_published", true);
+    .eq("is_published", true)
+    // The library is the platform's own catalogue. A teacher's question is
+    // scoped to one batch and reaches its students through the assignment, not
+    // through here. The row policy on `cases` enforces this too — this filter
+    // is the second lock, so a policy change can never silently turn the
+    // library into a leak.
+    .eq("visibility", "platform");
 
   // ?saved=1 restricts the library to bookmarked cases.
   if (params.saved === "1") {

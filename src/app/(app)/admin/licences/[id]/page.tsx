@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/stat-card";
+import { grossMargin, worstCaseCost } from "@/lib/economics";
 import { LicenceForm } from "@/components/admin/licence-form";
 import { LicenceControls } from "@/components/admin/licence-controls";
 import { MODEL_RATES, QUOTA } from "@/lib/constants";
@@ -62,19 +63,25 @@ export default async function LicenceDetailPage({
 
   const value = institution.contract_value_inr ?? 0;
   const aiCost = Number(row?.ai_cost_inr ?? 0);
-  const margin = value > 0 ? (value - aiCost) / value : null;
+  const margin = grossMargin(value, aiCost);
 
   const seatsUsed = Number(row?.seats_used ?? 0);
   const gradings = Number(row?.gradings ?? 0);
   const interviews = Number(row?.interviews ?? 0);
 
-  // What this contract could cost if every seat used its full allowance —
-  // the number that decides whether the price is safe.
+  // What this contract could cost if every seat used its full allowance — the
+  // number that decides whether the price is safe. The per-call costs used to
+  // be written inline here as 0.72 and 2.16; they now come from
+  // lib/economics, which derives them from MODEL_RATES, so a provider price
+  // change moves this figure instead of leaving it quietly stale.
   const gradingCap = institution.grading_quota ?? QUOTA.pro.gradings;
   const interviewCap = institution.interview_quota ?? QUOTA.pro.interviews;
-  const worstCase =
-    institution.seats_licensed * (gradingCap * 0.72 + interviewCap * 2.16);
-  const worstMargin = value > 0 ? (value - worstCase) / value : null;
+  const worstCase = worstCaseCost(
+    institution.seats_licensed,
+    gradingCap,
+    interviewCap,
+  );
+  const worstMargin = grossMargin(value, worstCase);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">

@@ -35,6 +35,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json<SearchResponse>({ cases: [], tracks: [] });
   }
 
+  // The caller's own client, so RLS decides what is visible. Deliberately NOT
+  // filtered to `visibility = 'platform'` the way /cases is: this endpoint also
+  // backs the teacher's case picker, which has to reach their own questions.
+  // The row policy on `cases` already scopes a private question to its author
+  // and its batch, so narrowing here would break assigning your own work
+  // without making anything safer.
   const supabase = await createClient();
 
   const [{ data: cases }, { data: tracks }] = await Promise.all([

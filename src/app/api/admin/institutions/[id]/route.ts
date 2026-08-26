@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { audit, authzResponse, requireAdminActor } from "@/lib/authz";
 
 // Every field optional: this endpoint serves both the full edit form and the
 // single-field suspend toggle, and a partial update should not blank the rest.
@@ -30,10 +30,12 @@ type Params = { params: Promise<{ id: string }> };
 
 /** Updates a campus licence. Platform-admin only. */
 export async function PATCH(request: NextRequest, { params }: Params) {
+  let actor;
   try {
-    await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    actor = await requireAdminActor();
+  } catch (error) {
+    const { body, status } = authzResponse(error);
+    return NextResponse.json(body, { status });
   }
 
   const { id } = await params;
@@ -72,24 +74,51 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     );
   }
 
+  // Suspension is called out separately from an ordinary edit: it cuts every
+  // student on the contract off at once, and "when did access stop, and who
+  // stopped it" is the first question asked afterwards.
+  await audit(
+    actor,
+    body.is_suspended === true
+      ? "licence.suspend"
+      : body.is_suspended === false
+        ? "licence.resume"
+        : "licence.update",
+    "institutions",
+    id,
+    body,
+  );
+
   return NextResponse.json({ ok: true });
 }
 
 /** Deletes a licence. Members lose access; their accounts and work survive. */
 export async function DELETE(_request: NextRequest, { params }: Params) {
+  let actor;
   try {
-    await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    actor = await requireAdminActor();
+  } catch (error) {
+    const { body, status } = authzResponse(error);
+    return NextResponse.json(body, { status });
   }
 
   const { id } = await params;
   const admin = createAdminClient();
 
+  // Read the terms before deleting them, so the audit row records what was
+  // removed rather than just an id that no longer resolves to anything.
+  const { data: doomed } = await admin
+    .from("institutions")
+    .select("name, seats_licensed, contract_value_inr, licence_ends_on")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await admin.from("institutions").delete().eq("id", id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await audit(actor, "licence.delete", "institutions", id, doomed ?? {});
 
   return NextResponse.json({ ok: true });
 }

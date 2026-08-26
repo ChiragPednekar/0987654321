@@ -69,7 +69,7 @@ export async function recordUsage(admin: Admin, event: UsageEvent): Promise<void
       .eq("user_id", event.userId)
       .maybeSingle();
 
-    await admin.from("usage_events").insert({
+    const { error } = await admin.from("usage_events").insert({
       user_id: event.userId,
       institution_id: membership?.institution_id ?? null,
       operation: event.operation,
@@ -79,9 +79,21 @@ export async function recordUsage(admin: Admin, event: UsageEvent): Promise<void
       total_tokens: event.totalTokens ?? input + output,
       cost_inr: priceUsage(input, output),
     });
-  } catch {
-    // Deliberately swallowed. Metrics are not worth failing a graded submission
-    // or an interview turn over; the submission and score rows remain the
-    // record of what happened either way.
+
+    // Logged, not thrown. Metrics are not worth failing a graded submission or
+    // an interview turn over — but they are worth knowing about. Swallowing
+    // this silently is how `usage_events` went missing from the migrations for
+    // three releases while every cost figure quietly read zero and nothing
+    // anywhere said why.
+    if (error) {
+      console.error("[usage] could not record usage event", {
+        operation: event.operation,
+        model: event.model,
+        code: error.code,
+        message: error.message,
+      });
+    }
+  } catch (error) {
+    console.error("[usage] usage recording threw", error);
   }
 }

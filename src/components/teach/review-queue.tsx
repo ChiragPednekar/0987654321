@@ -271,11 +271,64 @@ export function ReviewQueue({
                     </div>
 
                     {row.ai_score !== null ? (
-                      <p className="mt-3 text-sm text-muted-foreground tabular">
-                        AI grade: {row.ai_score}/{row.ai_max} (
-                        {Number(row.ai_percentage).toFixed(1)}%) — advisory only.
-                        Your mark is the one that counts.
-                      </p>
+                      <div className="mt-3 rounded-md border border-border p-3">
+                        <p className="text-sm text-muted-foreground tabular">
+                          AI grade: {row.ai_score}/{row.ai_max} (
+                          {Number(row.ai_percentage).toFixed(1)}%) — advisory
+                          only. Your mark is the one that counts.
+                        </p>
+
+                        {/*
+                          The per-criterion split and the written feedback were
+                          already stored on every score; the review queue simply
+                          never returned them, so a teacher saw one number with
+                          no way to tell where it came from. Marking against a
+                          rubric you cannot see is most of the value gone.
+                        */}
+                        {row.ai_breakdown &&
+                        Object.keys(row.ai_breakdown).length > 0 ? (
+                          <ul className="mt-3 space-y-1">
+                            {Object.entries(row.ai_breakdown).map(
+                              ([key, points]) => (
+                                <li
+                                  key={key}
+                                  className="flex items-baseline justify-between gap-3 text-sm"
+                                >
+                                  <span className="capitalize text-muted-foreground">
+                                    {key.replace(/_/g, " ")}
+                                  </span>
+                                  <span className="tabular">{points}</span>
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        ) : null}
+
+                        {row.ai_feedback ? (
+                          <div className="mt-3 space-y-2 border-t border-border pt-3 text-sm">
+                            {(
+                              [
+                                ["Strengths", row.ai_feedback.strengths],
+                                ["Gaps", row.ai_feedback.weaknesses],
+                                ["Next time", row.ai_feedback.improvements],
+                              ] as const
+                            ).map(([label, items]) =>
+                              items && items.length > 0 ? (
+                                <div key={label}>
+                                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                                    {label}
+                                  </p>
+                                  <ul className="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">
+                                    {items.map((item, i) => (
+                                      <li key={i}>{item}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null,
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
                     ) : (
                       <p className="mt-3 text-sm text-muted-foreground">
                         Submitted but not yet graded by the AI.

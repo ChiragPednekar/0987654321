@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UserFilters } from "@/components/admin/user-filters";
+import { UserActions } from "@/components/admin/user-actions";
 import { formatNumber, timeAgo } from "@/lib/utils";
 import type { AdminUserRow } from "@/lib/types/database";
 
@@ -31,6 +32,7 @@ export default async function UsersPage({
   });
 
   const rows = (data ?? []) as AdminUserRow[];
+  const deactivated = rows.filter((u) => u.deactivated_at).length;
   const total = rows[0]?.total_count ?? 0;
   const pages = Math.max(1, Math.ceil(Number(total) / PAGE_SIZE));
 
@@ -39,7 +41,8 @@ export default async function UsersPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {formatNumber(Number(total))} accounts.
+          {formatNumber(Number(total))} accounts
+          {deactivated > 0 ? `, ${formatNumber(deactivated)} deactivated on this page` : ""}.
         </p>
       </div>
 
@@ -64,6 +67,9 @@ export default async function UsersPage({
                     <th className="px-4 py-3 text-right font-medium">Solved</th>
                     <th className="px-4 py-3 text-right font-medium">CE</th>
                     <th className="px-4 py-3 text-right font-medium">Last active</th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -73,6 +79,11 @@ export default async function UsersPage({
                         <Link href={`/u/${u.id}`} className="font-medium hover:underline">
                           {u.full_name ?? "Unnamed"}
                         </Link>
+                        {u.deactivated_at ? (
+                          <Badge variant="destructive" className="ml-2">
+                            Deactivated
+                          </Badge>
+                        ) : null}
                         <p className="text-xs text-muted-foreground">{u.email}</p>
                       </td>
                       <td className="px-4 py-3">
@@ -90,6 +101,13 @@ export default async function UsersPage({
                       <td className="px-4 py-3 text-right tabular">{formatNumber(u.ce)}</td>
                       <td className="px-4 py-3 text-right text-xs text-muted-foreground">
                         {u.last_active ? timeAgo(u.last_active) : "never"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <UserActions
+                          userId={u.id}
+                          name={u.full_name ?? u.email}
+                          deactivated={Boolean(u.deactivated_at)}
+                        />
                       </td>
                     </tr>
                   ))}

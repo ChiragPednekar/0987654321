@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { audit, authzResponse, requireAdminActor } from "@/lib/authz";
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -12,10 +12,12 @@ type Params = { params: Promise<{ id: string }> };
 
 /** Adds or re-roles a member of an institution. Platform-admin only. */
 export async function POST(request: NextRequest, { params }: Params) {
+  let actor;
   try {
-    await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    actor = await requireAdminActor();
+  } catch (error) {
+    const { body, status } = authzResponse(error);
+    return NextResponse.json(body, { status });
   }
 
   const { id } = await params;
@@ -52,6 +54,13 @@ export async function POST(request: NextRequest, { params }: Params) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Granting institution staff hands someone the cohort dashboard for a whole
+  // college, so it belongs in the trail alongside the licence changes.
+  await audit(actor, "institution.member_role", "institution_members", id, {
+    email: body.email.toLowerCase(),
+    role: body.role,
+  });
 
   return NextResponse.json({ ok: true, role: body.role });
 }

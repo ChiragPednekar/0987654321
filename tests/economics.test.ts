@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MODEL_RATES, PLATFORM_INFRA_INR_PER_YEAR, QUOTA } from "@/lib/constants";
+import { grossMargin, priceUsage, worstCaseCost } from "@/lib/economics";
 
 /**
  * The arithmetic behind every commercial number in the admin area.
@@ -9,31 +10,11 @@ import { MODEL_RATES, PLATFORM_INFRA_INR_PER_YEAR, QUOTA } from "@/lib/constants
  * dashboard happens to render.
  */
 
-// Mirrors lib/usage.ts. Kept as a local copy so the test does not need
-// `server-only`, which refuses to load outside a React Server Component.
-function priceUsage(inputTokens: number, outputTokens: number): number {
-  return (
-    ((inputTokens / 1e6) * MODEL_RATES.inputPerMillionUsd +
-      (outputTokens / 1e6) * MODEL_RATES.outputPerMillionUsd) *
-    MODEL_RATES.usdInr
-  );
-}
-
-function grossMargin(revenue: number, cost: number): number | null {
-  // Zero revenue has no margin — it is not 0% and it is certainly not -Infinity.
-  if (revenue <= 0) return null;
-  return (revenue - cost) / revenue;
-}
-
-function worstCaseCost(
-  seats: number,
-  gradings: number,
-  interviews: number,
-  gradingCost: number,
-  interviewCost: number,
-): number {
-  return seats * (gradings * gradingCost + interviews * interviewCost);
-}
+// Imported from the module the dashboard uses, not reimplemented. These used
+// to be local copies "so the test does not need server-only" — which meant the
+// tested formula and the rendered formula were two pieces of code that merely
+// happened to agree. lib/economics is deliberately free of server-only for
+// exactly this reason.
 
 describe("AI pricing", () => {
   it("prices a measured worst-case grading call", () => {

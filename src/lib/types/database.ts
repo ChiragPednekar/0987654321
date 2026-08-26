@@ -99,6 +99,14 @@ export type UserRow = {
   current_streak: number;
   longest_streak: number;
   last_solved_on: string | null;
+  /**
+   * Set when an admin closes the account. has_pro() and quota_status() both
+   * check it, so a deactivated user loses Pro and drops to a zero grading
+   * allowance without any route needing its own guard.
+   */
+  deactivated_at: string | null;
+  /** Admin-only context. Not granted to `authenticated`, so profile reads omit it. */
+  deactivated_reason?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1123,6 +1131,9 @@ export type AssignmentReviewRow = {
   ai_score: number | null;
   ai_max: number | null;
   ai_percentage: number | null;
+  /** Per-criterion points, keyed the same way as the rubric. */
+  ai_breakdown: RubricCriteria | null;
+  ai_feedback: EvaluationFeedback | null;
   faculty_marks: number | null;
   faculty_remarks: string | null;
   reviewed_at: string | null;
@@ -1328,5 +1339,7 @@ export type AdminUserRow = {
   ce: number;
   last_active: string | null;
   created_at: string;
+  /** Set when an admin has closed the account; null while it is active. */
+  deactivated_at: string | null;
   total_count: number;
 };

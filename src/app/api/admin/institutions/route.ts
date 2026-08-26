@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { audit, authzResponse, requireAdminActor } from "@/lib/authz";
 import { slugify } from "@/lib/utils";
 
 const bodySchema = z.object({
@@ -37,10 +37,12 @@ const bodySchema = z.object({
  * why 20250101000019 revokes writes on both tables from authenticated.
  */
 export async function POST(request: NextRequest) {
+  let actor;
   try {
-    await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    actor = await requireAdminActor();
+  } catch (error) {
+    const { body, status } = authzResponse(error);
+    return NextResponse.json(body, { status });
   }
 
   let body: z.infer<typeof bodySchema>;
@@ -121,6 +123,18 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Creating a licence is the commercial act the audit trail exists for: it
+  // sets seats, dates and a contract value. Recorded with the terms, so a later
+  // dispute reads against what was actually entered rather than what the row
+  // says today.
+  await audit(actor, "licence.create", "institutions", institution.id, {
+    name: body.name,
+    seats_licensed: body.seats_licensed,
+    licence_starts_on: body.licence_starts_on ?? null,
+    licence_ends_on: body.licence_ends_on ?? null,
+    contract_value_inr: body.contract_value_inr ?? null,
+  });
+
   return NextResponse.json(
     { ...institution, staff_attached: staffAttached },
     { status: 201 },
@@ -130,9 +144,10 @@ export async function POST(request: NextRequest) {
 /** Lists licences with live seat usage, for the platform admin. */
 export async function GET() {
   try {
-    await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    await requireAdminActor();
+  } catch (error) {
+    const { body, status } = authzResponse(error);
+    return NextResponse.json(body, { status });
   }
 
   const admin = createAdminClient();
@@ -142,16 +157,23 @@ export async function GET() {
     .select("*")
     .order("created_at", { ascending: false });
 
-  const withUsage = await Promise.all(
-    (institutions ?? []).map(async (i) => {
-      const { count } = await admin
-        .from("institution_members")
-        .select("user_id", { count: "exact", head: true })
-        .eq("institution_id", i.id)
-        .eq("role", "student");
-      return { ...i, seats_used: count ?? 0 };
-    }),
-  );
+  // Seat counts come from one grouped read rather than a count query per
+  // institution. The previous version issued N+1 queries — invisible at three
+  // licences, a slow page at three hundred.
+  const { data: members } = await admin
+    .from("institution_members")
+    .select("institution_id")
+    .eq("role", "student");
+
+  const seatsUsed = new Map<string, number>();
+  for (const m of members ?? []) {
+    seatsUsed.set(m.institution_id, (seatsUsed.get(m.institution_id) ?? 0) + 1);
+  }
+
+  const withUsage = (institutions ?? []).map((i) => ({
+    ...i,
+    seats_used: seatsUsed.get(i.id) ?? 0,
+  }));
 
   return NextResponse.json({ institutions: withUsage });
 }

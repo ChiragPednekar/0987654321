@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { createClient, requireAdmin } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { audit, authzResponse, requireAdminActor } from "@/lib/authz";
 import { slugify } from "@/lib/utils";
 
 const caseSchema = z.object({
@@ -11,6 +12,10 @@ const caseSchema = z.object({
     "product_management",
     "marketing",
     "strategy",
+    // 20250101000012 added `operations` to the domain enum and the seeder
+    // generates 60 of them, but this list was never updated — so the admin
+    // case editor rejected every Operations case as an invalid domain.
+    "operations",
   ]),
   difficulty: z.enum(["easy", "medium", "hard"]),
   category_id: z.string().uuid().nullable().optional(),
@@ -46,10 +51,12 @@ const caseSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  let actor;
   try {
-    await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    actor = await requireAdminActor();
+  } catch (error) {
+    const { body, status } = authzResponse(error);
+    return NextResponse.json(body, { status });
   }
 
   let body: z.infer<typeof caseSchema>;
@@ -111,14 +118,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: rubricError.message }, { status: 500 });
   }
 
+  await audit(actor, "case.create", "cases", created.id, {
+    title: caseFields.title,
+    published: caseFields.is_published ?? false,
+  });
+
   return NextResponse.json(created, { status: 201 });
 }
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    await requireAdminActor();
+  } catch (error) {
+    const { body, status } = authzResponse(error);
+    return NextResponse.json(body, { status });
   }
 
   const supabase = await createClient();

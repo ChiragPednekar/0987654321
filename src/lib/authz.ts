@@ -161,7 +161,7 @@ export async function audit(
 ): Promise<void> {
   try {
     const admin = createAdminClient();
-    await admin.from("audit_log").insert({
+    const { error } = await admin.from("audit_log").insert({
       actor_id: actor.id,
       actor_email: actor.email,
       action,
@@ -169,7 +169,22 @@ export async function audit(
       resource_id: resourceId,
       metadata: metadata as never,
     });
-  } catch {
-    // Intentionally swallowed — see the note above.
+
+    // Logged rather than thrown: the action still happened, and a licence that
+    // could not be suspended because logging failed would be the worse
+    // outcome. But an audit trail that fails silently is not an audit trail —
+    // if this line starts appearing, the log is incomplete and someone needs
+    // to know before it is relied on.
+    if (error) {
+      console.error("[audit] could not write audit row", {
+        action,
+        resource,
+        resource_id: resourceId,
+        code: error.code,
+        message: error.message,
+      });
+    }
+  } catch (error) {
+    console.error("[audit] audit write threw", { action, resource, error });
   }
 }

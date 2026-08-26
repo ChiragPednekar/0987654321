@@ -11,14 +11,40 @@ config({ path: ".env.local" });
  * thing being tested IS the layer — a mock would only prove the mock agrees
  * with itself. Every account is created and deleted inside the run.
  *
- * Set TEST_BASE_URL to point at a preview or a local dev server.
+ * TEST_BASE_URL must be set explicitly — this suite creates and deletes real
+ * accounts, classrooms and licences against whatever it points at. It used to
+ * default to the production deployment, so a bare `npm test` wrote to the live
+ * site. Refusing to guess is the only safe default; point it at a preview or
+ * `npm run dev` on localhost.
  */
 
-const BASE = process.env.TEST_BASE_URL ?? "https://mableetcode.vercel.app";
+// Skipped rather than failed when unconfigured: these are integration tests
+// against a running deployment, and a machine without credentials (CI, a fresh
+// clone) should still get a green run from the unit suites.
+const configured = Boolean(
+  process.env.TEST_BASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.SUPABASE_SERVICE_ROLE_KEY &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+);
+const describeIntegration = configured ? describe : describe.skip;
+
+if (!configured) {
+  console.warn(
+    "[authorization] skipped — set TEST_BASE_URL, NEXT_PUBLIC_SUPABASE_URL, " +
+      "SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY to run it. " +
+      "Never point it at production: it creates and deletes real accounts.",
+  );
+}
+
+// Asserted non-null because every use is inside a suite that only runs when
+// `configured` is true; the guard above is the real check.
+const BASE = process.env.TEST_BASE_URL!;
 const SB = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const REF = SB.split("//")[1].split(".")[0];
+
+const REF = configured ? SB.split("//")[1].split(".")[0] : "";
 
 const SVC = {
   apikey: SERVICE,
@@ -98,6 +124,10 @@ let batchA: string;
 let assignmentA: string;
 
 beforeAll(async () => {
+  // Hooks run even when every suite in the file is skipped, and these ones
+  // create real accounts. Bail out before touching the network.
+  if (!configured) return;
+
   [student, teacherA, teacherB, admin] = await Promise.all([
     makeAccount("student"),
     makeAccount("teacher-a", "teacher"),
@@ -128,6 +158,8 @@ beforeAll(async () => {
 }, 180_000);
 
 afterAll(async () => {
+  if (!configured) return;
+
   await Promise.all(
     classrooms.map((id) =>
       fetch(`${SB}/rest/v1/classrooms?id=eq.${id}`, { method: "DELETE", headers: SVC }),
@@ -140,14 +172,14 @@ afterAll(async () => {
   );
 }, 180_000);
 
-describe("setup", () => {
+describeIntegration("setup", () => {
   it("creates the fixtures the rest of the suite depends on", () => {
     expect(batchA).toBeTruthy();
     expect(assignmentA).toBeTruthy();
   });
 });
 
-describe("students cannot reach teacher functions", () => {
+describeIntegration("students cannot reach teacher functions", () => {
   it("refuses to create an assignment", async () => {
     const res = await api("POST", "/api/teacher/assignments", student, {
       classroom_id: batchA,
@@ -183,7 +215,7 @@ describe("students cannot reach teacher functions", () => {
   });
 });
 
-describe("teachers are scoped to their own batches", () => {
+describeIntegration("teachers are scoped to their own batches", () => {
   it("lets teacher A mark in their own batch", async () => {
     // Nobody has submitted, so a 404 on the student is the correct answer —
     // and it proves the authorization check passed to reach that point.
@@ -238,7 +270,7 @@ describe("teachers are scoped to their own batches", () => {
   });
 });
 
-describe("teachers cannot reach platform-owner functions", () => {
+describeIntegration("teachers cannot reach platform-owner functions", () => {
   it("refuses to create a licence", async () => {
     const res = await api("POST", "/api/admin/institutions", teacherA, {
       name: "Hostile College",
@@ -266,7 +298,7 @@ describe("teachers cannot reach platform-owner functions", () => {
   });
 });
 
-describe("the platform owner can operate the platform", () => {
+describeIntegration("the platform owner can operate the platform", () => {
   it("creates and then removes a licence", async () => {
     const create = await api("POST", "/api/admin/institutions", admin, {
       name: `QA Institution ${Date.now()}`,
@@ -286,7 +318,7 @@ describe("the platform owner can operate the platform", () => {
   });
 });
 
-describe("anonymous callers reach nothing", () => {
+describeIntegration("anonymous callers reach nothing", () => {
   it("cannot create an assignment", async () => {
     const res = await api("POST", "/api/teacher/assignments", null, {
       classroom_id: batchA,
@@ -320,7 +352,7 @@ describe("anonymous callers reach nothing", () => {
   });
 });
 
-describe("assignment validation", () => {
+describeIntegration("assignment validation", () => {
   it("rejects a due date before the start date", async () => {
     const res = await api("POST", "/api/teacher/assignments", teacherA, {
       classroom_id: batchA,

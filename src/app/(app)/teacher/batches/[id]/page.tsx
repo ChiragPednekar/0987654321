@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
 import { RosterTable } from "@/components/institution/roster-table";
+import { BatchControls } from "@/components/teacher/batch-controls";
 import { DOMAIN_LABEL } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
 import type { Domain, InstitutionRosterRow } from "@/lib/types/database";
@@ -40,7 +41,9 @@ export default async function BatchDetail({
       admin.from("classrooms").select("*").eq("id", id).maybeSingle(),
       admin
         .from("classroom_members")
-        .select("user_id, joined_at, users(full_name, email, cases_solved, ce)")
+        .select(
+          "user_id, joined_at, users(full_name, email, cases_solved, cases_attempted, ce)",
+        )
         .eq("classroom_id", id)
         .eq("role", "student"),
       admin
@@ -54,20 +57,35 @@ export default async function BatchDetail({
 
   const studentIds = (members ?? []).map((m) => m.user_id);
 
-  const [{ data: scores }, { data: domains }] = await Promise.all([
-    studentIds.length
-      ? admin
-          .from("scores")
-          .select("user_id, percentage, evaluated_at")
-          .in("user_id", studentIds)
-      : Promise.resolve({ data: [] }),
-    studentIds.length
-      ? admin
-          .from("domain_progress")
-          .select("domain, avg_percentage, cases_solved")
-          .in("user_id", studentIds)
-      : Promise.resolve({ data: [] }),
-  ]);
+  const [{ data: scores }, { data: domains }, { data: interviewRows }] =
+    await Promise.all([
+      studentIds.length
+        ? admin
+            .from("scores")
+            .select("user_id, percentage, evaluated_at")
+            .in("user_id", studentIds)
+        : Promise.resolve({ data: [] }),
+      studentIds.length
+        ? admin
+            .from("domain_progress")
+            .select("domain, avg_percentage, cases_solved")
+            .in("user_id", studentIds)
+        : Promise.resolve({ data: [] }),
+      // Mock-interview counts. The roster column existed but was fed a literal
+      // zero, so every student looked as though they had never used the
+      // interviewer — the one feature with a real per-use cost.
+      studentIds.length
+        ? admin
+            .from("chat_sessions")
+            .select("user_id")
+            .in("user_id", studentIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+  const interviewsByUser = new Map<string, number>();
+  for (const row of interviewRows ?? []) {
+    interviewsByUser.set(row.user_id, (interviewsByUser.get(row.user_id) ?? 0) + 1);
+  }
 
   const graded = scores ?? [];
   const avg = graded.length
@@ -100,11 +118,11 @@ export default async function BatchDetail({
       full_name: u?.full_name ?? null,
       email: u?.email ?? "",
       cases_solved: u?.cases_solved ?? 0,
-      cases_attempted: 0,
+      cases_attempted: u?.cases_attempted ?? 0,
       ce: u?.ce ?? 0,
       avg_percentage: a ? a.total / a.n : null,
       last_active: lastActive.get(m.user_id) ?? null,
-      interviews: 0,
+      interviews: interviewsByUser.get(m.user_id) ?? 0,
     };
   });
 
@@ -132,9 +150,20 @@ export default async function BatchDetail({
             <p className="mt-1 text-sm text-muted-foreground">{batch.description}</p>
           ) : null}
         </div>
-        <Badge variant="outline" className="font-mono text-sm">
-          Join code {batch.join_code}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          {batch.archived ? (
+            <Badge variant="secondary">Archived</Badge>
+          ) : (
+            <Badge variant="outline" className="font-mono text-sm">
+              Join code {batch.join_code}
+            </Badge>
+          )}
+          <BatchControls
+            classroomId={id}
+            name={batch.name}
+            archived={Boolean(batch.archived)}
+          />
+        </div>
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -235,7 +264,13 @@ export default async function BatchDetail({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <RosterTable students={roster} staleDays={STALE_DAYS} />
+          {/* The teacher of this batch may unenrol a student; the placement
+              dashboard renders the same table without this prop. */}
+          <RosterTable
+            students={roster}
+            staleDays={STALE_DAYS}
+            removeFromClassroomId={id}
+          />
         </CardContent>
       </Card>
     </div>

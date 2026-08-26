@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowUpDown, Loader2, UserMinus } from "lucide-react";
+import { toast } from "sonner";
 import { cn, formatNumber, timeAgo } from "@/lib/utils";
 import type { InstitutionRosterRow } from "@/lib/types/database";
 
@@ -18,10 +20,54 @@ type SortKey = "name" | "solved" | "avg" | "interviews" | "active";
 export function RosterTable({
   students,
   staleDays,
+  /**
+   * When set, each row gets a Remove action scoped to this batch. Omitted by
+   * the placement dashboard, which reads a cohort it does not administer —
+   * the same table, minus a power it should not have.
+   */
+  removeFromClassroomId,
 }: {
   students: InstitutionRosterRow[];
   staleDays: number;
+  removeFromClassroomId?: string;
 }) {
+  const router = useRouter();
+  const [removing, setRemoving] = React.useState<string | null>(null);
+
+  async function remove(student: InstitutionRosterRow) {
+    if (
+      !confirm(
+        `Remove ${student.full_name ?? student.email} from this batch?\n\n` +
+          "Their solved cases, scores and any marks you have already given are kept — only the enrolment goes.",
+      )
+    ) {
+      return;
+    }
+
+    setRemoving(student.user_id);
+    try {
+      const response = await fetch(
+        `/api/classrooms/${removeFromClassroomId}/members`,
+        {
+          method: "DELETE",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ user_id: student.user_id }),
+        },
+      );
+      const body = await response.json();
+      if (!response.ok) {
+        toast.error(body.error ?? "Could not remove them.");
+        return;
+      }
+      toast.success("Removed from the batch.");
+      router.refresh();
+    } catch {
+      toast.error("Network error.");
+    } finally {
+      setRemoving(null);
+    }
+  }
+
   const [sort, setSort] = React.useState<SortKey>("solved");
   const [asc, setAsc] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -105,6 +151,11 @@ export function RosterTable({
               {header("avg", "Avg score", "right")}
               {header("interviews", "Interviews", "right")}
               {header("active", "Last active", "right")}
+              {removeFromClassroomId ? (
+                <th className="py-2 text-right font-medium">
+                  <span className="sr-only">Actions</span>
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
@@ -142,6 +193,24 @@ export function RosterTable({
                   >
                     {s.last_active ? timeAgo(s.last_active) : "never started"}
                   </td>
+                  {removeFromClassroomId ? (
+                    <td className="py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => void remove(s)}
+                        disabled={removing === s.user_id}
+                        aria-label={`Remove ${s.full_name ?? s.email} from this batch`}
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                      >
+                        {removing === s.user_id ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          <UserMinus className="size-3" />
+                        )}
+                        Remove
+                      </button>
+                    </td>
+                  ) : null}
                 </tr>
               );
             })}

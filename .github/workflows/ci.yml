@@ -23,6 +23,19 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+
+      # `database.ts` is hand-maintained, so the type checker cannot tell the
+      # difference between a column that exists and one someone intended to
+      # add. This compares what the code asks the database for against what the
+      # migrations create.
+      - run: npm run check:schema
+
+      # The suite was never wired into CI, so the assertions covering grading
+      # arithmetic, margin and the fair-use quota gated nothing. The
+      # authorization suite skips itself unless TEST_BASE_URL and the Supabase
+      # keys are present, so this stays offline and hermetic on a fork.
+      - run: npm test
+
       - run: npm run build
         env:
           # The build only needs these to exist; pages that read real data are

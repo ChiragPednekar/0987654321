@@ -1,11 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { createClient, requireAdmin } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { audit, authzResponse, requireAdminActor } from "@/lib/authz";
 
 const patchSchema = z.object({
   title: z.string().trim().min(5).max(200).optional(),
   domain: z
-    .enum(["finance", "consulting", "product_management", "marketing", "strategy"])
+    .enum([
+      "finance",
+      "consulting",
+      "product_management",
+      "marketing",
+      "strategy",
+      // See the note in ../route.ts — `operations` was missing here too.
+      "operations",
+    ])
     .optional(),
   difficulty: z.enum(["easy", "medium", "hard"]).optional(),
   company_track: z.string().max(80).nullable().optional(),
@@ -31,10 +40,12 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  let actor;
   try {
-    await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    actor = await requireAdminActor();
+  } catch (error) {
+    const { body, status } = authzResponse(error);
+    return NextResponse.json(body, { status });
   }
 
   const { id } = await params;
@@ -79,6 +90,22 @@ export async function PATCH(
     }
   }
 
+  // Publishing state and rubric changes are the two edits that change what
+  // students see and how they are scored, so both are named in the trail.
+  await audit(
+    actor,
+    body.is_published === true
+      ? "case.publish"
+      : body.is_published === false
+        ? "case.unpublish"
+        : rubric
+          ? "case.rubric_update"
+          : "case.update",
+    "cases",
+    id,
+    { fields: Object.keys(caseFields), rubric_changed: Boolean(rubric) },
+  );
+
   return NextResponse.json({ ok: true });
 }
 
@@ -86,10 +113,12 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  let actor;
   try {
-    await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    actor = await requireAdminActor();
+  } catch (error) {
+    const { body, status } = authzResponse(error);
+    return NextResponse.json(body, { status });
   }
 
   const { id } = await params;
@@ -112,6 +141,11 @@ export async function DELETE(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    await audit(actor, "case.unpublish", "cases", id, {
+      reason: "submissions exist",
+      submissions: count,
+    });
+
     return NextResponse.json({
       ok: true,
       action: "unpublished",
@@ -124,6 +158,8 @@ export async function DELETE(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await audit(actor, "case.delete", "cases", id, {});
 
   return NextResponse.json({ ok: true, action: "deleted" });
 }
