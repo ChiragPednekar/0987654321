@@ -153,6 +153,39 @@ describe("quota status", () => {
     expect(status.interviewsLeft).toBe(0);
   });
 
+  it("refuses a deactivated account instead of falling back to the free tier", async () => {
+    // The regression this exists for: quota_status() returns 0/0 for a
+    // deactivated account, but the tier fallback overwrote it — a deactivated
+    // user is not Pro, so the free-tier constant applied and they kept 60
+    // graded answers a year. Deactivation read as enforced everywhere except
+    // the one place that spends money.
+    const status = await getQuotaStatus(
+      clientReturning([
+        { is_pro: false, grading_limit: 0, interview_limit: 0, gradings_used: 12, interviews_used: 0 },
+      ]),
+      "user-1",
+    );
+
+    expect(status.gradingLimit).toBe(0);
+    expect(status.interviewLimit).toBe(0);
+    expect(status.gradingsLeft).toBe(0);
+    expect(status.interviewsLeft).toBe(0);
+  });
+
+  it("still gives a free user their allowance when only interviews are zero", async () => {
+    // Free users legitimately have interview_limit 0 and a real grading
+    // allowance. That must not be mistaken for a block.
+    const status = await getQuotaStatus(
+      clientReturning([
+        { is_pro: false, grading_limit: 250, interview_limit: 0, gradings_used: 0, interviews_used: 0 },
+      ]),
+      "user-1",
+    );
+
+    expect(status.gradingLimit).toBe(QUOTA.free.gradings);
+    expect(status.gradingsLeft).toBe(QUOTA.free.gradings);
+  });
+
   it("treats a missing row as a free user at zero usage rather than failing", async () => {
     // Refusing to grade because a usage lookup came back empty would be the
     // wrong failure — a new account has no scores and no licence yet.

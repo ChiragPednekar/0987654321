@@ -44,12 +44,31 @@ export async function getQuotaStatus(
   // grade because a usage lookup came back empty would be the wrong failure.
   const isPro = Boolean(row?.is_pro);
 
-  const gradingLimit = isPro
-    ? (row?.grading_limit ?? QUOTA.pro.gradings)
-    : QUOTA.free.gradings;
-  const interviewLimit = isPro
-    ? (row?.interview_limit ?? QUOTA.pro.interviews)
-    : QUOTA.free.interviews;
+  /**
+   * A limit of zero from the database is a refusal, not a missing value.
+   *
+   * quota_status() returns 0 for a deactivated account (20250101000026). The
+   * tier fallback below used to overwrite that: a deactivated user is not Pro,
+   * so the free-tier constant applied and they kept 60 graded answers a year.
+   * Deactivation looked enforced — has_pro() was false, the SQL said 0 — while
+   * the account could still spend real money on model calls, which is the one
+   * thing deactivation exists to stop.
+   *
+   * Only an explicit 0 is treated this way. `null`/`undefined` still mean "the
+   * database has no opinion, use the tier default".
+   */
+  const blocked = row?.grading_limit === 0 && row?.interview_limit === 0;
+
+  const gradingLimit = blocked
+    ? 0
+    : isPro
+      ? (row?.grading_limit ?? QUOTA.pro.gradings)
+      : QUOTA.free.gradings;
+  const interviewLimit = blocked
+    ? 0
+    : isPro
+      ? (row?.interview_limit ?? QUOTA.pro.interviews)
+      : QUOTA.free.interviews;
 
   const gradingsUsed = Number(row?.gradings_used ?? 0);
   const interviewsUsed = Number(row?.interviews_used ?? 0);
