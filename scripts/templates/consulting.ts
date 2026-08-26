@@ -538,7 +538,6 @@ Score on size, speed, cost and risk. The first two are usually cheapest and fast
     },
     build: (company, rng) => {
       const replacementYears = rng.int(3, 8);
-      const c = currency(company);
       const product = rng.pick([
         "electric two-wheelers",
         "commercial coffee machines",

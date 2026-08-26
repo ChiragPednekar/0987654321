@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MODEL_RATES, PLATFORM_INFRA_INR_PER_YEAR, QUOTA } from "@/lib/constants";
+import { PLATFORM_INFRA_INR_PER_YEAR, QUOTA } from "@/lib/constants";
 import { grossMargin, priceUsage, worstCaseCost } from "@/lib/economics";
 
 /**

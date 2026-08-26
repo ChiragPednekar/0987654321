@@ -400,7 +400,12 @@ async function main() {
     const { data, error } = await supabase
       .from("cases")
       .upsert(
-        chunk.map(({ rubric: _rubric, category_slug: _slug, ...fields }) => fields),
+        chunk.map((item) => {
+          const { rubric, category_slug, ...fields } = item;
+          void rubric;
+          void category_slug;
+          return fields;
+        }),
         { onConflict: "slug" },
       )
       .select("id, slug");
