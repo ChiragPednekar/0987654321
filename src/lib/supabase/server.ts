@@ -57,17 +57,22 @@ export async function getCurrentUser() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!profile) {
-    // If the public.users record is missing (e.g. trigger didn't run or table was rebuilt),
-    // self-heal by creating the profile using the admin client.
-    const admin = createAdminClientOrNull();
-    if (admin) {
-      const fullName =
-        (user.user_metadata?.full_name as string) ??
-        (user.user_metadata?.name as string) ??
-        user.email?.split("@")[0] ??
-        "User";
-      const avatarUrl = (user.user_metadata?.avatar_url as string) ?? null;
+  if (profile) {
+    return { ...profile, email: user.email ?? "" };
+  }
+
+  // If the public.users record is missing (e.g. trigger didn't run or table was rebuilt),
+  // self-heal by creating the profile using the admin client.
+  const fullName =
+    (user.user_metadata?.full_name as string) ??
+    (user.user_metadata?.name as string) ??
+    user.email?.split("@")[0] ??
+    "User";
+  const avatarUrl = (user.user_metadata?.avatar_url as string) ?? null;
+
+  const admin = createAdminClientOrNull();
+  if (admin) {
+    try {
       await admin.from("users").upsert(
         {
           id: user.id,
@@ -87,13 +92,34 @@ export async function getCurrentUser() {
       if (createdProfile) {
         return { ...createdProfile, email: user.email ?? "" };
       }
+    } catch (e) {
+      console.error("[auth] failed to upsert missing user profile", e);
     }
-    return null;
   }
 
-  // The session already carries the address, so callers that show "you are
-  // signed in as …" keep working without the column being world-readable.
-  return { ...profile, email: user.email ?? "" };
+  // Safe fallback profile so authenticated users never get stuck in a redirect loop
+  return {
+    id: user.id,
+    email: user.email ?? "",
+    full_name: fullName,
+    avatar_url: avatarUrl,
+    university: null,
+    career_goal: null,
+    role: ((user.user_metadata?.role as string) ?? "student") as Database["public"]["Tables"]["users"]["Row"]["role"],
+    ce: 0,
+    level: 1,
+    total_score: 0,
+    cases_solved: 0,
+    cases_attempted: 0,
+    current_streak: 0,
+    longest_streak: 0,
+    last_solved_on: null,
+    open_to_opportunities: false,
+    plan: "free" as const,
+    deactivated_at: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
 }
 
 /** Throws unless the caller is a signed-in admin. Use to guard admin routes. */

@@ -26,8 +26,6 @@ const PROTECTED_PREFIXES = [
   "/recruiter",
 ];
 
-const AUTH_ROUTES = ["/login", "/signup"];
-
 /**
  * Refreshes the auth cookie on every request and gates protected routes.
  *
@@ -74,30 +72,11 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
-  }
-
-  const isAuthRoute = AUTH_ROUTES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
-
-  // Authenticated user hitting login/signup -> send to dashboard (unless error or logout param present)
-  if (user && isAuthRoute) {
-    if (
-      request.nextUrl.searchParams.has("error") ||
-      request.nextUrl.searchParams.has("logout")
-    ) {
-      return response;
-    }
-    const nextParam = request.nextUrl.searchParams.get("next");
-    const isSafeNext =
-      nextParam &&
-      nextParam.startsWith("/") &&
-      !AUTH_ROUTES.some((p) => nextParam.startsWith(p));
-    const url = request.nextUrl.clone();
-    url.pathname = isSafeNext ? nextParam : "/dashboard";
-    url.search = "";
-    return NextResponse.redirect(url);
+    const redirectResponse = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirectResponse;
   }
 
   // Admin area: check the role, not just the session.
@@ -112,7 +91,11 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       url.search = "";
-      return NextResponse.redirect(url);
+      const redirectResponse = NextResponse.redirect(url);
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+      });
+      return redirectResponse;
     }
   }
 

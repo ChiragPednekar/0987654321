@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, createAdminClientOrNull } from "@/lib/supabase/admin";
 import type { UserRole } from "@/lib/types/database";
 
 /**
@@ -38,51 +38,63 @@ export async function requireActor(): Promise<Actor> {
   const supabase = await createClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
-  if (!user) throw new AuthzError("Not authenticated", 401);
+  if (authError || !user) throw new AuthzError("Not authenticated", 401);
 
   // Role comes from the database, not the JWT: a role change must take effect
   // without waiting for the token to be reissued.
-  const admin = createAdminClient();
-  const { data: profile } = await admin
-    .from("users")
-    .select("id, email, role")
-    .eq("id", user.id)
-    .maybeSingle();
+  const admin = createAdminClientOrNull();
+  if (admin) {
+    const { data: profile } = await admin
+      .from("users")
+      .select("id, email, role")
+      .eq("id", user.id)
+      .maybeSingle();
 
-  if (!profile) {
+    if (profile) {
+      return { id: profile.id, email: profile.email ?? user.email ?? "", role: profile.role };
+    }
+
     const fullName =
       (user.user_metadata?.full_name as string) ??
       (user.user_metadata?.name as string) ??
       user.email?.split("@")[0] ??
       "User";
     const avatarUrl = (user.user_metadata?.avatar_url as string) ?? null;
-    await admin.from("users").upsert(
-      {
-        id: user.id,
-        email: user.email ?? "",
-        full_name: fullName,
-        avatar_url: avatarUrl,
-      },
-      { onConflict: "id" },
-    );
-    const { data: createdProfile } = await admin
-      .from("users")
-      .select("id, email, role")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (createdProfile) {
-      return {
-        id: createdProfile.id,
-        email: createdProfile.email ?? user.email ?? "",
-        role: createdProfile.role,
-      };
+    try {
+      await admin.from("users").upsert(
+        {
+          id: user.id,
+          email: user.email ?? "",
+          full_name: fullName,
+          avatar_url: avatarUrl,
+        },
+        { onConflict: "id" },
+      );
+      const { data: createdProfile } = await admin
+        .from("users")
+        .select("id, email, role")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (createdProfile) {
+        return {
+          id: createdProfile.id,
+          email: createdProfile.email ?? user.email ?? "",
+          role: createdProfile.role,
+        };
+      }
+    } catch (e) {
+      console.error("[authz] failed to upsert missing user profile", e);
     }
-    throw new AuthzError("Account not found", 401);
   }
 
-  return { id: profile.id, email: profile.email ?? user.email ?? "", role: profile.role };
+  return {
+    id: user.id,
+    email: user.email ?? "",
+    role: ((user.user_metadata?.role as string) ?? "student") as UserRole,
+  };
 }
 
 /** The single platform owner. */
