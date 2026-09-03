@@ -1,0 +1,48 @@
+# Builds the container on Cloud Build rather than on a laptop.
+#
+# Two reasons this exists alongside the local `docker build` path in
+# scripts/deploy-cloudrun.sh:
+#
+#   1. Cloud Run only runs linux/amd64. Building on an Apple Silicon Mac needs
+#      --platform linux/amd64, which emulates and is slow; Cloud Build is amd64
+#      natively.
+#   2. It needs no local Docker daemon and no local disk for image layers,
+#      which is the difference between deploying and not when the machine is
+#      short of either.
+#
+# The two NEXT_PUBLIC_* values are build args because Next.js inlines them into
+# the client bundle at build time — they are public by design (the anon key is
+# already in the browser). Every other secret is a *runtime* env var set by
+# `gcloud run deploy`, so none of them are baked into the image.
+#
+# Invoked by scripts/deploy-cloudrun.sh --cloud-build, or by hand:
+#
+#   gcloud builds submit \
+#     --config cloudbuild.yaml \
+#     --substitutions=_IMAGE=...,_SUPABASE_URL=...,_SUPABASE_ANON=...
+
+substitutions:
+  _IMAGE: ""
+  _SUPABASE_URL: ""
+  _SUPABASE_ANON: ""
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - "--build-arg"
+      - "NEXT_PUBLIC_SUPABASE_URL=${_SUPABASE_URL}"
+      - "--build-arg"
+      - "NEXT_PUBLIC_SUPABASE_ANON_KEY=${_SUPABASE_ANON}"
+      - "-t"
+      - "${_IMAGE}:latest"
+      - "."
+
+images:
+  - "${_IMAGE}:latest"
+
+options:
+  machineType: E2_HIGHCPU_8
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1200s
