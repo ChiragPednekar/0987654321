@@ -47,45 +47,54 @@ describe("each role has its own home", () => {
   });
 });
 
-describe("privilege flows downward", () => {
-  it("lets the platform owner open every dashboard", () => {
-    // requireTeacherActor() has always allowed an admin into the teaching
-    // area so the owner can see what teachers see. Bouncing them here would
-    // silently override that — which it did, until this test existed.
-    for (const path of ROLE_HOMES) {
-      expect(canOpenHome(path, "admin")).toBe(true);
-      expect(mustRedirectFromHome(path, "admin")).toBe(false);
+describe("each role is walled into its own dashboard", () => {
+  it("lets every role open its own home and nothing else", () => {
+    for (const role of ["student", "teacher", "admin", "recruiter"] as const) {
+      const home = roleHome(role);
+      for (const path of ROLE_HOMES) {
+        expect(canOpenHome(path, role)).toBe(path === home);
+      }
     }
   });
 
-  it("lets a teacher open the teaching and student areas", () => {
-    expect(canOpenHome("/teacher", "teacher")).toBe(true);
-    expect(canOpenHome("/dashboard", "teacher")).toBe(true);
+  it("bounces a teacher off the student dashboard", () => {
+    // The complaint this exists for: a teacher clicking a stray link landed on
+    // /dashboard and saw the student product with somebody else's numbers.
+    expect(canOpenHome("/dashboard", "teacher")).toBe(false);
+    expect(mustRedirectFromHome("/dashboard", "teacher")).toBe(true);
   });
 
-  it("keeps a teacher out of the admin dashboard", () => {
-    expect(canOpenHome("/admin", "teacher")).toBe(false);
-    expect(mustRedirectFromHome("/admin", "teacher")).toBe(true);
+  it("bounces the platform owner off both other dashboards", () => {
+    // Deliberate, and a reversal: an earlier version let the owner "inspect"
+    // /teacher and /dashboard. Three separate logins exist so no session has to
+    // straddle two roles — inspecting the teacher product means signing in as
+    // the teacher.
+    expect(canOpenHome("/teacher", "admin")).toBe(false);
+    expect(canOpenHome("/dashboard", "admin")).toBe(false);
   });
 
   it("keeps a student out of the teaching and admin dashboards", () => {
     for (const path of ["/teacher", "/admin", "/recruiter"]) {
-      expect(canOpenHome(path, "student")).toBe(false);
       expect(mustRedirectFromHome(path, "student")).toBe(true);
     }
   });
 
-  it("lets every signed-in account open the student dashboard", () => {
-    for (const role of ["student", "teacher", "admin", "recruiter"] as const) {
-      expect(canOpenHome("/dashboard", role)).toBe(true);
-    }
-  });
-
-  it("never bounces a page that is not a role home", () => {
-    for (const path of ["/cases", "/classrooms", "/teacher/batches", "/admin/users"]) {
+  it("leaves shared features alone", () => {
+    // /cases and /classrooms are features, not dashboards. A teacher has to
+    // browse the library to assign from it, and /classrooms is where the
+    // teacher and student sides actually meet.
+    for (const path of ["/cases", "/classrooms", "/teacher/batches", "/admin/users", "/leaderboard"]) {
       for (const role of ["student", "teacher", "admin"] as const) {
         expect(mustRedirectFromHome(path, role)).toBe(false);
       }
+    }
+  });
+
+  it("does not bounce an unknown role anywhere", () => {
+    // A failed profile read must not become a redirect — that is how the
+    // login/dashboard loop happened.
+    for (const path of ROLE_HOMES) {
+      expect(mustRedirectFromHome(path, null)).toBe(false);
     }
   });
 });

@@ -20,7 +20,6 @@ export default async function AppLayout({
   // Drives the Placement link. Optional enrichment, so a missing service-role
   // key hides the link rather than taking the whole shell down.
   let isInstitutionStaff = false;
-  let isTeacher = false;
 
   if (profile) {
     const supabase = await createClient();
@@ -49,19 +48,6 @@ export default async function AppLayout({
         .eq("user_id", profile.id)
         .in("role", ["owner", "staff"]);
       isInstitutionStaff = (staffRows ?? 0) > 0;
-
-      // The platform role is the gate. Batch ownership is kept as a fallback
-      // so anyone already teaching keeps the link if their role is not set yet.
-      if (profile.role === "teacher" || profile.role === "admin") {
-        isTeacher = true;
-      } else {
-        const { count: taught } = await admin
-          .from("classroom_members")
-          .select("user_id", { count: "exact", head: true })
-          .eq("user_id", profile.id)
-          .eq("role", "teacher");
-        isTeacher = (taught ?? 0) > 0;
-      }
     }
   }
 
@@ -78,7 +64,6 @@ export default async function AppLayout({
           <AppSidebar
             role={profile.role}
             isInstitutionStaff={isInstitutionStaff}
-            isTeacher={isTeacher}
           />
           <main className="min-w-0 flex-1">{children}</main>
         </div>

@@ -87,11 +87,11 @@ export async function updateSession(request: NextRequest) {
    * own after login — the login form resolves that, and roleHome() is the one
    * answer both use.
    *
-   * This is the weaker, second question: may this role open this dashboard at
-   * all? Privilege flows downward, so a student is sent back from /teacher and
-   * /admin while the platform owner is never bounced anywhere. Making the
-   * bounce as strict as the landing locked the owner out of the teaching area
-   * that requireTeacherActor() has always let them see.
+   * The second question is where a role may BE: exactly its own home, and
+   * nowhere else. A teacher opening /dashboard goes back to /teacher, the owner
+   * opening either goes back to /admin. Privilege deliberately does not flow
+   * downward here — an owner who wants the teacher product signs in as the
+   * teacher, which is what the separate login is for.
    *
    * The lookup only runs on the four home paths and inside /admin, so ordinary
    * navigation still costs no extra query.
@@ -117,9 +117,6 @@ export async function updateSession(request: NextRequest) {
 
     if (role && mustRedirectFromHome(pathname, role)) {
       // Standing on a dashboard this role may not open — go to your own.
-      // Privilege flows downward, so the platform owner is never bounced: an
-      // admin opening /teacher sees the teaching area, which is what
-      // requireTeacherActor() has always allowed.
       target = roleHome(role);
     } else if (
       role &&

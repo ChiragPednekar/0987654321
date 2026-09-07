@@ -109,12 +109,20 @@ export async function requireAdminActor(): Promise<Actor> {
 /**
  * May open the teacher area at all.
  *
- * Admins pass so the owner can inspect what teachers see without a second
- * account. This says nothing about *which* batches — see requireBatchTeacher.
+ * Teachers only. Admins used to pass so the owner could "inspect what teachers
+ * see without a second account", but the three dashboards are separate products
+ * and the middleware now bounces every role off the others' homes — leaving the
+ * guard more permissive than the routing would mean the two disagree, and the
+ * looser one always wins wherever it is reached first.
+ *
+ * The owner inspects the teacher product by signing in as a teacher. Three
+ * logins exist precisely so no session has to straddle two roles.
+ *
+ * This says nothing about *which* batches — see requireBatchTeacher.
  */
 export async function requireTeacherActor(): Promise<Actor> {
   const actor = await requireActor();
-  if (actor.role !== "teacher" && actor.role !== "admin") {
+  if (actor.role !== "teacher") {
     throw new AuthzError("Teacher access required", 403);
   }
   return actor;
@@ -129,7 +137,6 @@ export async function requireTeacherActor(): Promise<Actor> {
  */
 export async function requireBatchTeacher(classroomId: string): Promise<Actor> {
   const actor = await requireTeacherActor();
-  if (actor.role === "admin") return actor;
 
   const admin = createAdminClient();
   const { data: membership } = await admin

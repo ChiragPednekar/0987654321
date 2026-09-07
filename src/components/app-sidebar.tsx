@@ -123,21 +123,6 @@ const ADMIN_GROUPS: { heading: string; items: Item[] }[] = [
   },
 ];
 
-/**
- * The owner's way into the other two products.
- *
- * Without this the platform owner has no link to the teaching or student
- * dashboards at all — they would have to type the URL, which is exactly the
- * dead end that made the separation feel like a lockout rather than a layout.
- */
-const ADMIN_INSPECT: { heading: string; items: Item[] } = {
-  heading: "Other dashboards",
-  items: [
-    { href: "/teacher", label: "Teacher view", icon: ClipboardCheck },
-    { href: "/dashboard", label: "Student view", icon: GraduationCap },
-  ],
-};
-
 const RECRUITER_GROUPS: { heading: string; items: Item[] }[] = [
   {
     heading: "Hiring",
@@ -151,13 +136,10 @@ const RECRUITER_GROUPS: { heading: string; items: Item[] }[] = [
 export function AppSidebar({
   role,
   isInstitutionStaff = false,
-  isTeacher = false,
 }: {
   role: UserRole | null;
   /** Placement-cell staff on a campus licence. */
   isInstitutionStaff?: boolean;
-  /** Teaches at least one batch. */
-  isTeacher?: boolean;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = React.useState(false);
@@ -178,29 +160,29 @@ export function AppSidebar({
     });
   }
 
-  // One role, one menu. `isTeacher` still matters for someone who teaches a
-  // batch without carrying the platform teacher role — they keep the student
-  // menu and gain the teaching section rather than swapping products.
-  const base =
+  /**
+   * One role, one menu — and no link out of it.
+   *
+   * Every item below belongs to the signed-in role's own dashboard or to a
+   * genuinely shared feature (the case library, classrooms). Nothing points at
+   * another role's home, because the middleware would bounce it straight back:
+   * a link that cannot be followed is worse than no link.
+   *
+   * `isTeacher` used to add a "Teaching" entry to the student menu for someone
+   * who ran a batch without the platform teacher role. Creating a classroom now
+   * requires that role, so the case cannot arise for anyone new — and for
+   * anyone left over the link would only bounce. Promote the account to
+   * `teacher` instead; that is what the role is for.
+   */
+  const groups = (
     role === "admin"
-      ? [...ADMIN_GROUPS, ADMIN_INSPECT]
+      ? ADMIN_GROUPS
       : role === "recruiter"
         ? RECRUITER_GROUPS
         : role === "teacher"
           ? TEACHER_GROUPS
-          : STUDENT_GROUPS;
-
-  const extra: { heading: string; items: Item[] }[] =
-    role !== "admin" && role !== "teacher" && isTeacher
-      ? [
-          {
-            heading: "Teaching",
-            items: [{ href: "/teacher", label: "Teaching", icon: ClipboardCheck }],
-          },
-        ]
-      : [];
-
-  const groups = [...base, ...extra]
+          : STUDENT_GROUPS
+  )
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => {
