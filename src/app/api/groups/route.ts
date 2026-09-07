@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/utils";
-import { generateGroupJoinCode, embedGroupJoinCode } from "@/lib/group-codes";
+import { generateGroupJoinCode } from "@/lib/group-codes";
 
 const createSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -70,26 +70,48 @@ export async function POST(request: NextRequest) {
     slug = `${base}-${attempt}`;
   }
 
-  const joinCode = body.is_private ? generateGroupJoinCode() : null;
-  const description = joinCode
-    ? embedGroupJoinCode(body.description, joinCode)
-    : body.description ?? null;
+  /**
+   * A private group needs a way in; a public one does not.
+   *
+   * The code goes in its own column, which carries a unique index — so the
+   * retry below is on the constraint rather than on a pre-check, and two groups
+   * can never end up sharing a code. It used to be embedded in the description,
+   * where it was neither unique nor private.
+   */
+  let joinCode: string | null = null;
+  let group: { id: string; slug: string } | null = null;
+  let insertError: { message: string } | null = null;
 
-  const { data: group, error } = await admin
-    .from("groups")
-    .insert({
-      slug,
-      name: body.name,
-      description,
-      owner_id: user.id,
-      is_private: body.is_private,
-    })
-    .select("id, slug")
-    .single();
+  for (let attempt = 0; attempt < 5 && !group; attempt += 1) {
+    joinCode = body.is_private ? generateGroupJoinCode() : null;
 
-  if (error || !group) {
+    const { data, error } = await admin
+      .from("groups")
+      .insert({
+        slug,
+        name: body.name,
+        description: body.description ?? null,
+        owner_id: user.id,
+        is_private: body.is_private,
+        join_code: joinCode,
+      })
+      .select("id, slug")
+      .single();
+
+    if (!error && data) {
+      group = data;
+    } else if (error && error.code === "23505" && body.is_private) {
+      // Code collision — vanishingly rare, but the index is the authority.
+      continue;
+    } else {
+      insertError = error;
+      break;
+    }
+  }
+
+  if (!group) {
     return NextResponse.json(
-      { error: error?.message ?? "Could not create the group." },
+      { error: insertError?.message ?? "Could not create the group." },
       { status: 500 },
     );
   }

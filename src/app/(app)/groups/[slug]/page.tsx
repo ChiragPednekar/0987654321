@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { GroupActions } from "@/components/groups/group-actions";
 import { GroupCodeBadge } from "@/components/groups/group-code-badge";
-import { cleanGroupDescription, extractGroupJoinCode } from "@/lib/group-codes";
+import { cleanGroupDescription } from "@/lib/group-codes";
 import { initials, timeAgo } from "@/lib/utils";
 
 interface PageProps {
@@ -38,7 +38,7 @@ export default async function GroupPage({ params }: PageProps) {
 
   const { data: group } = await supabase
     .from("groups")
-    .select("id, slug, name, description, is_private, member_count, owner_id")
+    .select("id, slug, name, description, is_private, member_count, owner_id, join_code")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -63,7 +63,9 @@ export default async function GroupPage({ params }: PageProps) {
 
   const isMember = Boolean(membership);
   const isOwner = group.owner_id === profile.id;
-  const joinCode = extractGroupJoinCode(group.description);
+  // The column is the source of truth; older groups may still carry a
+  // code embedded in their description.
+  const joinCode = group.join_code ?? null;
   const cleanDesc = cleanGroupDescription(group.description);
 
   return (

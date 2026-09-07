@@ -8,7 +8,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ClassroomForms } from "@/components/classroom/classroom-forms";
 import { JoinBatchModal } from "@/components/classroom/join-batch-modal";
-import { FacultyResourceCard } from "@/components/classroom/faculty-resource-modal";
 
 export const metadata: Metadata = {
   title: "Classrooms & Batches",

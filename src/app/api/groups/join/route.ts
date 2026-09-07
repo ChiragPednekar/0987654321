@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { normaliseGroupJoinCode } from "@/lib/group-codes";
 
 const joinSchema = z.object({
   code: z.string().trim().min(4).max(20),
@@ -24,17 +25,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid join code" }, { status: 400 });
   }
 
-  let code = body.code.toUpperCase().replace(/\s+/g, "");
-  if (!code.startsWith("GRP-") && !code.includes("-")) {
-    code = `GRP-${code}`;
-  }
+  const code = normaliseGroupJoinCode(body.code);
   const admin = createAdminClient();
 
-  // Search for the group matching this code in description
+  /**
+   * Exact match on the column, not a substring search of free text.
+   *
+   * The previous version matched `ilike '%[join_code:…]%'` against the
+   * description. Nothing enforced uniqueness there, so a duplicate code
+   * admitted you to whichever group came back first, and any description that
+   * merely contained the pattern matched. `join_code` is unique where present.
+   *
+   * The legacy `GRP-` prefix is stripped by normalise(), so a code handed out
+   * under the old scheme still works.
+   */
   const { data: groups, error: searchError } = await admin
     .from("groups")
-    .select("id, slug, name, description")
-    .ilike("description", `%[join_code:${code}]%`)
+    .select("id, slug, name, is_private")
+    .eq("join_code", code)
     .limit(1);
 
   if (searchError) {

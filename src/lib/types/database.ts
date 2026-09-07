@@ -1167,6 +1167,14 @@ export type ClassroomAssignmentStatsRow = {
 // --------------------------------------------------------------- §10 groups --
 
 export type GroupRow = {
+  /**
+   * Invitation code for a private group; null for public ones, which are
+   * listed to everyone and joined with a click.
+   *
+   * Unique where present (20250101000027). Previously embedded in the
+   * description, where it was neither unique nor hidden.
+   */
+  join_code?: string | null;
   id: string;
   slug: string;
   name: string;

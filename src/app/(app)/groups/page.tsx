@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreateGroupForm } from "@/components/groups/create-group-form";
 import { JoinGroupModal } from "@/components/groups/join-group-modal";
 import { QuickJoinButton } from "@/components/groups/quick-join-button";
-import { cleanGroupDescription, extractGroupJoinCode } from "@/lib/group-codes";
+import { cleanGroupDescription } from "@/lib/group-codes";
 
 export const metadata: Metadata = {
   title: "Groups",
@@ -24,7 +24,7 @@ export default async function GroupsPage() {
   const [{ data: allGroups }, { data: mine }] = await Promise.all([
     supabase
       .from("groups")
-      .select("id, slug, name, description, is_private, member_count, owner_id")
+      .select("id, slug, name, description, is_private, member_count, owner_id, join_code")
       .order("member_count", { ascending: false })
       .limit(100),
     supabase.from("group_members").select("group_id").eq("user_id", profile.id),
@@ -62,7 +62,9 @@ export default async function GroupsPage() {
           </div>
           <ul className="grid gap-4 sm:grid-cols-2">
             {myGroups.map((group) => {
-              const joinCode = extractGroupJoinCode(group.description);
+              // The column is the source of truth; older groups may still carry a
+  // code embedded in their description.
+  const joinCode = group.join_code ?? null;
               const isOwner = group.owner_id === profile.id;
               const cleanDesc = cleanGroupDescription(group.description);
 

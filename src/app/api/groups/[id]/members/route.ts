@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { extractGroupJoinCode } from "@/lib/group-codes";
+import { normaliseGroupJoinCode } from "@/lib/group-codes";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -25,7 +25,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
 
   const { data: group } = await admin
     .from("groups")
-    .select("id, is_private, description")
+    .select("id, is_private, join_code")
     .eq("id", id)
     .maybeSingle();
 
@@ -33,17 +33,25 @@ export async function POST(_request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Group not found" }, { status: 404 });
   }
 
-  // If group is private, require matching join code
+  /**
+   * A public group is joined with a click; a private one needs its code.
+   *
+   * The code is compared against the column rather than parsed out of the
+   * description, so it is unique and is not readable by anyone who can merely
+   * see the group.
+   */
   if (group.is_private) {
     let code = "";
     try {
       const body = await _request.json();
-      code = String(body.code ?? "").trim().toUpperCase();
+      code = normaliseGroupJoinCode(String(body.code ?? ""));
     } catch {
       // no body passed
     }
 
-    const expectedCode = extractGroupJoinCode(group.description);
+    const expectedCode = group.join_code
+      ? normaliseGroupJoinCode(group.join_code)
+      : null;
     if (!code || !expectedCode || code !== expectedCode) {
       return NextResponse.json(
         { error: "This is a private group. Please provide the correct join code to join." },
