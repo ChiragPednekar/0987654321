@@ -104,70 +104,130 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      {svc ? (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label="Annual contract value"
-            value={rupees(arr)}
-            sublabel={`${liveLicences.length} live ${liveLicences.length === 1 ? "licence" : "licences"}`}
-            icon={IndianRupee}
-          />
-          <StatCard
-            label="AI spend to date"
-            value={rupees(aiSpend)}
-            sublabel={`+ ${rupees(PLATFORM_INFRA_INR_PER_YEAR)}/yr infra`}
-            icon={Cpu}
-          />
-          <StatCard
-            label="Gross margin"
-            value={
-              arr > 0
-                ? `${Math.round(((arr - aiSpend - PLATFORM_INFRA_INR_PER_YEAR) / arr) * 100)}%`
-                : "—"
-            }
-            sublabel="after AI and infra"
-            icon={TrendingUp}
-          />
-          <StatCard
-            label="Active students"
-            value={formatNumber(Number(overview?.active_users ?? 0))}
-            sublabel={`of ${formatNumber(Number(overview?.total_users ?? 0))} accounts`}
-            icon={Users}
-          />
-        </div>
+      {/*
+        People first.
+        
+        The commercial numbers used to lead, and the user counts sat in a card
+        labelled "Roles" whose headline value was the student count with
+        everything else crammed into a sublabel. Contract value matters, but it
+        is not the first thing anyone opens this page to see — "how many people
+        are on the platform and how many of them are actually using it" is.
+      */}
+      {overview ? (
+        <>
+          <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+            People
+          </h2>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="Total users"
+              value={formatNumber(Number(overview.total_users))}
+              sublabel={`${formatNumber(Number(overview.students))} students · ${formatNumber(Number(overview.teachers))} teachers`}
+              icon={Users}
+            />
+            <StatCard
+              label="Active (30 days)"
+              value={formatNumber(Number(overview.active_users))}
+              sublabel={
+                Number(overview.total_users) > 0
+                  ? `${Math.round((Number(overview.active_users) / Number(overview.total_users)) * 100)}% of accounts`
+                  : "no accounts yet"
+              }
+              icon={TrendingUp}
+            />
+            <StatCard
+              label="New (30 days)"
+              value={formatNumber(Number(overview.new_users))}
+              sublabel="accounts created"
+              icon={Users}
+            />
+            <StatCard
+              label="Never started"
+              value={formatNumber(Number(overview.never_started))}
+              sublabel="signed up, never attempted a case"
+              // The number worth acting on: these are the seats a college is
+              // paying for that nobody is using.
+              accent={Number(overview.never_started) > 0 ? "text-amber-500" : undefined}
+              icon={Users}
+            />
+          </div>
+
+          <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+            Activity
+          </h2>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="AI calls"
+              value={formatNumber(Number(overview.gradings) + Number(overview.interviews))}
+              sublabel={`${formatNumber(Number(overview.gradings))} graded · ${formatNumber(Number(overview.interviews))} interviews`}
+              icon={Cpu}
+            />
+            <StatCard
+              label="Tokens used"
+              value={formatNumber(Number(overview.total_tokens))}
+              sublabel="across every model call"
+              icon={Cpu}
+            />
+            <StatCard
+              label="Seats"
+              value={`${formatNumber(Number(overview.seats_used))} / ${formatNumber(Number(overview.seats_licensed))}`}
+              sublabel={
+                Number(overview.seats_licensed) > 0
+                  ? `${Math.round((Number(overview.seats_used) / Number(overview.seats_licensed)) * 100)}% utilisation`
+                  : "no licences yet"
+              }
+              icon={Building2}
+            />
+            <StatCard
+              label="Institutions"
+              value={formatNumber(Number(overview.active_licences))}
+              sublabel={`${overview.expired_licences} expired · ${overview.suspended_licences} suspended`}
+              icon={Building2}
+            />
+          </div>
+        </>
       ) : null}
 
-      {overview ? (
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label="Seats"
-            value={`${formatNumber(Number(overview.seats_used))} / ${formatNumber(Number(overview.seats_licensed))}`}
-            sublabel={
-              Number(overview.seats_licensed) > 0
-                ? `${Math.round((Number(overview.seats_used) / Number(overview.seats_licensed)) * 100)}% utilisation`
-                : "no licences yet"
-            }
-            icon={Building2}
-          />
-          <StatCard
-            label="Institutions"
-            value={formatNumber(Number(overview.active_licences))}
-            sublabel={`${overview.expired_licences} expired · ${overview.suspended_licences} suspended`}
-            icon={Building2}
-          />
-          <StatCard
-            label="AI calls"
-            value={formatNumber(Number(overview.gradings) + Number(overview.interviews))}
-            sublabel={`${formatNumber(Number(overview.gradings))} graded · ${formatNumber(Number(overview.interviews))} interviews`}
-            icon={Cpu}
-          />
-          <StatCard
-            label="Roles"
-            value={formatNumber(Number(overview.students))}
-            sublabel={`${overview.teachers} teachers · ${overview.never_started} never started`}
-            icon={Users}
-          />
-        </div>
+      {svc ? (
+        <>
+          <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+            Commercial
+          </h2>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="Annual contract value"
+              value={rupees(arr)}
+              sublabel={`${liveLicences.length} live ${liveLicences.length === 1 ? "licence" : "licences"}`}
+              icon={IndianRupee}
+            />
+            <StatCard
+              label="AI spend to date"
+              value={rupees(aiSpend)}
+              sublabel={`+ ${rupees(PLATFORM_INFRA_INR_PER_YEAR)}/yr infra`}
+              icon={Cpu}
+            />
+            <StatCard
+              label="Gross margin"
+              value={
+                arr > 0
+                  ? `${Math.round(((arr - aiSpend - PLATFORM_INFRA_INR_PER_YEAR) / arr) * 100)}%`
+                  : "—"
+              }
+              sublabel={arr > 0 ? "after AI and infra" : "no contracts yet"}
+              icon={TrendingUp}
+            />
+            <StatCard
+              label="Cost per active user"
+              value={
+                Number(overview?.active_users ?? 0) > 0
+                  ? rupees(aiSpend / Number(overview!.active_users))
+                  : "—"
+              }
+              sublabel="AI spend ÷ active accounts"
+              icon={IndianRupee}
+            />
+          </div>
+        </>
       ) : null}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
