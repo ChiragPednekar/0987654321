@@ -47,19 +47,36 @@ export default async function CasesPage({
   const page = Math.max(1, Number(params.page ?? 1) || 1);
   const from = (page - 1) * CASES_PER_PAGE;
 
-  let query = supabase
-    .from("cases")
-    .select(
-      "id, slug, title, domain, difficulty, company_track, firm_style, format, is_pro, estimated_minutes, completion_rate, total_submissions",
-      { count: "exact" },
-    )
-    .eq("is_published", true)
-    // The library is the platform's own catalogue. A teacher's question is
-    // scoped to one batch and reaches its students through the assignment, not
-    // through here. The row policy on `cases` enforces this too — this filter
-    // is the second lock, so a policy change can never silently turn the
-    // library into a leak.
-    .eq("visibility", "platform");
+  /**
+   * Builds the library query.
+   *
+   * `filterVisibility` is a parameter rather than a constant because the filter
+   * depends on a column grant that a database may not have yet. The library is
+   * the platform's own catalogue — a teacher's question is scoped to one batch
+   * and reaches its students through the assignment, not through here — and the
+   * row policy on `cases` enforces that too, so this filter is the second lock.
+   *
+   * But a second lock that jams shuts the door. When production had the
+   * `visibility` column without the matching grant, every read came back 42501
+   * and the library rendered 0 of 510 cases: the catalogue, which is the whole
+   * product, simply vanished. Falling back to the unfiltered query keeps the
+   * library working and leans on the row policy, which is the boundary that
+   * actually matters.
+   */
+  const buildQuery = (filterVisibility: boolean) => {
+    let q = supabase
+      .from("cases")
+      .select(
+        "id, slug, title, domain, difficulty, company_track, firm_style, format, is_pro, estimated_minutes, completion_rate, total_submissions",
+        { count: "exact" },
+      )
+      .eq("is_published", true);
+
+    if (filterVisibility) q = q.eq("visibility", "platform");
+    return q;
+  };
+
+  let query = buildQuery(true);
 
   // ?saved=1 restricts the library to bookmarked cases.
   if (params.saved === "1") {
@@ -91,10 +108,38 @@ export default async function CasesPage({
     if (safe) query = query.or(`title.ilike.%${safe}%,scenario.ilike.%${safe}%`);
   }
 
-  const { data: cases, count } = await query
-    .order("difficulty", { ascending: true })
-    .order("created_at", { ascending: true })
-    .range(from, from + CASES_PER_PAGE - 1);
+  const ordered = (q: typeof query) =>
+    q
+      .order("difficulty", { ascending: true })
+      .order("created_at", { ascending: true })
+      .range(from, from + CASES_PER_PAGE - 1);
+
+  // eslint-disable-next-line prefer-const -- cases/count are reassigned by the fallback below
+  let { data: cases, count, error: casesError } = await ordered(query);
+
+  // 42501 is "permission denied": the visibility grant is missing on this
+  // database. Retry without that filter rather than showing an empty library,
+  // and say so in the log — an empty catalogue looks like missing data, and
+  // nothing would otherwise point at the real cause.
+  if (casesError?.code === "42501") {
+    console.error(
+      "[cases] visibility filter denied — falling back to the row policy. " +
+        "Apply the `grant select (visibility, owner_classroom_id) on public.cases` " +
+        "from 20250101000025 to this database.",
+    );
+    let retry = buildQuery(false);
+    if (params.domain) retry = retry.eq("domain", params.domain as Domain);
+    if (params.difficulty)
+      retry = retry.eq("difficulty", params.difficulty as Difficulty);
+    if (params.track) retry = retry.eq("company_track", params.track);
+    if (params.format) retry = retry.eq("format", params.format as CaseFormat);
+    if (params.firm) retry = retry.eq("firm_style", params.firm);
+    if (params.q) {
+      const safe = params.q.replace(/[(),]/g, " ").trim();
+      if (safe) retry = retry.or(`title.ilike.%${safe}%,scenario.ilike.%${safe}%`);
+    }
+    ({ data: cases, count } = await ordered(retry));
+  }
 
   // Solve state for the signed-in user, fetched in one round trip.
   let bestByCase = new Map<string, number>();
