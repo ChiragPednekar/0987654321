@@ -1075,6 +1075,14 @@ export type ClassroomMemberRow = {
 };
 
 export type ClassroomAssignmentRow = {
+  /**
+   * Published openly to the whole platform, not just this batch.
+   *
+   * A read grant and nothing more: submissions still attach only for members of
+   * the batch, so nobody outside it can hand work in or appear in its review
+   * queue. Added by 20250101000027.
+   */
+  is_public?: boolean;
   id: string;
   classroom_id: string;
   case_id: string;

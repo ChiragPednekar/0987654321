@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/utils";
+import { generateGroupJoinCode, embedGroupJoinCode } from "@/lib/group-codes";
 
 const createSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -69,12 +70,17 @@ export async function POST(request: NextRequest) {
     slug = `${base}-${attempt}`;
   }
 
+  const joinCode = body.is_private ? generateGroupJoinCode() : null;
+  const description = joinCode
+    ? embedGroupJoinCode(body.description, joinCode)
+    : body.description ?? null;
+
   const { data: group, error } = await admin
     .from("groups")
     .insert({
       slug,
       name: body.name,
-      description: body.description ?? null,
+      description,
       owner_id: user.id,
       is_private: body.is_private,
     })
@@ -102,5 +108,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ id: group.id, slug: group.slug }, { status: 201 });
+  return NextResponse.json(
+    { id: group.id, slug: group.slug, join_code: joinCode },
+    { status: 201 },
+  );
 }

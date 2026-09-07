@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { extractGroupJoinCode } from "@/lib/group-codes";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -24,7 +25,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
 
   const { data: group } = await admin
     .from("groups")
-    .select("id, is_private")
+    .select("id, is_private, description")
     .eq("id", id)
     .maybeSingle();
 
@@ -32,13 +33,23 @@ export async function POST(_request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Group not found" }, { status: 404 });
   }
 
-  // Private groups are invite-only. Without this check the endpoint would be a
-  // way around the very policy that makes them private.
+  // If group is private, require matching join code
   if (group.is_private) {
-    return NextResponse.json(
-      { error: "This group is invite-only." },
-      { status: 403 },
-    );
+    let code = "";
+    try {
+      const body = await _request.json();
+      code = String(body.code ?? "").trim().toUpperCase();
+    } catch {
+      // no body passed
+    }
+
+    const expectedCode = extractGroupJoinCode(group.description);
+    if (!code || !expectedCode || code !== expectedCode) {
+      return NextResponse.json(
+        { error: "This is a private group. Please provide the correct join code to join." },
+        { status: 403 },
+      );
+    }
   }
 
   // member_count is maintained by trigger, so nothing to increment here.

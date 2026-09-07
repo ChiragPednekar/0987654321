@@ -34,7 +34,7 @@ export default function AuthLayout({
           {[
             ["300+", "cases"],
             ["5", "domains"],
-            ["Weekly", "contests"],
+            ["AI", "rubrics"],
           ].map(([value, label]) => (
             <div key={label}>
               <dt className="text-2xl font-semibold tracking-tight tabular">

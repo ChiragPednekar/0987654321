@@ -9,6 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProfileForm } from "@/components/profile-form";
 import { AppearanceSettings } from "@/components/settings/appearance-settings";
+import { PracticePreferences } from "@/components/settings/practice-preferences";
+import { NotificationSettings } from "@/components/settings/notification-settings";
+import { PrivacySettings } from "@/components/settings/privacy-settings";
+import { DataManagement } from "@/components/settings/data-management";
 import type { UniversityRow } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -33,13 +37,16 @@ export default async function SettingsPage() {
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Your profile, how the app looks, and what it does with your data.
+        Your profile, practice solver options, notifications, privacy, and data.
       </p>
 
       <Tabs defaultValue="profile" className="mt-6">
-        <TabsList>
+        <TabsList className="grid grid-cols-3 sm:flex flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="practice">Practice</TabsTrigger>
           <TabsTrigger value="workspace">Workspace</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="privacy">Privacy & Data</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
 
@@ -56,6 +63,11 @@ export default async function SettingsPage() {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ---- practice -------------------------------------------------- */}
+        <TabsContent value="practice" className="mt-6 space-y-6">
+          <PracticePreferences />
         </TabsContent>
 
         {/* ---- workspace ------------------------------------------------- */}
@@ -94,6 +106,17 @@ export default async function SettingsPage() {
               ))}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ---- notifications --------------------------------------------- */}
+        <TabsContent value="notifications" className="mt-6 space-y-6">
+          <NotificationSettings />
+        </TabsContent>
+
+        {/* ---- privacy & data -------------------------------------------- */}
+        <TabsContent value="privacy" className="mt-6 space-y-6">
+          <PrivacySettings />
+          <DataManagement userEmail={profile.email} userName={profile.full_name} />
         </TabsContent>
 
         {/* ---- account --------------------------------------------------- */}

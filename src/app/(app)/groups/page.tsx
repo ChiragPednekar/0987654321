@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { Lock, Users } from "lucide-react";
+import { Globe, KeyRound, Lock, Users } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateGroupForm } from "@/components/groups/create-group-form";
+import { JoinGroupModal } from "@/components/groups/join-group-modal";
+import { QuickJoinButton } from "@/components/groups/quick-join-button";
+import { cleanGroupDescription, extractGroupJoinCode } from "@/lib/group-codes";
 
 export const metadata: Metadata = {
   title: "Groups",
-  description: "Study groups and communities on CaseCode.",
+  description: "Study groups, campus cohorts and interview prep circles on CaseCode.",
 };
 
 export default async function GroupsPage() {
@@ -18,74 +21,173 @@ export default async function GroupsPage() {
 
   const supabase = await createClient();
 
-  // RLS already hides private groups the viewer is not in, so this needs no
-  // extra filter — the policy is the filter.
-  const [{ data: groups }, { data: mine }] = await Promise.all([
+  const [{ data: allGroups }, { data: mine }] = await Promise.all([
     supabase
       .from("groups")
-      .select("id, slug, name, description, is_private, member_count")
+      .select("id, slug, name, description, is_private, member_count, owner_id")
       .order("member_count", { ascending: false })
-      .limit(50),
+      .limit(100),
     supabase.from("group_members").select("group_id").eq("user_id", profile.id),
   ]);
 
-  const joined = new Set((mine ?? []).map((m) => m.group_id));
+  const joinedIds = new Set((mine ?? []).map((m) => m.group_id));
+
+  // Separate groups into Public groups and My Groups
+  const publicGroups = (allGroups ?? []).filter((g) => !g.is_private);
+  const myGroups = (allGroups ?? []).filter((g) => joinedIds.has(g.id) || g.owner_id === profile.id);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 space-y-10">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Groups</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Study Groups & Circles</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Study groups, campus cohorts and interview prep circles.
+            Join public practice circles freely or enter a private invite code from your peer or coach.
           </p>
         </div>
-        <CreateGroupForm />
+        <div className="flex flex-wrap items-center gap-2">
+          <JoinGroupModal />
+          <CreateGroupForm />
+        </div>
       </div>
 
-      {!groups || groups.length === 0 ? (
-        <Card className="mt-6">
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            No groups yet. Create the first one.
-          </CardContent>
-        </Card>
-      ) : (
-        <ul className="mt-6 grid gap-4 sm:grid-cols-2">
-          {groups.map((group) => (
-            <li key={group.id}>
-              <Link href={`/groups/${group.slug}`} className="block">
-                <Card className="h-full transition-colors hover:border-primary/40">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <h2 className="font-medium">{group.name}</h2>
-                      {group.is_private ? (
-                        <Lock
-                          className="size-3.5 shrink-0 text-muted-foreground"
-                          aria-label="Private group"
-                        />
-                      ) : null}
-                    </div>
-                    {group.description ? (
-                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                        {group.description}
-                      </p>
-                    ) : null}
-                    <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1 tabular">
-                        <Users className="size-3.5" />
-                        {group.member_count}
-                      </span>
-                      {joined.has(group.id) ? (
-                        <Badge variant="secondary">Joined</Badge>
-                      ) : null}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* My Enrolled Groups */}
+      {myGroups.length > 0 ? (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+              <Users className="size-4 text-primary" />
+              My Groups ({myGroups.length})
+            </h2>
+          </div>
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {myGroups.map((group) => {
+              const joinCode = extractGroupJoinCode(group.description);
+              const isOwner = group.owner_id === profile.id;
+              const cleanDesc = cleanGroupDescription(group.description);
+
+              return (
+                <li key={group.id}>
+                  <Link href={`/groups/${group.slug}`} className="block h-full">
+                    <Card className="h-full border-border/80 transition-colors hover:border-primary/50">
+                      <CardContent className="p-4 flex flex-col justify-between h-full">
+                        <div>
+                          <div className="flex items-start justify-between gap-3">
+                            <h3 className="font-semibold text-foreground">{group.name}</h3>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {group.is_private ? (
+                                <Badge variant="outline" className="gap-1 text-xs border-amber-500/30 text-amber-500">
+                                  <Lock className="size-3" />
+                                  Private
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="gap-1 text-xs border-emerald-500/30 text-emerald-500">
+                                  <Globe className="size-3" />
+                                  Public
+                                </Badge>
+                              )}
+                              {isOwner ? (
+                                <Badge variant="secondary" className="text-xs">Owner</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs">Member</Badge>
+                              )}
+                            </div>
+                          </div>
+                          {cleanDesc ? (
+                            <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
+                              {cleanDesc}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-between border-t border-border/40 pt-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Users className="size-3.5" />
+                            {group.member_count} {group.member_count === 1 ? "member" : "members"}
+                          </span>
+                          {joinCode ? (
+                            <span className="font-mono text-[11px] font-semibold bg-muted px-2 py-0.5 rounded text-foreground">
+                              Code: {joinCode}
+                            </span>
+                          ) : null}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* Public Groups (Open to all platform members) */}
+      <section className="space-y-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <Globe className="size-4 text-emerald-500" />
+            <h2 className="text-lg font-semibold tracking-tight">Public Groups</h2>
+            <Badge variant="outline" className="text-xs">
+              No code required
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Visible to all CaseCode members. Join any public group instantly.
+          </p>
+        </div>
+
+        {publicGroups.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-sm text-muted-foreground text-center">
+              No public groups yet. Click <strong>New group</strong> above to start one!
+            </CardContent>
+          </Card>
+        ) : (
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {publicGroups.map((group) => {
+              const isJoined = joinedIds.has(group.id);
+              const cleanDesc = cleanGroupDescription(group.description);
+
+              return (
+                <li key={group.id}>
+                  <Card className="h-full border-border/80 transition-colors hover:border-primary/50 flex flex-col justify-between">
+                    <CardContent className="p-4 flex flex-col justify-between h-full">
+                      <Link href={`/groups/${group.slug}`} className="block">
+                        <div className="flex items-start justify-between gap-3">
+                          <h3 className="font-semibold text-foreground hover:underline">
+                            {group.name}
+                          </h3>
+                          <Badge variant="outline" className="gap-1 text-xs border-emerald-500/30 text-emerald-500 shrink-0">
+                            <Globe className="size-3" />
+                            Public
+                          </Badge>
+                        </div>
+                        {cleanDesc ? (
+                          <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
+                            {cleanDesc}
+                          </p>
+                        ) : null}
+                      </Link>
+
+                      <div className="mt-4 flex items-center justify-between border-t border-border/40 pt-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Users className="size-3.5" />
+                          {group.member_count} {group.member_count === 1 ? "member" : "members"}
+                        </span>
+                        {isJoined ? (
+                          <Badge variant="secondary" className="text-xs">Joined</Badge>
+                        ) : (
+                          <QuickJoinButton groupId={group.id} groupName={group.name} />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

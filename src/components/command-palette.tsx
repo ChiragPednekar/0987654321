@@ -40,7 +40,7 @@ const STUDENT_PAGES: Page[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Case Library", href: "/cases", icon: BookOpen },
   { title: "Skill Tracks", href: "/paths", icon: Route },
-  { title: "Contests", href: "/contests", icon: Trophy },
+  { title: "Groups", href: "/groups", icon: Users },
   { title: "Leaderboard", href: "/leaderboard", icon: Users },
   { title: "Progress", href: "/progress", icon: FileText },
   { title: "Bookmarks", href: "/bookmarks", icon: BookOpen },

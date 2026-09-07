@@ -24,11 +24,15 @@ export function DrillRunner({
   questions,
   signedIn,
   caseSlug,
+  nextCaseSlug,
+  pathSlug,
 }: {
   caseId: string;
   questions: DrillQuestion[];
   signedIn: boolean;
   caseSlug: string;
+  nextCaseSlug?: string | null;
+  pathSlug?: string | null;
 }) {
   const [current, setCurrent] = React.useState(0);
   const [answers, setAnswers] = React.useState<Record<string, string>>({});
@@ -162,11 +166,18 @@ export function DrillRunner({
           })}
         </ul>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {nextCaseSlug && (
+            <Button asChild>
+              <Link href={`/cases/${nextCaseSlug}${pathSlug ? `?path=${pathSlug}` : ""}`}>
+                Next question →
+              </Link>
+            </Button>
+          )}
           <Button asChild variant="outline">
             <Link href={`/cases/${caseSlug}`}>Try again</Link>
           </Button>
-          <Button asChild>
+          <Button asChild variant="ghost">
             <Link href="/cases?format=drill">More drills</Link>
           </Button>
         </div>

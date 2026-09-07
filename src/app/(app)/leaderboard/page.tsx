@@ -56,75 +56,74 @@ export default async function LeaderboardPage({
   const isCohort = Boolean(university);
   const isMyCohort = isCohort && university === myUniversity;
 
-  // `users!inner` turns the embedded profile into a join, which is what makes
-  // filtering the board by a column on `users` possible.
-  let query = supabase
-    .from("leaderboards")
-    .select(
-      "rank, total_points, cases_solved, accuracy, user_id, users!inner(full_name, avatar_url, university, level)",
-    )
-    .eq("period", period)
-    .order(sort, { ascending: false })
-    .limit(LEADERBOARD_PAGE_SIZE);
+  let userQuery = supabase
+    .from("users")
+    .select("id, full_name, avatar_url, university, level, role, created_at")
+    .order("created_at", { ascending: true });
 
-  if (university) query = query.eq("users.university", university);
+  if (university) userQuery = userQuery.eq("university", university);
 
-  // These three are independent, so they go out together. Run in sequence they
-  // cost three round trips to the database region on every single render.
-  const [{ data: rows }, { data: universityRows }, { data: myRow }] =
+  const [{ data: allUsers }, { data: lbRows }, { data: universityRows }] =
     await Promise.all([
-      query,
-      // Other campuses with a presence on this board, for the cohort switcher.
+      userQuery,
+      supabase
+        .from("leaderboards")
+        .select("user_id, total_points, cases_solved, accuracy, rank")
+        .eq("period", period),
       supabase
         .from("users")
         .select("university")
         .not("university", "is", null)
         .neq("university", "")
         .limit(500),
-      profile
-        ? supabase
-            .from("leaderboards")
-            .select("rank, total_points, cases_solved, accuracy")
-            .eq("period", period)
-            .eq("user_id", profile.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
     ]);
+
+  const lbMap = new Map((lbRows ?? []).map((r) => [r.user_id, r]));
+
+  // Combine so EVERY registered user/student present on the platform is included
+  const allRankedRows = (allUsers ?? []).map((u) => {
+    const lb = lbMap.get(u.id);
+    return {
+      user_id: u.id,
+      users: {
+        full_name: u.full_name,
+        avatar_url: u.avatar_url,
+        university: u.university,
+        level: u.level,
+      },
+      total_points: Number(lb?.total_points ?? 0),
+      cases_solved: Number(lb?.cases_solved ?? 0),
+      accuracy: Number(lb?.accuracy ?? 0),
+    };
+  });
+
+  // Sort by the selected metric with sensible tie-breakers
+  allRankedRows.sort((a, b) => {
+    if (b[sort] !== a[sort]) return b[sort] - a[sort];
+    if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+    if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy;
+    return b.cases_solved - a.cases_solved;
+  });
+
+  // Assign sequential platform ranks 1..N
+  const rows = allRankedRows.map((r, idx) => ({
+    ...r,
+    rank: idx + 1,
+  }));
 
   const universities = [
     ...new Set(
       [
-        // Keep the board being viewed visible even when its cohort has no
-        // ranked members yet, so the active scope is never unlabelled.
         ...(university ? [university] : []),
         ...(universityRows ?? []).map((row) => row.university?.trim()),
       ].filter((value): value is string => Boolean(value)),
     ),
   ].sort((a, b) => a.localeCompare(b));
 
-  const inTop = rows?.some((row) => row.user_id === profile?.id);
-
-  const mine = myRow ?? null;
-
-  // Global rank comes from the stored `rank`. A cohort rank is positional
-  // within the filtered board, so it has to be counted rather than read — but
-  // only when the viewer is missing from the visible page, since otherwise
-  // their position is already on screen.
-  let myCohortRank: number | null = null;
-
-  if (mine && university && isMyCohort && !inTop) {
-    const { count } = await supabase
-      .from("leaderboards")
-      .select("user_id, users!inner(university)", {
-        count: "exact",
-        head: true,
-      })
-      .eq("period", period)
-      .eq("users.university", university)
-      .gt(sort, mine[sort] ?? 0);
-
-    myCohortRank = (count ?? 0) + 1;
-  }
+  const myRow = rows.find((r) => r.user_id === profile?.id) ?? null;
+  const inTop = true;
+  const mine = myRow;
+  const myCohortRank: number | null = myRow ? myRow.rank : null;
 
   const boardTitle = isCohort ? university : "Global leaderboard";
 
@@ -134,7 +133,7 @@ export default async function LeaderboardPage({
       <p className="mt-1 text-sm text-muted-foreground">
         {isCohort
           ? `Ranked within ${university}. Ties break on accuracy.`
-          : "Ranked by points earned. Ties break on accuracy."}
+          : `Ranking of all ${rows.length} students on the platform. Ties break on accuracy.`}
       </p>
 
       {/* ---- cohort scope ---------------------------------------------- */}

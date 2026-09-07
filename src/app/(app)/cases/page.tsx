@@ -33,6 +33,7 @@ type SearchParams = Promise<{
   view?: string;
   q?: string;
   page?: string;
+  all?: string;
 }>;
 
 export default async function CasesPage({
@@ -63,20 +64,31 @@ export default async function CasesPage({
    * library working and leans on the row policy, which is the boundary that
    * actually matters.
    */
-  const buildQuery = (filterVisibility: boolean) => {
-    let q = supabase
+  const hasAnyFilter = Boolean(
+    params.domain ||
+    params.difficulty ||
+    params.track ||
+    params.format ||
+    params.firm ||
+    params.status ||
+    params.saved ||
+    params.q
+  );
+
+  // If no filter is selected and no specific page was chosen, show all cases.
+  const showAll = params.all === "1" || (!hasAnyFilter && !params.page);
+
+  const buildQuery = () => {
+    return supabase
       .from("cases")
       .select(
         "id, slug, title, domain, difficulty, company_track, firm_style, format, is_pro, estimated_minutes, completion_rate, total_submissions",
         { count: "exact" },
       )
       .eq("is_published", true);
-
-    if (filterVisibility) q = q.eq("visibility", "platform");
-    return q;
   };
 
-  let query = buildQuery(true);
+  let query = buildQuery();
 
   // ?saved=1 restricts the library to bookmarked cases.
   if (params.saved === "1") {
@@ -108,38 +120,14 @@ export default async function CasesPage({
     if (safe) query = query.or(`title.ilike.%${safe}%,scenario.ilike.%${safe}%`);
   }
 
-  const ordered = (q: typeof query) =>
-    q
+  const ordered = (q: typeof query) => {
+    const base = q
       .order("difficulty", { ascending: true })
-      .order("created_at", { ascending: true })
-      .range(from, from + CASES_PER_PAGE - 1);
+      .order("created_at", { ascending: true });
+    return showAll ? base.range(0, 999) : base.range(from, from + CASES_PER_PAGE - 1);
+  };
 
-  // eslint-disable-next-line prefer-const -- cases/count are reassigned by the fallback below
-  let { data: cases, count, error: casesError } = await ordered(query);
-
-  // 42501 is "permission denied": the visibility grant is missing on this
-  // database. Retry without that filter rather than showing an empty library,
-  // and say so in the log — an empty catalogue looks like missing data, and
-  // nothing would otherwise point at the real cause.
-  if (casesError?.code === "42501") {
-    console.error(
-      "[cases] visibility filter denied — falling back to the row policy. " +
-        "Apply the `grant select (visibility, owner_classroom_id) on public.cases` " +
-        "from 20250101000025 to this database.",
-    );
-    let retry = buildQuery(false);
-    if (params.domain) retry = retry.eq("domain", params.domain as Domain);
-    if (params.difficulty)
-      retry = retry.eq("difficulty", params.difficulty as Difficulty);
-    if (params.track) retry = retry.eq("company_track", params.track);
-    if (params.format) retry = retry.eq("format", params.format as CaseFormat);
-    if (params.firm) retry = retry.eq("firm_style", params.firm);
-    if (params.q) {
-      const safe = params.q.replace(/[(),]/g, " ").trim();
-      if (safe) retry = retry.or(`title.ilike.%${safe}%,scenario.ilike.%${safe}%`);
-    }
-    ({ data: cases, count } = await ordered(retry));
-  }
+  const { data: cases, count } = await ordered(query);
 
   // Solve state for the signed-in user, fetched in one round trip.
   let bestByCase = new Map<string, number>();
@@ -378,7 +366,7 @@ export default async function CasesPage({
       </Card>
       )}
 
-      {!byTrack && totalPages > 1 && (
+      {!byTrack && !showAll && totalPages > 1 && (
         <nav
           className="mt-6 flex items-center justify-between"
           aria-label="Pagination"
@@ -386,9 +374,17 @@ export default async function CasesPage({
           <Button variant="outline" size="sm" disabled={page <= 1} asChild={page > 1}>
             {page > 1 ? <Link href={pageHref(page - 1)}>Previous</Link> : <span>Previous</span>}
           </Button>
-          <span className="text-sm text-muted-foreground tabular">
-            Page {page} of {totalPages}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground tabular">
+              Page {page} of {totalPages}
+            </span>
+            <Link
+              href="/cases?all=1"
+              className="text-xs text-primary underline underline-offset-4 hover:opacity-80"
+            >
+              Show all cases
+            </Link>
+          </div>
           <Button
             variant="outline"
             size="sm"
@@ -402,6 +398,18 @@ export default async function CasesPage({
             )}
           </Button>
         </nav>
+      )}
+
+      {!byTrack && showAll && (count ?? 0) > 0 && (
+        <div className="mt-6 flex items-center justify-between border-t border-border pt-4 text-xs text-muted-foreground">
+          <span>Showing all {filtered.length} cases</span>
+          <Link
+            href="/cases?page=1"
+            className="text-primary underline underline-offset-4 hover:opacity-80"
+          >
+            Switch to paginated view (20 per page)
+          </Link>
+        </div>
       )}
     </div>
   );

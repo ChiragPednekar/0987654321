@@ -4,8 +4,8 @@ import {
   BarChart3,
   Brain,
   Flame,
-  Swords,
   Target,
+  Users,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { SiteNav } from "@/components/site-nav";
@@ -31,9 +31,9 @@ const FEATURES = [
     body: "Finance, consulting and PM tracks that unlock progressively. Start at financial statements, finish at M&A.",
   },
   {
-    icon: Swords,
-    title: "Weekly contests",
-    body: "One featured case a week, a two-hour timer, and a speed bonus. Friday to Sunday, ranked against everyone else.",
+    icon: Users,
+    title: "Cohorts & study groups",
+    body: "Collaborate with peers, join private study circles with group codes, and learn directly with classroom cohorts.",
   },
 ];
 
@@ -221,8 +221,8 @@ export default async function LandingPage() {
             <Link href="/leaderboard" className="hover:text-foreground">
               Leaderboard
             </Link>
-            <Link href="/contests" className="hover:text-foreground">
-              Contests
+            <Link href="/groups" className="hover:text-foreground">
+              Groups
             </Link>
           </nav>
         </div>

@@ -58,7 +58,6 @@ const STUDENT_GROUPS: { heading: string; items: Item[] }[] = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/cases", label: "Cases", icon: Library },
       { href: "/paths", label: "Paths", icon: Route },
-      { href: "/contests", label: "Contests", icon: Trophy },
     ],
   },
   {

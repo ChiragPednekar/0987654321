@@ -1,10 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { Lock, Users } from "lucide-react";
+import { Globe, Lock, Users } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { GroupActions } from "@/components/groups/group-actions";
+import { GroupCodeBadge } from "@/components/groups/group-code-badge";
+import { cleanGroupDescription, extractGroupJoinCode } from "@/lib/group-codes";
 import { initials, timeAgo } from "@/lib/utils";
 
 interface PageProps {
@@ -59,30 +62,46 @@ export default async function GroupPage({ params }: PageProps) {
   ]);
 
   const isMember = Boolean(membership);
+  const isOwner = group.owner_id === profile.id;
+  const joinCode = extractGroupJoinCode(group.description);
+  const cleanDesc = cleanGroupDescription(group.description);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <div className="space-y-2">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">{group.name}</h1>
             {group.is_private ? (
-              <Lock className="size-4 text-muted-foreground" aria-label="Private" />
+              <Badge variant="outline" className="gap-1 text-xs border-amber-500/30 text-amber-500">
+                <Lock className="size-3" />
+                Private
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1 text-xs border-emerald-500/30 text-emerald-500">
+                <Globe className="size-3" />
+                Public
+              </Badge>
+            )}
+          </div>
+          {cleanDesc ? (
+            <p className="mt-1 text-sm text-muted-foreground">{cleanDesc}</p>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 tabular">
+              <Users className="size-3.5" />
+              {group.member_count} {group.member_count === 1 ? "member" : "members"}
+            </span>
+            {group.is_private && joinCode && (isMember || isOwner) ? (
+              <GroupCodeBadge code={joinCode} isOwner={isOwner} />
             ) : null}
           </div>
-          {group.description ? (
-            <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>
-          ) : null}
-          <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground tabular">
-            <Users className="size-3.5" />
-            {group.member_count} {group.member_count === 1 ? "member" : "members"}
-          </p>
         </div>
 
         <GroupActions
           groupId={group.id}
           isMember={isMember}
-          isOwner={group.owner_id === profile.id}
+          isOwner={isOwner}
           isPrivate={group.is_private}
         />
       </div>

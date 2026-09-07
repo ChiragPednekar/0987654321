@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
   ArrowBigUp,
+  ArrowRight,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Download,
   FileText,
@@ -17,6 +20,7 @@ import { ScorePanel } from "@/components/case/score-panel";
 import { ShareToggle } from "@/components/case/share-toggle";
 import { Discussion, type DiscussionComment } from "@/components/case/discussion";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { BookmarkButton } from "@/components/case/bookmark-button";
 import { HintsPanel, type HintStub } from "@/components/case/hints-panel";
 import { ReportForm } from "@/components/case/report-form";
@@ -44,7 +48,7 @@ import type {
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ submission?: string; tab?: string }>;
+  searchParams: Promise<{ submission?: string; tab?: string; path?: string }>;
 }
 
 export async function generateMetadata({
@@ -287,16 +291,100 @@ export default async function CaseDetailPage({
   const hasSupportingData =
     supportingData && Object.keys(supportingData).length > 0;
 
+  // Adjacent case navigation (supports learning path progression or general catalogue)
+  let nextCase: { slug: string; title: string } | null = null;
+  let prevCase: { slug: string; title: string } | null = null;
+
+  if (query.path) {
+    const { data: pathData } = await supabase
+      .from("learning_paths")
+      .select("learning_path_steps(step_order, cases(id, slug, title))")
+      .eq("slug", query.path)
+      .maybeSingle();
+
+    if (pathData?.learning_path_steps) {
+      const steps = (pathData.learning_path_steps as unknown as Array<{
+        step_order: number;
+        cases: { id: string; slug: string; title: string } | null;
+      }>)
+        .map((s) => ({
+          step_order: s.step_order,
+          caseRef: Array.isArray(s.cases) ? s.cases[0] : s.cases,
+        }))
+        .filter((s) => s.caseRef)
+        .sort((a, b) => a.step_order - b.step_order);
+
+      const currentIndex = steps.findIndex((s) => s.caseRef?.slug === slug);
+      if (currentIndex !== -1) {
+        if (currentIndex < steps.length - 1) {
+          nextCase = steps[currentIndex + 1].caseRef ?? null;
+        }
+        if (currentIndex > 0) {
+          prevCase = steps[currentIndex - 1].caseRef ?? null;
+        }
+      }
+    }
+  }
+
+  if (!nextCase) {
+    const { data: nxt } = await supabase
+      .from("cases")
+      .select("slug, title")
+      .eq("is_published", true)
+      .gt("created_at", caseData.created_at)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    nextCase = nxt ?? null;
+  }
+
+  if (!prevCase) {
+    const { data: prv } = await supabase
+      .from("cases")
+      .select("slug, title")
+      .eq("is_published", true)
+      .lt("created_at", caseData.created_at)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    prevCase = prv ?? null;
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {/* ------------------------------------------------------ header --- */}
       <div className="mb-6">
-        <Link
-          href="/cases"
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← All cases
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href={query.path ? `/paths/${query.path}` : "/cases"}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← {query.path ? "Back to path" : "All cases"}
+          </Link>
+
+          <div className="flex items-center gap-2">
+            {prevCase && (
+              <Button variant="outline" size="sm" asChild>
+                <Link
+                  href={`/cases/${prevCase.slug}${query.path ? `?path=${query.path}` : ""}`}
+                  title={prevCase.title}
+                >
+                  <ChevronLeft className="mr-1 size-3.5" /> Previous
+                </Link>
+              </Button>
+            )}
+            {nextCase && (
+              <Button size="sm" asChild className="gap-1.5 shadow-sm">
+                <Link
+                  href={`/cases/${nextCase.slug}${query.path ? `?path=${query.path}` : ""}`}
+                  title={nextCase.title}
+                >
+                  Next question <ChevronRight className="size-3.5" />
+                </Link>
+              </Button>
+            )}
+          </div>
+        </div>
 
         <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
@@ -401,8 +489,21 @@ export default async function CaseDetailPage({
                 <CardHeader>
                   <CardTitle className="text-base">Your task</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <Markdown>{caseData.instructions}</Markdown>
+                  {nextCase && (
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+                      <span className="text-xs text-muted-foreground">
+                        Ready to move forward? Up next:{" "}
+                        <strong className="text-foreground">{nextCase.title}</strong>
+                      </span>
+                      <Button size="sm" asChild variant="outline">
+                        <Link href={`/cases/${nextCase.slug}${query.path ? `?path=${query.path}` : ""}`}>
+                          Next question <ChevronRight className="ml-1 size-3.5" />
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -503,6 +604,8 @@ export default async function CaseDetailPage({
                 caseSlug={caseData.slug}
                 questions={drillQuestions}
                 signedIn={Boolean(profile)}
+                nextCaseSlug={nextCase?.slug}
+                pathSlug={query.path}
               />
             </div>
           ) : caseData.format === "model" && modelCells.length > 0 ? (
@@ -673,10 +776,24 @@ export default async function CaseDetailPage({
 
         <TabsContent value="review">
           {selectedScore && rubric ? (
-            <div className="grid gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <ScorePanel score={selectedScore} criteria={rubric.criteria} />
-              </div>
+            <div className="space-y-6">
+              {nextCase && (
+                <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+                  <div>
+                    <p className="text-sm font-medium">Ready for the next challenge?</p>
+                    <p className="text-xs text-muted-foreground">Up next: {nextCase.title}</p>
+                  </div>
+                  <Button size="sm" asChild>
+                    <Link href={`/cases/${nextCase.slug}${query.path ? `?path=${query.path}` : ""}`}>
+                      Next question <ChevronRight className="ml-1 size-4" />
+                    </Link>
+                  </Button>
+                </div>
+              )}
+              <div className="grid gap-6 lg:grid-cols-3">
+                <div className="lg:col-span-2">
+                  <ScorePanel score={selectedScore} criteria={rubric.criteria} />
+                </div>
               <Card className="h-fit">
                 <CardHeader>
                   <CardTitle className="text-base">Your answer</CardTitle>
@@ -689,6 +806,7 @@ export default async function CaseDetailPage({
                   </div>
                 </CardContent>
               </Card>
+            </div>
             </div>
           ) : (
             <Card>

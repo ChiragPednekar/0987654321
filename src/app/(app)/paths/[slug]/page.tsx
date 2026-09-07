@@ -100,81 +100,108 @@ export default async function PathDetailPage({ params }: PageProps) {
         </p>
       </div>
 
-      <ol className="mt-8 space-y-3">
-        {stepState.map(({ step, caseRef, best, cleared }, index) => {
-          // Unlocked if it's the next step or earlier, or already cleared.
-          const locked = Boolean(profile) && index > unlockedUpTo && !cleared;
-
-          const content = (
-            <Card
-              className={cn(
-                "transition-colors",
-                locked ? "opacity-60" : "hover:border-primary/50",
-              )}
-            >
-              <CardContent className="flex items-center gap-4 p-4">
-                <span className="shrink-0">
-                  {cleared ? (
-                    <CheckCircle2 className="size-5 text-[var(--success)]" />
-                  ) : locked ? (
-                    <Lock className="size-5 text-muted-foreground/50" />
-                  ) : (
-                    <Circle className="size-5 text-muted-foreground/40" />
-                  )}
-                </span>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground tabular">
-                      Step {step.step_order}
-                    </span>
-                    {caseRef && (
-                      <span
-                        className={cn(
-                          "text-xs font-medium capitalize",
-                          DIFFICULTY_CLASS[caseRef.difficulty as Difficulty],
-                        )}
-                      >
-                        {caseRef.difficulty}
-                      </span>
-                    )}
-                  </div>
-                  <p className="truncate text-sm font-medium">
-                    {caseRef?.title ?? step.title}
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Need {step.unlock_threshold}% to unlock the next step
-                  </p>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-3">
-                  {best !== undefined && (
-                    <Badge variant={cleared ? "success" : "warning"} className="tabular">
-                      {best.toFixed(0)}%
-                    </Badge>
-                  )}
-                  {caseRef && (
-                    <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
-                      <Clock className="size-3" />
-                      {caseRef.estimated_minutes}m
-                    </span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
+      <div className="mt-8 space-y-8">
+        {Array.from({ length: Math.ceil(stepState.length / 5) }).map((_, sectionIdx) => {
+          const sectionSteps = stepState.slice(sectionIdx * 5, (sectionIdx + 1) * 5);
+          const SECTION_NAMES = [
+            "Section 1: Foundations & Frameworks",
+            "Section 2: Core Analysis & Quantitative Modelling",
+            "Section 3: Advanced Scenarios & Edge Cases",
+            "Section 4: Executive Synthesis & Complex Cases",
+          ];
+          const sectionTitle = SECTION_NAMES[sectionIdx] ?? `Section ${sectionIdx + 1}: Expansion Cases`;
+          const secCompleted = sectionSteps.filter((s) => s.cleared).length;
 
           return (
-            <li key={step.id}>
-              {locked || !caseRef ? (
-                content
-              ) : (
-                <Link href={`/cases/${caseRef.slug}`}>{content}</Link>
-              )}
-            </li>
+            <div key={sectionIdx} className="space-y-3">
+              <div className="flex items-center justify-between border-b border-border pb-2">
+                <h2 className="text-base font-semibold">{sectionTitle}</h2>
+                <span className="text-xs text-muted-foreground tabular">
+                  {secCompleted}/{sectionSteps.length} cleared
+                </span>
+              </div>
+
+              <ol className="space-y-3">
+                {sectionSteps.map(({ step, caseRef, best, cleared }) => {
+                  const globalIndex = step.step_order - 1;
+                  const locked = Boolean(profile) && globalIndex > unlockedUpTo && !cleared;
+
+                  const content = (
+                    <Card
+                      className={cn(
+                        "transition-colors",
+                        locked ? "opacity-60" : "hover:border-primary/50",
+                      )}
+                    >
+                      <CardContent className="flex items-center gap-4 p-4">
+                        <span className="shrink-0">
+                          {cleared ? (
+                            <CheckCircle2 className="size-5 text-[var(--success)]" />
+                          ) : locked ? (
+                            <Lock className="size-5 text-muted-foreground/50" />
+                          ) : (
+                            <Circle className="size-5 text-muted-foreground/40" />
+                          )}
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground tabular">
+                              Question {step.step_order}
+                            </span>
+                            {caseRef && (
+                              <span
+                                className={cn(
+                                  "text-xs font-medium capitalize",
+                                  DIFFICULTY_CLASS[caseRef.difficulty as Difficulty],
+                                )}
+                              >
+                                {caseRef.difficulty}
+                              </span>
+                            )}
+                          </div>
+                          <p className="truncate text-sm font-medium">
+                            {caseRef?.title ?? step.title}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            Pass with {step.unlock_threshold}% to unlock next
+                          </p>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-3">
+                          {best !== undefined && (
+                            <Badge variant={cleared ? "success" : "warning"} className="tabular">
+                              {best.toFixed(0)}%
+                            </Badge>
+                          )}
+                          {caseRef && (
+                            <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
+                              <Clock className="size-3" />
+                              {caseRef.estimated_minutes}m
+                            </span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+
+                  return (
+                    <li key={step.id}>
+                      {locked || !caseRef ? (
+                        content
+                      ) : (
+                        <Link href={`/cases/${caseRef.slug}?path=${slug}`} className="block">
+                          {content}
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
           );
         })}
-      </ol>
+      </div>
 
       {steps.length === 0 && (
         <Card className="mt-8">
