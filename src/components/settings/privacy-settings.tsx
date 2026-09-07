@@ -11,38 +11,67 @@ interface PrivacyConfig {
   showCollegeAffiliation: boolean;
 }
 
-const STORAGE_KEY = "casecode_privacy_config";
-
-const DEFAULT_CONFIG: PrivacyConfig = {
-  showOnLeaderboard: true,
-  shareHistoryWithCohort: true,
-  showCollegeAffiliation: true,
+/** Maps the UI keys to the columns the server stores them in. */
+const COLUMN: Record<keyof PrivacyConfig, string> = {
+  showOnLeaderboard: "show_on_leaderboard",
+  shareHistoryWithCohort: "share_history_with_cohort",
+  showCollegeAffiliation: "show_college_affiliation",
 };
 
-export function PrivacySettings() {
-  const [config, setConfig] = React.useState<PrivacyConfig>(DEFAULT_CONFIG);
+/**
+ * Privacy preferences, saved on the server.
+ *
+ * These were held in localStorage: the panel reported "Privacy preferences
+ * updated." while the server never heard about it, so switching off "Show on
+ * leaderboard" left the user on the leaderboard for everyone, and the choice
+ * did not follow them to another browser. A privacy control that changes
+ * nothing anyone else can see is not a privacy control.
+ *
+ * The current values are passed in from the server so the toggles open showing
+ * what is actually true, rather than a default that may be a lie.
+ */
+export function PrivacySettings({ initial }: { initial?: Partial<PrivacyConfig> }) {
+  const [config, setConfig] = React.useState<PrivacyConfig>({
+    showOnLeaderboard: initial?.showOnLeaderboard ?? true,
+    shareHistoryWithCohort: initial?.shareHistoryWithCohort ?? true,
+    showCollegeAffiliation: initial?.showCollegeAffiliation ?? true,
+  });
+  const [saving, setSaving] = React.useState(false);
 
-  React.useEffect(() => {
+  async function toggle(key: keyof PrivacyConfig) {
+    const next = !config[key];
+    const previous = config;
+
+    // Optimistic: a toggle that lags feels broken. Reverted if the save fails,
+    // because showing it off while the server has it on is the bug this whole
+    // change exists to remove.
+    setConfig({ ...config, [key]: next });
+    setSaving(true);
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setConfig(JSON.parse(stored));
+      const response = await fetch("/api/settings/privacy", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ [COLUMN[key]]: next }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setConfig(previous);
+        toast.error(payload.error ?? "Could not update privacy setting.");
+        return;
       }
+      toast.success(
+        key === "showOnLeaderboard" && !next
+          ? "Removed from the leaderboards."
+          : "Privacy preferences updated.",
+      );
     } catch {
-      // ignore
-    }
-  }, []);
-
-  function toggle(key: keyof PrivacyConfig) {
-    const updated = { ...config, [key]: !config[key] };
-    setConfig(updated);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      toast.success("Privacy preferences updated.");
-    } catch {
-      toast.error("Could not update privacy setting.");
+      setConfig(previous);
+      toast.error("Network error — nothing was changed.");
+    } finally {
+      setSaving(false);
     }
   }
+  void saving;
 
   return (
     <Card>

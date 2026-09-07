@@ -33,6 +33,25 @@ export default async function SettingsPage() {
     .select("id, name, short_name, domain, country, created_at")
     .order("name");
 
+  /**
+   * The real privacy state, so the toggles open showing what is actually true.
+   *
+   * These used to render from a default, which meant the panel could show
+   * "Show on leaderboard: on" to someone who had switched it off — the setting
+   * lived in localStorage and the server had never heard of it.
+   *
+   * A failed read (a database predating 20250101000028) leaves `privacy` null
+   * and the toggles fall back to the defaults, which match the behaviour such a
+   * database actually has.
+   */
+  const { data: privacy } = await supabase
+    .from("users")
+    .select(
+      "show_on_leaderboard, share_history_with_cohort, show_college_affiliation",
+    )
+    .eq("id", profile.id)
+    .maybeSingle();
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
@@ -115,7 +134,13 @@ export default async function SettingsPage() {
 
         {/* ---- privacy & data -------------------------------------------- */}
         <TabsContent value="privacy" className="mt-6 space-y-6">
-          <PrivacySettings />
+          <PrivacySettings
+              initial={{
+                showOnLeaderboard: privacy?.show_on_leaderboard ?? true,
+                shareHistoryWithCohort: privacy?.share_history_with_cohort ?? true,
+                showCollegeAffiliation: privacy?.show_college_affiliation ?? true,
+              }}
+            />
           <DataManagement userEmail={profile.email} userName={profile.full_name} />
         </TabsContent>
 

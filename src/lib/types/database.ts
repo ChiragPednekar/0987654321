@@ -105,6 +105,14 @@ export type UserRow = {
    * has_pro() and quota_status(), so no page needs to read it, and selecting a
    * column production might not have costs every user their real profile.
    */
+  /**
+   * Privacy preferences (20250101000028). Optional because a database may
+   * predate them; the reads that expose a user fall back to visible, which is
+   * the behaviour such a database actually has.
+   */
+  show_on_leaderboard?: boolean;
+  share_history_with_cohort?: boolean;
+  show_college_affiliation?: boolean;
   deactivated_at?: string | null;
   /** Admin-only context. Not granted to `authenticated`, so profile reads omit it. */
   deactivated_reason?: string | null;
