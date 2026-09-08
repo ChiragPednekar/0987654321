@@ -17,7 +17,7 @@ const FREE = [
   "Rubric-based AI grading with per-criterion feedback",
   "Progress tracking, streaks and skill radar",
   "Campus and global leaderboards",
-  "Weekly contests, study groups and classrooms",
+  "Study groups, classrooms and teacher-set assignments",
 ];
 
 // Only the first entry is live today. The rest stay on the page because they

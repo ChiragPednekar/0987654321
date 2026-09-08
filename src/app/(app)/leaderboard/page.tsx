@@ -5,7 +5,6 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { LEADERBOARD_PAGE_SIZE } from "@/lib/constants";
 import { cn, formatNumber, initials } from "@/lib/utils";
 import type { LeaderboardPeriod } from "@/lib/types/database";
 

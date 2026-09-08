@@ -4,10 +4,6 @@
     {
       "path": "/api/cron/refresh-leaderboards",
       "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/weekly-contest",
-      "schedule": "0 6 * * 5"
     }
   ]
 }
