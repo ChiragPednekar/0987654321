@@ -6,6 +6,7 @@ import { UpgradeButton } from "@/components/billing/upgrade-button";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { razorpayConfigured } from "@/lib/billing/razorpay";
 import { Card } from "@/components/ui/card";
+import { DOMAINS, MARKETED_CASE_FLOOR } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 const FREE = [
-  "All 508 cases across six domains, including drills and model builds",
+  `All ${MARKETED_CASE_FLOOR}+ cases across ${DOMAINS.length} domains, including drills and model builds`,
   "Rubric-based AI grading with per-criterion feedback",
   "Progress tracking, streaks and skill radar",
   "Campus and global leaderboards",

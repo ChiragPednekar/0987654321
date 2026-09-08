@@ -15,7 +15,7 @@ interface CaseHit { id: string; title: string }
 /**
  * Create an assignment (spec §10).
  *
- * The case is chosen by searching rather than from a dropdown: 508 platform
+ * The case is chosen by searching rather than from a dropdown: hundreds of platform
  * cases plus a teacher's own will not fit in a select, and search is what a
  * teacher actually does — they know roughly what they want.
  */
@@ -122,7 +122,7 @@ export function AssignmentForm({
             <>
               <Input id="case-search" value={query} autoComplete="off"
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search 508 platform cases by title…" />
+                placeholder="Search the platform case library by title…" />
               {hits.length > 0 ? (
                 <ul className="mt-2 space-y-1 rounded-md border border-border p-1">
                   {hits.map((h) => (

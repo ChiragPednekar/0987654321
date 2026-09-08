@@ -21,6 +21,12 @@ import { STRATEGY_ARCHETYPES } from "./templates/strategy";
 import { MARKETING_ARCHETYPES } from "./templates/marketing";
 import { OPERATIONS_ARCHETYPES } from "./templates/operations";
 import { DEBUG_ARCHETYPES } from "./templates/debug";
+import { FINANCE_EXTENDED } from "./templates/finance-extended";
+import { CONSULTING_EXTENDED } from "./templates/consulting-extended";
+import { PRODUCT_EXTENDED } from "./templates/product-extended";
+import { STRATEGY_EXTENDED } from "./templates/strategy-extended";
+import { MARKETING_EXTENDED } from "./templates/marketing-extended";
+import { OPERATIONS_EXTENDED } from "./templates/operations-extended";
 
 config({ path: ".env.local" });
 config({ path: ".env" });
@@ -35,14 +41,55 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const EMIT_SQL = process.argv.includes("--emit-sql");
 const SQL_OUT = "supabase/seed/cases.sql";
 
+/**
+ * Counts are chosen so every archetype gets roughly twenty company variants —
+ * enough that a student working through a domain meets each analytical shape
+ * several times with different numbers, without the library becoming twenty
+ * near-identical copies of one case.
+ *
+ * The `_EXTENDED` sets are additional archetypes covering syllabus territory
+ * the originals missed: cost of capital, working capital, quality economics,
+ * attribution, cohort retention, due diligence and so on. Adding shapes rather
+ * than only raising counts is what makes the library varied rather than long.
+ */
 const PLAN = [
-  { archetypes: FINANCE_ARCHETYPES, count: 100, seed: 1_000, label: "Finance" },
-  { archetypes: CONSULTING_ARCHETYPES, count: 100, seed: 2_000, label: "Consulting" },
-  { archetypes: PRODUCT_ARCHETYPES, count: 100, seed: 3_000, label: "Product Management" },
-  { archetypes: STRATEGY_ARCHETYPES, count: 60, seed: 4_000, label: "Strategy" },
-  { archetypes: MARKETING_ARCHETYPES, count: 60, seed: 5_000, label: "Marketing" },
-  { archetypes: OPERATIONS_ARCHETYPES, count: 60, seed: 6_000, label: "Operations" },
-  { archetypes: DEBUG_ARCHETYPES, count: 24, seed: 7_000, label: "Debug" },
+  {
+    archetypes: [...FINANCE_ARCHETYPES, ...FINANCE_EXTENDED],
+    count: 200,
+    seed: 1_000,
+    label: "Finance",
+  },
+  {
+    archetypes: [...CONSULTING_ARCHETYPES, ...CONSULTING_EXTENDED],
+    count: 180,
+    seed: 2_000,
+    label: "Consulting",
+  },
+  {
+    archetypes: [...PRODUCT_ARCHETYPES, ...PRODUCT_EXTENDED],
+    count: 140,
+    seed: 3_000,
+    label: "Product Management",
+  },
+  {
+    archetypes: [...STRATEGY_ARCHETYPES, ...STRATEGY_EXTENDED],
+    count: 80,
+    seed: 4_000,
+    label: "Strategy",
+  },
+  {
+    archetypes: [...MARKETING_ARCHETYPES, ...MARKETING_EXTENDED],
+    count: 120,
+    seed: 5_000,
+    label: "Marketing",
+  },
+  {
+    archetypes: [...OPERATIONS_ARCHETYPES, ...OPERATIONS_EXTENDED],
+    count: 120,
+    seed: 6_000,
+    label: "Operations",
+  },
+  { archetypes: DEBUG_ARCHETYPES, count: 30, seed: 7_000, label: "Debug" },
 ];
 
 /**

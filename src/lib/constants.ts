@@ -10,7 +10,7 @@ import type { CaseFormat, Difficulty, Domain } from "@/lib/types/database";
  * pages use this because they are on the sign-in path and should not pay for a
  * query. Raise it when the library passes the next fifty.
  */
-export const MARKETED_CASE_FLOOR = 500;
+export const MARKETED_CASE_FLOOR = 850;
 
 export const DOMAINS: {
   value: Domain;
