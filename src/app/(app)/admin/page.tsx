@@ -133,6 +133,7 @@ export default async function AdminPage() {
             />
             <StatCard
               label="Active (30 days)"
+              tone={Number(overview.active_users) > 0 ? "positive" : "default"}
               value={formatNumber(Number(overview.active_users))}
               sublabel={
                 Number(overview.total_users) > 0
@@ -149,6 +150,7 @@ export default async function AdminPage() {
             />
             <StatCard
               label="Never started"
+              tone={Number(overview.never_started) > 0 ? "warning" : "default"}
               value={formatNumber(Number(overview.never_started))}
               sublabel="signed up, never attempted a case"
               // The number worth acting on: these are the seats a college is
@@ -202,12 +204,14 @@ export default async function AdminPage() {
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               label="Annual contract value"
+              tone={arr > 0 ? "positive" : "default"}
               value={rupees(arr)}
               sublabel={`${liveLicences.length} live ${liveLicences.length === 1 ? "licence" : "licences"}`}
               icon={IndianRupee}
             />
             <StatCard
               label="AI spend to date"
+              tone="warning"
               value={rupees(aiSpend)}
               sublabel={`+ ${rupees(PLATFORM_INFRA_INR_PER_YEAR)}/yr infra`}
               icon={Cpu}
