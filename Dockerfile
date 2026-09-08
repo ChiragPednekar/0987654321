@@ -13,11 +13,12 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # NEXT_PUBLIC_* values are inlined into the client bundle at build time, so they
-# have to be present here rather than only at runtime.
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+# have to be present here rather than only at runtime. The Supabase pair is gone
+# on Cloud Run: the browser no longer talks to a database directly, so there is
+# no public key to ship. Firebase's client config is added here when the auth
+# migration lands.
+ARG NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build

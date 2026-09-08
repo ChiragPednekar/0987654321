@@ -1,48 +1,70 @@
-# Builds the container on Cloud Build rather than on a laptop.
+# GitHub -> Cloud Build -> Artifact Registry -> Cloud Run
 #
-# Two reasons this exists alongside the local `docker build` path in
-# scripts/deploy-cloudrun.sh:
-#
-#   1. Cloud Run only runs linux/amd64. Building on an Apple Silicon Mac needs
-#      --platform linux/amd64, which emulates and is slow; Cloud Build is amd64
-#      natively.
-#   2. It needs no local Docker daemon and no local disk for image layers,
-#      which is the difference between deploying and not when the machine is
-#      short of either.
-#
-# The two NEXT_PUBLIC_* values are build args because Next.js inlines them into
-# the client bundle at build time — they are public by design (the anon key is
-# already in the browser). Every other secret is a *runtime* env var set by
-# `gcloud run deploy`, so none of them are baked into the image.
-#
-# Invoked by scripts/deploy-cloudrun.sh --cloud-build, or by hand:
-#
-#   gcloud builds submit \
-#     --config cloudbuild.yaml \
-#     --substitutions=_IMAGE=...,_SUPABASE_URL=...,_SUPABASE_ANON=...
-
+# Tests run before the image is built, and the build stops on failure, so a red
+# test suite cannot reach production. This replaces Vercel's git-push deploy.
 substitutions:
-  _IMAGE: ""
-  _SUPABASE_URL: ""
-  _SUPABASE_ANON: ""
-
-steps:
-  - name: gcr.io/cloud-builders/docker
-    args:
-      - build
-      - "--build-arg"
-      - "NEXT_PUBLIC_SUPABASE_URL=${_SUPABASE_URL}"
-      - "--build-arg"
-      - "NEXT_PUBLIC_SUPABASE_ANON_KEY=${_SUPABASE_ANON}"
-      - "-t"
-      - "${_IMAGE}:latest"
-      - "."
-
-images:
-  - "${_IMAGE}:latest"
+  _REGION: asia-south1
+  _SERVICE: casecode
+  _REPO: casecode
 
 options:
-  machineType: E2_HIGHCPU_8
   logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
 
-timeout: 1200s
+steps:
+  - id: install
+    name: node:22-alpine
+    entrypoint: npm
+    args: ["ci"]
+
+  - id: verify
+    name: node:22-alpine
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        set -e
+        npx tsc --noEmit
+        npx eslint --max-warnings=0
+        npx vitest run
+        npx tsx scripts/check-schema-refs.ts
+
+  # NEXT_PUBLIC_* are inlined into the client bundle at build time, so they must
+  # be present here — passing them only at runtime silently ships a bundle with
+  # `undefined` baked in, which fails in the browser and not in CI.
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        docker build \
+          --build-arg NEXT_PUBLIC_SITE_URL="$$NEXT_PUBLIC_SITE_URL" \
+          -t ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA \
+          -t ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:latest .
+    secretEnv: ["NEXT_PUBLIC_SITE_URL"]
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ["push", "--all-tags",
+           "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}"]
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA
+      - --region=${_REGION}
+      - --quiet
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/next-public-site-url/versions/latest
+      env: NEXT_PUBLIC_SITE_URL
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$SHORT_SHA
+timeout: 1800s
