@@ -524,6 +524,12 @@ export interface Database {
         Update: Partial<UsageEventRow>;
         Relationships: [];
       };
+      role_grants: {
+        Row: RoleGrantRow;
+        Insert: Partial<RoleGrantRow>;
+        Update: Partial<RoleGrantRow>;
+        Relationships: [];
+      };
       audit_log: {
         Row: AuditLogRow;
         Insert: Partial<AuditLogRow>;
@@ -1340,6 +1346,19 @@ export type AuditLogRow = {
   resource_id: string | null;
   metadata: Json;
   created_at: string;
+};
+
+/**
+ * Email allowlist for elevated roles (20250101000031). An email absent from
+ * this table is a student — that is the whole rule.
+ */
+export type RoleGrantRow = {
+  email: string;
+  role: Exclude<UserRole, "student">;
+  note: string | null;
+  granted_by: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 /** Platform-wide operational totals (public.platform_overview). */
