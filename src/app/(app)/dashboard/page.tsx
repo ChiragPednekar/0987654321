@@ -319,31 +319,35 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* ------------------------------------------------ weekly points --- */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Points by week</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Last 8 weeks. Points come from graded cases.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <WeeklyPointsLazy data={weekly} />
-        </CardContent>
-      </Card>
+      {/* --------------------------------------------- effort over time --- */}
+      {/* Paired rather than stacked: both answer "how much have I been doing
+          lately", and side by side they compare instead of scrolling past each
+          other. This is what took four full-width bands down to two. */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Points by week</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Last 8 weeks. Points come from graded cases.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <WeeklyPointsLazy data={weekly} />
+          </CardContent>
+        </Card>
 
-      {/* ----------------------------------------------------- activity --- */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Last 8 weeks</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Consistency beats intensity. Every square is a day.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <SubmissionHeatmap counts={heatmapCounts} />
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Last 8 weeks</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Consistency beats intensity. Every square is a day.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <SubmissionHeatmap counts={heatmapCounts} />
+          </CardContent>
+        </Card>
+      </div>
 
       {quota ? (
         <div className="mt-6">

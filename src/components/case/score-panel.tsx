@@ -1,15 +1,39 @@
-import { AlertCircle, ArrowUpRight, CheckCircle2, Quote } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { AlertCircle, ArrowUpRight, CheckCircle2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { EvaluationFeedback, ScoreRow } from "@/lib/types/database";
 
-function scoreTone(percentage: number) {
-  if (percentage >= 80) return "text-[var(--success)]";
-  if (percentage >= 60) return "text-[var(--warning)]";
-  return "text-destructive";
+function tone(percentage: number) {
+  if (percentage >= 80) return "success";
+  if (percentage >= 60) return "warning";
+  return "destructive";
 }
 
+const TONE_TEXT = {
+  success: "text-[var(--success)]",
+  warning: "text-[var(--warning)]",
+  destructive: "text-destructive",
+} as const;
+
+const TONE_BG = {
+  success: "bg-[var(--success)]",
+  warning: "bg-[var(--warning)]",
+  destructive: "bg-destructive",
+} as const;
+
+/**
+ * The result screen — the moment the whole product exists to deliver.
+ *
+ * It used to be four stacked cards: a number, a quote, and three bulleted
+ * lists that looked identical to each other. Everything had the same weight, so
+ * the score, the verdict and the advice all arrived at once and none of them
+ * landed.
+ *
+ * Now there is one clear order. A score ring you can read at a glance, the
+ * criteria beneath it as a small table of bars, the verdict as the one piece of
+ * prose on the screen, and the three feedback lists sharing a single card with
+ * coloured rails so they read as one critique rather than three sections.
+ */
 export function ScorePanel({
   score,
   criteria,
@@ -19,80 +43,126 @@ export function ScorePanel({
 }) {
   const feedback = score.feedback as EvaluationFeedback & { verdict?: string };
   const percentage = Number(score.percentage);
+  const t = tone(percentage);
+
+  // A ring reads as a proportion without needing to be measured, which a bare
+  // "63/80" does not. 44px radius, so the circumference is the dash length.
+  const radius = 44;
+  const circumference = 2 * Math.PI * radius;
+  const filled = (Math.min(100, Math.max(0, percentage)) / 100) * circumference;
 
   const sections = [
     {
       key: "strengths" as const,
       title: "Strengths",
       icon: CheckCircle2,
-      tone: "text-[var(--success)]",
+      text: "text-[var(--success)]",
+      rail: "bg-[var(--success)]/40",
     },
     {
       key: "weaknesses" as const,
       title: "Where you lost points",
       icon: AlertCircle,
-      tone: "text-destructive",
+      text: "text-destructive",
+      rail: "bg-destructive/40",
     },
     {
       key: "improvements" as const,
       title: "Next time",
       icon: ArrowUpRight,
-      tone: "text-primary",
+      text: "text-primary",
+      rail: "bg-primary/40",
     },
   ];
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="overflow-hidden">
+        {/* A hairline of the score colour, so the verdict is legible before a
+            single number is read. */}
+        <div className={cn("h-1 w-full", TONE_BG[t])} />
+
         <CardContent className="p-6">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Total score</p>
-              <p className={cn("text-4xl font-semibold tabular", scoreTone(percentage))}>
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+            <div className="relative shrink-0 self-center sm:self-auto">
+              <svg width="112" height="112" viewBox="0 0 112 112" aria-hidden>
+                <circle
+                  cx="56"
+                  cy="56"
+                  r={radius}
+                  fill="none"
+                  strokeWidth="8"
+                  className="stroke-muted"
+                />
+                <circle
+                  cx="56"
+                  cy="56"
+                  r={radius}
+                  fill="none"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={`${filled} ${circumference}`}
+                  transform="rotate(-90 56 56)"
+                  className={cn("transition-all", {
+                    "stroke-[var(--success)]": t === "success",
+                    "stroke-[var(--warning)]": t === "warning",
+                    "stroke-destructive": t === "destructive",
+                  })}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span
+                  className={cn(
+                    "text-2xl font-semibold leading-none tabular",
+                    TONE_TEXT[t],
+                  )}
+                >
+                  {percentage.toFixed(0)}%
+                </span>
+              </div>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Total score
+              </p>
+              <p className="mt-1 text-4xl font-semibold leading-none tracking-tight tabular">
                 {score.total_score}
-                <span className="text-xl text-muted-foreground">
+                <span className="text-2xl text-muted-foreground">
                   /{score.max_score}
                 </span>
               </p>
+              {feedback?.verdict && (
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {feedback.verdict}
+                </p>
+              )}
             </div>
-            <Badge
-              variant={
-                percentage >= 80 ? "success" : percentage >= 60 ? "warning" : "destructive"
-              }
-              className="text-sm tabular"
-            >
-              {percentage.toFixed(0)}%
-            </Badge>
           </div>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-6 space-y-3 border-t border-border pt-5">
             {Object.entries(criteria).map(([key, max]) => {
               const got = Number(score.breakdown?.[key] ?? 0);
               const ratio = max > 0 ? (got / max) * 100 : 0;
+              const ct = tone(ratio);
               return (
-                <div key={key} className="space-y-1.5">
-                  <div className="flex items-baseline justify-between text-sm">
-                    <span className="capitalize text-muted-foreground">
-                      {key.replace(/_/g, " ")}
-                    </span>
-                    <span className="tabular">
-                      {got}
-                      <span className="text-muted-foreground">/{max}</span>
-                    </span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  key={key}
+                  className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1.5 sm:grid-cols-[minmax(0,10rem)_1fr_auto]"
+                >
+                  <span className="truncate text-sm capitalize text-muted-foreground">
+                    {key.replace(/_/g, " ")}
+                  </span>
+                  <div className="col-span-2 h-2 overflow-hidden rounded-full bg-muted sm:col-span-1 sm:order-none">
                     <div
-                      className={cn(
-                        "h-full rounded-full transition-all",
-                        ratio >= 80
-                          ? "bg-[var(--success)]"
-                          : ratio >= 60
-                            ? "bg-[var(--warning)]"
-                            : "bg-destructive",
-                      )}
+                      className={cn("h-full rounded-full", TONE_BG[ct])}
                       style={{ width: `${ratio}%` }}
                     />
                   </div>
+                  <span className="text-sm tabular sm:order-none">
+                    {got}
+                    <span className="text-muted-foreground">/{max}</span>
+                  </span>
                 </div>
               );
             })}
@@ -100,45 +170,48 @@ export function ScorePanel({
         </CardContent>
       </Card>
 
-      {feedback?.verdict && (
+      {/* One card, three rails — a single critique rather than three lookalike
+          boxes competing for the same attention. */}
+      {sections.some((s) => (feedback?.[s.key] ?? []).length > 0) && (
         <Card>
-          <CardContent className="flex gap-3 p-5">
-            <Quote className="size-4 shrink-0 text-muted-foreground" />
-            <p className="text-sm leading-relaxed">{feedback.verdict}</p>
+          <CardContent className="space-y-5 p-6">
+            {sections.map((section) => {
+              const items = feedback?.[section.key] ?? [];
+              if (items.length === 0) return null;
+              return (
+                <div key={section.key}>
+                  <h3
+                    className={cn(
+                      "flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider",
+                      section.text,
+                    )}
+                  >
+                    <section.icon className="size-3.5" />
+                    {section.title}
+                  </h3>
+                  <ul className="mt-2.5 space-y-2.5 pl-0.5">
+                    {items.map((item, index) => (
+                      <li key={index} className="flex gap-3">
+                        <span
+                          className={cn(
+                            "mt-1 w-0.5 shrink-0 self-stretch rounded-full",
+                            section.rail,
+                          )}
+                        />
+                        <p className="text-sm leading-relaxed text-muted-foreground">
+                          {item}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       )}
 
-      {sections.map((section) => {
-        const items = feedback?.[section.key] ?? [];
-        if (items.length === 0) return null;
-
-        return (
-          <Card key={section.key}>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <section.icon className={cn("size-4", section.tone)} />
-                {section.title}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2.5">
-                {items.map((item, index) => (
-                  <li
-                    key={index}
-                    className="flex gap-2.5 text-sm leading-relaxed text-muted-foreground"
-                  >
-                    <span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/50" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        );
-      })}
-
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs leading-relaxed text-muted-foreground">
         Graded by {score.model ?? "AI"} against this case&apos;s rubric. Scores are
         indicative — argue with the feedback, that&apos;s part of the practice.
       </p>
