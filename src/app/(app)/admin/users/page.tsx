@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UserFilters } from "@/components/admin/user-filters";
 import { UserActions } from "@/components/admin/user-actions";
-import { formatNumber, timeAgo } from "@/lib/utils";
+import { formatNumber, plural, timeAgo } from "@/lib/utils";
 import type { AdminUserRow } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Users" };
@@ -41,7 +41,7 @@ export default async function UsersPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {formatNumber(Number(total))} accounts
+          {plural(Number(total), "account")}
           {deactivated > 0 ? `, ${formatNumber(deactivated)} deactivated on this page` : ""}.
         </p>
       </div>

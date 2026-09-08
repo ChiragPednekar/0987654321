@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
 import { MODEL_RATES, QUOTA } from "@/lib/constants";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, plural } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "AI usage" };
 
@@ -88,14 +88,14 @@ export default async function UsagePage() {
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total spend" value={rupees(totalCost)}
-          sublabel={`${formatNumber(rows.length)} calls`} icon={Cpu} />
+          sublabel={plural(rows.length, "call")} icon={Cpu} />
         <StatCard label="Graded answers" value={formatNumber(gradings.length)}
           sublabel={rupees(gradings.reduce((a, r) => a + Number(r.cost_inr), 0))} icon={Cpu} />
         <StatCard label="Interviews" value={formatNumber(interviews.length)}
           sublabel={rupees(interviews.reduce((a, r) => a + Number(r.cost_inr), 0))} icon={Cpu} />
         <StatCard label="Cost per student"
           value={uniqueUsers ? rupees(totalCost / uniqueUsers) : "—"}
-          sublabel={`${formatNumber(uniqueUsers)} students`} icon={Cpu} />
+          sublabel={plural(uniqueUsers, "student")} icon={Cpu} />
       </div>
 
       <Card className="mt-6">

@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/stat-card";
-import { formatNumber, timeAgo } from "@/lib/utils";
+import { formatNumber, plural, timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -122,7 +122,13 @@ export default async function AdminPage() {
             <StatCard
               label="Total users"
               value={formatNumber(Number(overview.total_users))}
-              sublabel={`${formatNumber(Number(overview.students))} students · ${formatNumber(Number(overview.teachers))} teachers`}
+              sublabel={`${formatNumber(Number(overview.students))} student${
+                Number(overview.students) === 1 ? "" : "s"
+              } · ${formatNumber(Number(overview.teachers))} teacher${
+                Number(overview.teachers) === 1 ? "" : "s"
+              } · ${formatNumber(Number(overview.admins))} admin${
+                Number(overview.admins) === 1 ? "" : "s"
+              }`}
               icon={Users}
             />
             <StatCard
@@ -271,8 +277,8 @@ export default async function AdminPage() {
                       {item.title}
                     </Link>
                     <p className="text-xs text-muted-foreground">
-                      {timeAgo(item.created_at)} · {item.total_submissions}{" "}
-                      submissions
+                      {timeAgo(item.created_at)} ·{" "}
+                      {plural(item.total_submissions, "submission")}
                     </p>
                   </div>
                   <Badge variant={item.is_published ? "success" : "secondary"}>
