@@ -93,7 +93,9 @@ export function PrivacySettings({ initial }: { initial?: Partial<PrivacyConfig> 
               Global Platform Leaderboard Visibility
             </span>
             <p className="text-xs text-muted-foreground">
-              Display your full name and CE score on the platform-wide student leaderboard. When disabled, your rank appears as &ldquo;Anonymous Candidate&rdquo;.
+              Display your full name and CE score on the platform-wide student
+              leaderboard. When disabled you are removed from it entirely — not
+              shown anonymously — so no row of yours is public.
             </p>
           </div>
           <input

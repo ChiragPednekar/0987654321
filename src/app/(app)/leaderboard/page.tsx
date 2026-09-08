@@ -55,9 +55,28 @@ export default async function LeaderboardPage({
   const isCohort = Boolean(university);
   const isMyCohort = isCohort && university === myUniversity;
 
+  /**
+   * Everyone who has not opted out.
+   *
+   * The opt-out is enforced twice, and it has to be. refresh_leaderboards()
+   * leaves an opted-out user out of the `leaderboards` table, which is what the
+   * dashboard rank reads — but this page does not read only that table. It
+   * merges the table with every row in `users` so that accounts which have
+   * never been graded still appear, and that merge was silently putting the
+   * opted-out user back on the board under their real name, scored zero.
+   *
+   * So the settings toggle reported "Removed from the leaderboards", the
+   * database honoured it, and the public page listed them anyway. A privacy
+   * control that announces success and changes nothing is worse than not
+   * offering it, because the user stops checking.
+   *
+   * Filtering here rather than after the merge: a row that must not be shown
+   * should never enter the list in the first place.
+   */
   let userQuery = supabase
     .from("users")
     .select("id, full_name, avatar_url, university, level, role, created_at")
+    .eq("show_on_leaderboard", true)
     .order("created_at", { ascending: true });
 
   if (university) userQuery = userQuery.eq("university", university);
