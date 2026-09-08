@@ -248,7 +248,16 @@ export function AnswerEditor({
                       short ? "text-muted-foreground" : "text-[var(--success)]",
                     )}
                   >
-                    {value.trim().length}/{section.minChars}
+                    {/*
+                      `minChars` is a floor, but "299/60" is read by everyone as
+                      299 out of a permitted 60 — the universal meaning of that
+                      format — so a student who had written a good answer saw
+                      what looked like a five-times overrun and started cutting.
+                      Say which direction the number points instead.
+                    */}
+                    {short
+                      ? `${section.minChars - value.trim().length} more characters`
+                      : `${value.trim().length} characters`}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">{section.hint}</p>

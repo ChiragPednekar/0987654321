@@ -252,6 +252,35 @@ export async function POST(request: NextRequest) {
         if (error) console.error("notification insert failed", error.message);
       });
 
+    /**
+     * Put the new score on the leaderboard now.
+     *
+     * The boards are materialised into `leaderboards` by refresh_leaderboards()
+     * on a nightly cron, so until it ran, a student who had just been graded
+     * saw their points on the dashboard (computed live) and zero on the
+     * leaderboard (read from the table). Tested end to end: solving a case
+     * scored 63/80, the dashboard said 63 points, and the leaderboard listed
+     * the same account at 0 with no indication anything was pending.
+     *
+     * That gap is not bounded by the cron interval either — the schedule lives
+     * in a GitHub workflow that fails closed without CRON_SECRET, so on a
+     * deployment where that secret is missing the boards never update at all.
+     * A leaderboard that silently stops counting is worse than a slow one, and
+     * the product should not depend on a secret being present to be correct.
+     *
+     * Fire-and-forget, like the notification above: a board rebuild must never
+     * cost someone their grade. The cron stays as the backstop that catches
+     * decay from deletions and expiring weekly windows.
+     *
+     * Note for later: this rebuilds all three boards per graded submission,
+     * which is nothing at today's volume and will not stay that way. When
+     * grading traffic makes it hurt, move to an incremental update of the
+     * single affected row rather than putting the delay back.
+     */
+    void admin.rpc("refresh_leaderboards").then(({ error }) => {
+      if (error) console.error("leaderboard refresh failed", error.message);
+    });
+
     // Link the contest entry, if this was a contest run.
     if (body.contest_id) {
       // The speed bonus is money, so the elapsed time must not come from the
