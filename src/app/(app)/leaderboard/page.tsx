@@ -104,11 +104,33 @@ export default async function LeaderboardPage({
     return b.cases_solved - a.cases_solved;
   });
 
-  // Assign sequential platform ranks 1..N
-  const rows = allRankedRows.map((r, idx) => ({
-    ...r,
-    rank: idx + 1,
-  }));
+  /**
+   * Competition ranking: tied rows share a rank, and the next distinct row
+   * skips ahead — 1, 2, 2, 2, 7 — matching SQL rank(), which is what
+   * refresh_leaderboards() stores and what the dashboard reads.
+   *
+   * This was `idx + 1`. That numbers a five-way tie 2, 3, 4, 5, 6, so a user
+   * whose dashboard said "Global rank #2" clicked through and found themselves
+   * listed sixth. Both numbers described the same standing; only one of them
+   * could be right. It also handed a silver medal to whichever tied row the
+   * database happened to return second.
+   *
+   * The board cannot simply reuse the stored rank, because it is re-sortable by
+   * accuracy and cases solved while the stored rank is by points. So the rank
+   * is recomputed here against whichever ordering is active, using the same
+   * comparator the sort just used.
+   */
+  const ties = (a: (typeof allRankedRows)[number], b: (typeof allRankedRows)[number]) =>
+    a[sort] === b[sort] &&
+    a.total_points === b.total_points &&
+    a.accuracy === b.accuracy &&
+    a.cases_solved === b.cases_solved;
+
+  let currentRank = 0;
+  const rows = allRankedRows.map((r, idx, all) => {
+    if (idx === 0 || !ties(r, all[idx - 1])) currentRank = idx + 1;
+    return { ...r, rank: currentRank };
+  });
 
   const universities = [
     ...new Set(
@@ -254,12 +276,13 @@ export default async function LeaderboardPage({
           </p>
         ) : (
           <ul className="divide-y divide-border">
-            {rows.map((row, index) => {
+            {rows.map((row) => {
               const user = Array.isArray(row.users) ? row.users[0] : row.users;
               const isMe = row.user_id === profile?.id;
-              // Cohort boards rank by position in the filtered list; the stored
-              // rank is global and would read as a gap-riddled sequence here.
-              const displayRank = isCohort ? index + 1 : row.rank;
+              // Both boards use the rank computed above: it is already scoped
+              // to the rows being shown, so a cohort board reads 1..N without
+              // the gaps a global rank would leave.
+              const displayRank = row.rank;
 
               return (
                 <li
@@ -270,9 +293,9 @@ export default async function LeaderboardPage({
                   )}
                 >
                   <span className="w-10 shrink-0">
-                    {displayRank === 1 ? (
+                    {row.total_points > 0 && displayRank === 1 ? (
                       <Crown className="size-4 text-[var(--warning)]" />
-                    ) : displayRank <= 3 ? (
+                    ) : row.total_points > 0 && displayRank <= 3 ? (
                       <Medal className="size-4 text-muted-foreground" />
                     ) : (
                       <span className="text-sm text-muted-foreground tabular">
