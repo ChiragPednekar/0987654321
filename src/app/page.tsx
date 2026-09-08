@@ -7,7 +7,7 @@ import {
   Target,
   Users,
 } from "lucide-react";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { SiteNav } from "@/components/site-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,7 +23,7 @@ const FEATURES = [
   {
     icon: BarChart3,
     title: "Progress you can see",
-    body: "A skill radar across five domains, streaks, CE and levels. You find out which muscle is weak before an interviewer does.",
+    body: "A skill radar across every domain, streaks, CE and levels. You find out which muscle is weak before an interviewer does.",
   },
   {
     icon: Target,
@@ -40,6 +40,27 @@ const FEATURES = [
 export default async function LandingPage() {
   const profile = await getCurrentUser();
 
+  /**
+   * Counted, not hard-coded.
+   *
+   * The badge read "300+ cases across five domains" while the library held 508
+   * across six — the headline claim on the page a prospective customer sees
+   * first was understating the product by 200 cases and miscounting its own
+   * domains. A literal goes stale the moment anyone seeds more cases, so this
+   * asks the database. `head: true` fetches the count without the rows.
+   */
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("cases")
+    .select("id", { count: "exact", head: true })
+    .eq("visibility", "platform")
+    .eq("is_published", true);
+
+  // Rounded down to the nearest fifty so the badge reads as a claim rather than
+  // a live counter, and never overstates. Falls back to the floor if the count
+  // query is refused (the visibility grant has gone missing before).
+  const caseCount = count && count > 0 ? Math.floor(count / 50) * 50 : 500;
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteNav profile={profile} />
@@ -50,7 +71,7 @@ export default async function LandingPage() {
           <div className="mx-auto max-w-3xl text-center">
             <Badge variant="outline" className="mb-6 gap-1.5 py-1">
               <Flame className="size-3.5 text-[var(--warning)]" />
-              300+ cases across five domains
+              {caseCount}+ cases across {DOMAINS.length} domains
             </Badge>
 
             <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-6xl">
@@ -165,14 +186,14 @@ export default async function LandingPage() {
         <section className="py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <h2 className="text-center text-3xl font-semibold tracking-tight">
-              Five domains
+              Six domains
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-center text-muted-foreground">
               Every case is tagged, so your radar chart tells you exactly where to
               spend the next hour.
             </p>
 
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {DOMAINS.map((domain) => (
                 <Link key={domain.value} href={`/cases?domain=${domain.value}`}>
                   <Card className="h-full transition-colors hover:border-primary/50">

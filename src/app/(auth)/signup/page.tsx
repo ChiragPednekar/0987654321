@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { SignupForm } from "@/components/auth/signup-form";
 import { GoogleButton } from "@/components/auth/google-button";
 import { googleSignInEnabled } from "@/lib/auth-providers";
+import { MARKETED_CASE_FLOOR } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Sign up" };
 
@@ -15,7 +16,7 @@ export default async function SignupPage() {
           Create your account
         </h1>
         <p className="text-sm text-muted-foreground">
-          300+ cases. Rubric-based AI feedback. Free to start.
+          {MARKETED_CASE_FLOOR}+ cases. Rubric-based AI feedback. Free to start.
         </p>
       </div>
 

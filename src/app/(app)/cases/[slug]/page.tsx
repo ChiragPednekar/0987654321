@@ -36,7 +36,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
-import { cn, initials, timeAgo, truncate } from "@/lib/utils";
+import { cn, initials, plural, timeAgo, truncate } from "@/lib/utils";
 import type {
   Attachment,
   Difficulty,
@@ -408,7 +408,7 @@ export default async function CaseDetailPage({
               </span>
               <span className="flex items-center gap-1 text-muted-foreground">
                 <Users className="size-3" />
-                {caseData.total_submissions} submissions
+                {plural(caseData.total_submissions, "submission")}
               </span>
               {caseData.company_track && (
                 <Badge variant="outline">{caseData.company_track}</Badge>

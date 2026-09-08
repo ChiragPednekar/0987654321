@@ -5,7 +5,7 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { cn, formatNumber, initials } from "@/lib/utils";
+import { cn, formatNumber, initials, plural } from "@/lib/utils";
 import type { LeaderboardPeriod } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Leaderboard" };
@@ -132,7 +132,7 @@ export default async function LeaderboardPage({
       <p className="mt-1 text-sm text-muted-foreground">
         {isCohort
           ? `Ranked within ${university}. Ties break on accuracy.`
-          : `Ranking of all ${rows.length} students on the platform. Ties break on accuracy.`}
+          : `Ranking of all ${plural(rows.length, "student")} on the platform. Ties break on accuracy.`}
       </p>
 
       {/* ---- cohort scope ---------------------------------------------- */}

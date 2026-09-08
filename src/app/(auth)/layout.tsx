@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DOMAINS, MARKETED_CASE_FLOOR } from "@/lib/constants";
 
 export default function AuthLayout({
   children,
@@ -32,8 +33,8 @@ export default function AuthLayout({
         </blockquote>
         <dl className="grid grid-cols-3 gap-6 border-t border-border pt-8">
           {[
-            ["300+", "cases"],
-            ["5", "domains"],
+            [`${MARKETED_CASE_FLOOR}+`, "cases"],
+            [String(DOMAINS.length), "domains"],
             ["AI", "rubrics"],
           ].map(([value, label]) => (
             <div key={label}>

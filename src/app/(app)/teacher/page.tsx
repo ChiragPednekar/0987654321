@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/teacher/empty-state";
 import { DOMAIN_LABEL } from "@/lib/constants";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, plural } from "@/lib/utils";
 import type { Domain } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Teacher dashboard" };
@@ -141,7 +141,8 @@ export default async function TeacherDashboard() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {formatNumber(uniqueStudents.size)} students across{" "}
+            {formatNumber(uniqueStudents.size)}{" "}
+            {uniqueStudents.size === 1 ? "student" : "students"} across{" "}
             {formatNumber(batchIds.length)}{" "}
             {batchIds.length === 1 ? "batch" : "batches"}.
           </p>
@@ -309,7 +310,7 @@ export default async function TeacherDashboard() {
                     {b.name}
                   </Link>
                   <span className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="tabular">{count} students</span>
+                    <span className="tabular">{plural(count, "student")}</span>
                     <Badge variant="outline" className="font-mono">
                       {b.join_code}
                     </Badge>

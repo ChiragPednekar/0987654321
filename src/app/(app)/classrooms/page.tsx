@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ClassroomForms } from "@/components/classroom/classroom-forms";
 import { JoinBatchModal } from "@/components/classroom/join-batch-modal";
+import { plural } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Classrooms & Batches",
@@ -243,7 +244,7 @@ export default async function ClassroomsPage() {
                           </span>
                           <span className="flex items-center gap-1">
                             <FileText className="size-3.5" />
-                            {assignments} cases
+                            {plural(assignments, "case")}
                           </span>
                         </div>
                         {isEnrolled ? (

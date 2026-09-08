@@ -1,5 +1,17 @@
 import type { CaseFormat, Difficulty, Domain } from "@/lib/types/database";
 
+/**
+ * Floor for the "N+ cases" marketing claim on the signed-out pages.
+ *
+ * Three pages independently hard-coded "300+" while the library held 508, so
+ * the first thing a prospective customer read understated the product by two
+ * hundred cases. A floor rather than the exact count: it stays true as the
+ * library grows and never overstates. The landing page counts for real; these
+ * pages use this because they are on the sign-in path and should not pay for a
+ * query. Raise it when the library passes the next fifty.
+ */
+export const MARKETED_CASE_FLOOR = 500;
+
 export const DOMAINS: {
   value: Domain;
   label: string;

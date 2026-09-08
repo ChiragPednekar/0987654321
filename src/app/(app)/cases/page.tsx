@@ -17,7 +17,7 @@ import {
   DIFFICULTY_CLASS,
   DOMAIN_LABEL,
 } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, plural } from "@/lib/utils";
 import type { CaseFormat, Difficulty, Domain } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Cases" };
@@ -402,7 +402,7 @@ export default async function CasesPage({
 
       {!byTrack && showAll && (count ?? 0) > 0 && (
         <div className="mt-6 flex items-center justify-between border-t border-border pt-4 text-xs text-muted-foreground">
-          <span>Showing all {filtered.length} cases</span>
+          <span>Showing all {plural(filtered.length, "case")}</span>
           <Link
             href="/cases?page=1"
             className="text-primary underline underline-offset-4 hover:opacity-80"

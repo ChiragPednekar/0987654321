@@ -66,3 +66,17 @@ export function estimateTokens(text: string): number {
 export function truncate(text: string, max: number): string {
   return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 }
+
+/**
+ * "1 student", "2 students" — a count with a correctly pluralised noun.
+ *
+ * Every count in the interface was written as `{n} students`, which is right
+ * exactly when n is not 1. A teacher with one student read "1 students across
+ * 2 batches" on their own dashboard, and a batch card read "1 students". Small,
+ * but it is the first screen a paying institution sees.
+ *
+ * Pass `plural` for nouns English does not pluralise with a bare "s".
+ */
+export function plural(count: number, noun: string, pluralForm?: string): string {
+  return `${count} ${count === 1 ? noun : (pluralForm ?? `${noun}s`)}`;
+}
