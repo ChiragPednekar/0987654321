@@ -2,47 +2,57 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Bell, Flame, GraduationCap, Users } from "lucide-react";
+import { Bell, GraduationCap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface NotificationConfig {
-  assignments: boolean;
-  groupDiscussions: boolean;
-  streakReminders: boolean;
-  weeklyPerformanceDigest: boolean;
-}
+/**
+ * Notification preferences.
+ *
+ * This panel used to offer four toggles — assignments, group posts, a daily
+ * streak reminder and a weekly performance digest — write all four to
+ * localStorage, and answer "Notification preferences updated." to each.
+ *
+ * None of them reached the server. Worse, three described a product that does
+ * not exist: nothing in the codebase creates a notification for a group post,
+ * and the streak nudge and weekly digest both need a delivery channel and a
+ * scheduled job that were never built. There is no mail provider in the
+ * project at all — notifications are in-app only.
+ *
+ * So one toggle was ignored and three were fiction. What is left is the one
+ * the product can honour, wired to the server. The rest are described honestly
+ * below rather than offered as switches, because a control that can never take
+ * effect teaches people that none of their settings matter.
+ */
+export function NotificationSettings({ initial }: { initial: boolean }) {
+  const [enabled, setEnabled] = React.useState(initial);
+  const [saving, setSaving] = React.useState(false);
 
-const STORAGE_KEY = "casecode_notification_config";
-
-const DEFAULT_CONFIG: NotificationConfig = {
-  assignments: true,
-  groupDiscussions: true,
-  streakReminders: true,
-  weeklyPerformanceDigest: false,
-};
-
-export function NotificationSettings() {
-  const [config, setConfig] = React.useState<NotificationConfig>(DEFAULT_CONFIG);
-
-  React.useEffect(() => {
+  async function toggle() {
+    const next = !enabled;
+    // Optimistic, then reverted on failure — the switch should follow the
+    // finger, but it must not keep a position the server rejected.
+    setEnabled(next);
+    setSaving(true);
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setConfig(JSON.parse(stored));
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  function toggle(key: keyof NotificationConfig) {
-    const updated = { ...config, [key]: !config[key] };
-    setConfig(updated);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      toast.success("Notification preferences updated.");
-    } catch {
-      toast.error("Could not update notifications.");
+      const response = await fetch("/api/settings/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notify_assignments: next }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? "Could not save that.");
+      toast.success(
+        next
+          ? "You'll be notified about assignments."
+          : "Assignment notifications turned off.",
+      );
+    } catch (error) {
+      setEnabled(!next);
+      toast.error(
+        error instanceof Error ? error.message : "Could not save that.",
+      );
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -51,87 +61,39 @@ export function NotificationSettings() {
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <Bell className="size-4 text-primary" />
-          Notifications & Alerts
+          Notifications
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Choose when and how CaseCode updates you about homework, cohorts, and your streak.
+          CaseCode notifies you in the app, on the bell in the top bar.
         </p>
       </CardHeader>
-      <CardContent className="space-y-4 divide-y divide-border/60 text-sm">
-        {/* Batch Assignments */}
-        <div className="flex items-center justify-between gap-4 pt-3 first:pt-0">
+      <CardContent className="space-y-4 text-sm">
+        <div className="flex items-center justify-between gap-4">
           <div className="space-y-0.5">
             <span className="font-medium text-foreground flex items-center gap-1.5">
               <GraduationCap className="size-3.5 text-muted-foreground" />
-              Classroom & Assignment Deadlines
+              Classroom &amp; assignment activity
             </span>
             <p className="text-xs text-muted-foreground">
-              Notify when an instructor posts a new case drill, grades your work, or requests revisions.
+              When a teacher sets an assignment, marks your work, or asks you to
+              have another go.
             </p>
           </div>
           <input
             type="checkbox"
-            checked={config.assignments}
-            onChange={() => toggle("assignments")}
-            className="size-4 rounded border-border accent-primary cursor-pointer"
+            checked={enabled}
+            disabled={saving}
+            onChange={toggle}
+            aria-label="Classroom and assignment activity"
+            className="size-4 rounded border-border accent-primary cursor-pointer disabled:opacity-50"
           />
         </div>
 
-        {/* Group Discussions */}
-        <div className="flex items-center justify-between gap-4 pt-3">
-          <div className="space-y-0.5">
-            <span className="font-medium text-foreground flex items-center gap-1.5">
-              <Users className="size-3.5 text-muted-foreground" />
-              Cohort & Study Group Posts
-            </span>
-            <p className="text-xs text-muted-foreground">
-              Notify when fellow members in your private or public groups post questions or mock interview invites.
-            </p>
-          </div>
-          <input
-            type="checkbox"
-            checked={config.groupDiscussions}
-            onChange={() => toggle("groupDiscussions")}
-            className="size-4 rounded border-border accent-primary cursor-pointer"
-          />
-        </div>
-
-        {/* Daily Streak Reminders */}
-        <div className="flex items-center justify-between gap-4 pt-3">
-          <div className="space-y-0.5">
-            <span className="font-medium text-foreground flex items-center gap-1.5">
-              <Flame className="size-3.5 text-amber-500" />
-              Daily Practice Streak Reminder
-            </span>
-            <p className="text-xs text-muted-foreground">
-              Evening nudge if you haven&apos;t completed a drill today to keep your streak active.
-            </p>
-          </div>
-          <input
-            type="checkbox"
-            checked={config.streakReminders}
-            onChange={() => toggle("streakReminders")}
-            className="size-4 rounded border-border accent-primary cursor-pointer"
-          />
-        </div>
-
-        {/* Weekly Digest */}
-        <div className="flex items-center justify-between gap-4 pt-3">
-          <div className="space-y-0.5">
-            <span className="font-medium text-foreground">
-              Weekly Performance Digest
-            </span>
-            <p className="text-xs text-muted-foreground">
-              Weekly recap of your CE score growth, global leaderboard rank, and suggested focus areas.
-            </p>
-          </div>
-          <input
-            type="checkbox"
-            checked={config.weeklyPerformanceDigest}
-            onChange={() => toggle("weeklyPerformanceDigest")}
-            className="size-4 rounded border-border accent-primary cursor-pointer"
-          />
-        </div>
+        <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">
+          Notices about your account — being removed from a batch, or an account
+          change — are always sent, and are not covered by this setting. CaseCode
+          does not send email, so there are no email preferences to set here.
+        </p>
       </CardContent>
     </Card>
   );

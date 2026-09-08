@@ -47,7 +47,7 @@ export default async function SettingsPage() {
   const { data: privacy } = await supabase
     .from("users")
     .select(
-      "show_on_leaderboard, share_history_with_cohort, show_college_affiliation",
+      "show_on_leaderboard, share_history_with_cohort, show_college_affiliation, notify_assignments",
     )
     .eq("id", profile.id)
     .maybeSingle();
@@ -129,7 +129,9 @@ export default async function SettingsPage() {
 
         {/* ---- notifications --------------------------------------------- */}
         <TabsContent value="notifications" className="mt-6 space-y-6">
-          <NotificationSettings />
+          <NotificationSettings
+            initial={privacy?.notify_assignments ?? true}
+          />
         </TabsContent>
 
         {/* ---- privacy & data -------------------------------------------- */}

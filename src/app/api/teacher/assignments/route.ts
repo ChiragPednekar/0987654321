@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit, authzResponse, requireBatchTeacher } from "@/lib/authz";
+import { assignmentNoticeRecipients } from "@/lib/notify";
 
 const bodySchema = z
   .object({
@@ -118,10 +119,15 @@ export async function POST(request: NextRequest) {
       .eq("classroom_id", body.classroom_id)
       .eq("role", "student");
 
-    if (students && students.length > 0) {
+    const recipients = await assignmentNoticeRecipients(
+      admin,
+      (students ?? []).map((s) => s.user_id),
+    );
+
+    if (recipients.length > 0) {
       await admin.from("notifications").insert(
-        students.map((s) => ({
-          user_id: s.user_id,
+        recipients.map((userId) => ({
+          user_id: userId,
           type: "system" as const,
           title: "New assignment",
           body: body.title,

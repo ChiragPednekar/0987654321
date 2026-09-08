@@ -7,6 +7,7 @@ import { MAX_ANSWER_CHARS, MIN_ANSWER_CHARS, RATE_LIMIT } from "@/lib/constants"
 import { getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { recordUsage } from "@/lib/usage";
 import type { RubricRow } from "@/lib/types/database";
+import { wantsAssignmentNotices } from "@/lib/notify";
 
 // Model evaluation regularly takes 15-40s; the default function timeout is not
 // enough. (Vercel: requires Pro for >60s.)
@@ -239,7 +240,9 @@ export async function POST(request: NextRequest) {
     // not send must never cost someone their grade.
     const pct =
       result.maxScore > 0 ? Math.round((totalScore / result.maxScore) * 100) : 0;
-    void admin
+    void wantsAssignmentNotices(admin, user.id).then((wanted) => {
+      if (!wanted) return;
+      return admin
       .from("notifications")
       .insert({
         user_id: user.id,
@@ -251,6 +254,7 @@ export async function POST(request: NextRequest) {
       .then(({ error }) => {
         if (error) console.error("notification insert failed", error.message);
       });
+    });
 
     /**
      * Put the new score on the leaderboard now.

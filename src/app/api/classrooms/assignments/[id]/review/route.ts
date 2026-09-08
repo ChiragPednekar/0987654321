@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit, authzResponse, requireAssignmentTeacher } from "@/lib/authz";
+import { wantsAssignmentNotices } from "@/lib/notify";
 
 const bodySchema = z.object({
   student_id: z.string().uuid(),
@@ -116,6 +117,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     : assignment.cases;
   const label = assignment.title ?? caseRow?.title ?? "your assignment";
 
+  if (await wantsAssignmentNotices(admin, body.student_id)) {
   await admin.from("notifications").insert({
     user_id: body.student_id,
     type: "system",
@@ -129,6 +131,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       : `Feedback on ${label}.`,
     href: `/classrooms/${assignment.classroom_id}`,
   });
+  }
 
   await audit(
     actor,

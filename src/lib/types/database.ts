@@ -113,6 +113,11 @@ export type UserRow = {
   show_on_leaderboard?: boolean;
   share_history_with_cohort?: boolean;
   show_college_affiliation?: boolean;
+  /**
+   * Notification preference (20250101000030). The only one the product can
+   * honour — see src/lib/notify.ts. Optional for the same reason as above.
+   */
+  notify_assignments?: boolean;
   deactivated_at?: string | null;
   /** Admin-only context. Not granted to `authenticated`, so profile reads omit it. */
   deactivated_reason?: string | null;
