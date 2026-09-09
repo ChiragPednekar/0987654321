@@ -524,6 +524,18 @@ export interface Database {
         Update: Partial<UsageEventRow>;
         Relationships: [];
       };
+      peer_sessions: {
+        Row: PeerSessionRow;
+        Insert: Partial<PeerSessionRow>;
+        Update: Partial<PeerSessionRow>;
+        Relationships: [];
+      };
+      peer_feedback: {
+        Row: PeerFeedbackRow;
+        Insert: Partial<PeerFeedbackRow>;
+        Update: Partial<PeerFeedbackRow>;
+        Relationships: [];
+      };
       role_grants: {
         Row: RoleGrantRow;
         Insert: Partial<RoleGrantRow>;
@@ -1354,6 +1366,33 @@ export type AuditLogRow = {
  * Email allowlist for elevated roles (20250101000031). An email absent from
  * this table is a student — that is the whole rule.
  */
+/** A two-person live case interview (20250101000033). */
+export type PeerSessionRow = {
+  id: string;
+  case_id: string;
+  host_id: string;
+  guest_id: string | null;
+  host_role: "interviewer" | "candidate";
+  status: "open" | "live" | "completed" | "cancelled";
+  scheduled_at: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+};
+
+/** One participant's verdict on the other, on the case's own rubric criteria. */
+export type PeerFeedbackRow = {
+  id: string;
+  session_id: string;
+  from_user: string;
+  to_user: string;
+  breakdown: Record<string, number>;
+  total_score: number | null;
+  max_score: number | null;
+  notes: string | null;
+  created_at: string;
+};
+
 export type RoleGrantRow = {
   email: string;
   role: Exclude<UserRole, "student">;

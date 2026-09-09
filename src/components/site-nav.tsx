@@ -44,6 +44,7 @@ const STUDENT_LINKS = [
   { href: "/cases", label: "Cases" },
   { href: "/paths", label: "Paths" },
   { href: "/groups", label: "Groups" },
+  { href: "/peer", label: "Peer interviews" },
   { href: "/progress", label: "Progress" },
   { href: "/bookmarks", label: "Bookmarks" },
   { href: "/leaderboard", label: "Leaderboard" },
