@@ -17,6 +17,9 @@ export interface EvaluationResult {
   feedback: EvaluationFeedback & { verdict: string };
   model: string;
   tokensUsed: number;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
 }
 
 type EvaluableCase = Pick<
@@ -59,7 +62,8 @@ export async function evaluateSubmission(
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      const { raw, model, tokensUsed } = await callModel({
+      const { raw, model, tokensUsed, inputTokens, outputTokens, cachedTokens } =
+        await callModel({
         system: SYSTEM_PROMPT,
         user,
         criteria,
@@ -90,13 +94,16 @@ export async function evaluateSubmission(
         maxScore,
         percentage: maxScore > 0 ? (totalScore / maxScore) * 100 : 0,
         feedback: {
-          strengths: parsed.feedback.strengths.slice(0, 3),
-          weaknesses: parsed.feedback.weaknesses.slice(0, 3),
-          improvements: parsed.feedback.improvements.slice(0, 3),
+          strengths: parsed.feedback.strengths.slice(0, 6),
+          weaknesses: parsed.feedback.weaknesses.slice(0, 6),
+          improvements: parsed.feedback.improvements.slice(0, 6),
           verdict: parsed.verdict,
         },
         model,
         tokensUsed,
+        inputTokens,
+        outputTokens,
+        cachedTokens,
       };
     } catch (error) {
       lastError = error;

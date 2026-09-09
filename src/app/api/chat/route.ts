@@ -224,8 +224,9 @@ export async function POST(request: NextRequest) {
     userId: user.id,
     operation: "interview",
     model: reply.model,
-    inputTokens: 0,
-    outputTokens: 0,
+    inputTokens: reply.inputTokens,
+    outputTokens: reply.outputTokens,
+    cachedTokens: reply.cachedTokens,
     totalTokens: reply.tokensUsed,
   });
 

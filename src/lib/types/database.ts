@@ -1346,6 +1346,8 @@ export type UsageEventRow = {
   model: string | null;
   input_tokens: number;
   output_tokens: number;
+  /** Input served from the provider cache, billed at a discount (20250101000034). */
+  cached_tokens: number;
   total_tokens: number;
   cost_inr: number;
   created_at: string;

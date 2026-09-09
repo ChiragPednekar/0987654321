@@ -262,8 +262,12 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       operation: "grading",
       model: result.model,
-      inputTokens: 0,
-      outputTokens: 0,
+      // Real numbers from the provider. These were zeros, which sent every
+      // grading down the 80/20 estimate path — so the admin dashboard has been
+      // calling an assumption "measured".
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      cachedTokens: result.cachedTokens,
       totalTokens: result.tokensUsed,
     });
 

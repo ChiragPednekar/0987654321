@@ -22,6 +22,14 @@ export interface ChatReply {
   content: string;
   model: string;
   tokensUsed: number;
+  /**
+   * The real split. An interview is the expensive operation — many turns, each
+   * carrying the whole conversation as input — so pricing it from an assumed
+   * 80/20 split was the least defensible estimate in the system.
+   */
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
 }
 
 /** Interviewers should be varied and human, not repeatable like a grader. */
@@ -61,6 +69,9 @@ async function chatOpenAI(
     content,
     model,
     tokensUsed: completion.usage?.total_tokens ?? 0,
+    inputTokens: completion.usage?.prompt_tokens ?? 0,
+    outputTokens: completion.usage?.completion_tokens ?? 0,
+    cachedTokens: completion.usage?.prompt_tokens_details?.cached_tokens ?? 0,
   };
 }
 
@@ -109,6 +120,9 @@ async function chatAnthropic(
     model,
     tokensUsed:
       (data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0),
+    inputTokens: data.usage?.input_tokens ?? 0,
+    outputTokens: data.usage?.output_tokens ?? 0,
+    cachedTokens: data.usage?.cache_read_input_tokens ?? 0,
   };
 }
 
@@ -155,6 +169,9 @@ async function chatGemini(
     content,
     model,
     tokensUsed: data.usageMetadata?.totalTokenCount ?? 0,
+    inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
+    outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
+    cachedTokens: data.usageMetadata?.cachedContentTokenCount ?? 0,
   };
 }
 

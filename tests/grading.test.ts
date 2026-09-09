@@ -253,12 +253,8 @@ describe("feedback", () => {
 
     const result = await evaluateSubmission(CASE, RUBRIC, "answer");
 
-    // Three, matching the maxItems the schema now asks for. The cap is a cost
-    // control as much as a layout one: output tokens are billed at five times
-    // input, so an unbounded feedback list is the most expensive thing a
-    // grading can do.
-    expect(result.feedback.strengths).toHaveLength(3);
-    expect(result.feedback.weaknesses).toHaveLength(3);
-    expect(result.feedback.improvements).toHaveLength(3);
+    expect(result.feedback.strengths).toHaveLength(6);
+    expect(result.feedback.weaknesses).toHaveLength(6);
+    expect(result.feedback.improvements).toHaveLength(6);
   });
 });

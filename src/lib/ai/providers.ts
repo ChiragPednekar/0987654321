@@ -8,6 +8,19 @@ export interface ProviderResult {
   raw: string;
   model: string;
   tokensUsed: number;
+  /**
+   * The real split, straight from the provider.
+   *
+   * Every one of these APIs reports input and output separately and we were
+   * throwing it away, keeping only the total — which meant usage accounting
+   * fell back to splitting 80/20 by assumption. Output is priced five times
+   * input, so an assumed split is an assumed bill, and the admin dashboard was
+   * calling it "measured".
+   */
+  inputTokens: number;
+  outputTokens: number;
+  /** Input served from the provider's prompt cache, billed at a discount. */
+  cachedTokens: number;
 }
 
 export interface ProviderArgs {
@@ -69,10 +82,14 @@ async function callOpenAI({
   const raw = choice?.message?.content;
   if (!raw) throw new Error("Model returned an empty response");
 
+  const usage = completion.usage;
   return {
     raw,
     model,
-    tokensUsed: completion.usage?.total_tokens ?? 0,
+    tokensUsed: usage?.total_tokens ?? 0,
+    inputTokens: usage?.prompt_tokens ?? 0,
+    outputTokens: usage?.completion_tokens ?? 0,
+    cachedTokens: usage?.prompt_tokens_details?.cached_tokens ?? 0,
   };
 }
 
@@ -126,11 +143,15 @@ async function callAnthropic({
 
   if (!toolUse) throw new Error("Model did not return a tool call");
 
+  const usage = data.usage ?? {};
   return {
     raw: JSON.stringify(toolUse.input),
     model,
-    tokensUsed:
-      (data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0),
+    tokensUsed: (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0),
+    inputTokens: usage.input_tokens ?? 0,
+    outputTokens: usage.output_tokens ?? 0,
+    // Anthropic reports cache reads separately from fresh input.
+    cachedTokens: usage.cache_read_input_tokens ?? 0,
   };
 }
 
@@ -185,10 +206,17 @@ async function callGemini({
   const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!raw) throw new Error("Model returned an empty response");
 
+  const usage = data.usageMetadata ?? {};
   return {
     raw,
     model,
-    tokensUsed: data.usageMetadata?.totalTokenCount ?? 0,
+    tokensUsed: usage.totalTokenCount ?? 0,
+    // promptTokenCount already includes cachedContentTokenCount; the cached
+    // portion is priced separately below, so it is reported rather than
+    // subtracted here.
+    inputTokens: usage.promptTokenCount ?? 0,
+    outputTokens: usage.candidatesTokenCount ?? 0,
+    cachedTokens: usage.cachedContentTokenCount ?? 0,
   };
 }
 

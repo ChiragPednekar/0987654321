@@ -168,6 +168,13 @@ export type QuotaTier = "free" | "pro";
 export const MODEL_RATES = {
   inputPerMillionUsd: 0.75,
   outputPerMillionUsd: 3.75,
+  /**
+   * Cached input costs a quarter of fresh input on Gemini. 84% of a grading
+   * prompt is the case, rubric and reference answer — identical for every
+   * student answering the same case — so on a batch assignment most of the
+   * input should be arriving from cache.
+   */
+  cachedInputMultiplier: 0.25,
   usdInr: 88,
 } as const;
 

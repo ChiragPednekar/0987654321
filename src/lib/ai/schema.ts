@@ -52,45 +52,30 @@ export function buildJsonSchema(criteria: RubricCriteria) {
         additionalProperties: false,
         required: ["strengths", "weaknesses", "improvements"],
         properties: {
-          /**
-           * maxItems is a cost control as much as a formatting one.
-           *
-           * The descriptions asked for "2-4" but nothing enforced it, so the
-           * ceiling was whatever the model felt like returning. Output tokens
-           * are priced five times input here, which makes the feedback lists
-           * the single most expensive part of a grading — 20% of the tokens
-           * and 55% of the bill.
-           *
-           * Three is also the better answer for the student. Nine specific
-           * criticisms do not get acted on; three do.
-           */
           strengths: {
             type: "array",
             items: { type: "string" },
-            maxItems: 3,
             description:
-              "2-3 specific things the answer did well. Reference what the student actually wrote. One sentence each.",
+              "2-4 specific things the answer did well. Quote or reference the answer.",
           },
           weaknesses: {
             type: "array",
             items: { type: "string" },
-            maxItems: 3,
             description:
-              "2-3 specific gaps, errors or unsupported claims. One sentence each.",
+              "2-4 specific gaps, errors or unsupported claims.",
           },
           improvements: {
             type: "array",
             items: { type: "string" },
-            maxItems: 3,
             description:
-              "2-3 concrete, actionable next steps. One sentence each.",
+              "2-4 concrete, actionable next steps for the next attempt.",
           },
         },
       },
       verdict: {
         type: "string",
         description:
-          "One sentence summarising the overall quality of the answer.",
+          "One or two sentences summarising the overall quality of the answer.",
       },
     },
   } as const;

@@ -28,12 +28,29 @@ export interface UsageEvent {
   outputTokens: number;
   /** Some providers report only a total; pass it when the split is unknown. */
   totalTokens?: number;
+  /**
+   * Input served from the provider's prompt cache. Included in inputTokens —
+   * passed separately so it can be priced at the cached rate rather than the
+   * full one.
+   */
+  cachedTokens?: number;
 }
 
 /** Rupees, from Google's published per-million rates. */
-export function priceUsage(inputTokens: number, outputTokens: number): number {
+export function priceUsage(
+  inputTokens: number,
+  outputTokens: number,
+  cachedTokens = 0,
+): number {
+  // Cached input is billed at a fraction of fresh input. Charging it at the
+  // full rate would hide the entire benefit of prompt caching in a cost figure
+  // that never moves, which is the opposite of useful.
+  const cached = Math.min(cachedTokens, inputTokens);
+  const fresh = inputTokens - cached;
+
   const usd =
-    (inputTokens / 1e6) * MODEL_RATES.inputPerMillionUsd +
+    (fresh / 1e6) * MODEL_RATES.inputPerMillionUsd +
+    (cached / 1e6) * MODEL_RATES.inputPerMillionUsd * MODEL_RATES.cachedInputMultiplier +
     (outputTokens / 1e6) * MODEL_RATES.outputPerMillionUsd;
   return usd * MODEL_RATES.usdInr;
 }
@@ -76,8 +93,9 @@ export async function recordUsage(admin: Admin, event: UsageEvent): Promise<void
       model: event.model,
       input_tokens: input,
       output_tokens: output,
+      cached_tokens: event.cachedTokens ?? 0,
       total_tokens: event.totalTokens ?? input + output,
-      cost_inr: priceUsage(input, output),
+      cost_inr: priceUsage(input, output, event.cachedTokens ?? 0),
     });
 
     // Logged, not thrown. Metrics are not worth failing a graded submission or
