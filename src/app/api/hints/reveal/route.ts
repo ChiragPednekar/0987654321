@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 
 const bodySchema = z.object({ hint_id: z.string().uuid() });
 
@@ -32,6 +33,13 @@ export async function POST(request: NextRequest) {
   // `body` is not granted to authenticated — only the service role can read
   // it, which is what makes the reveal endpoint the single way to obtain one.
   const admin = createAdminClient();
+
+  // Licensing gate. Browsing a case is open to anyone; practising against it is
+  // the product being sold. Checked server-side because the client gate is a
+  // courtesy, not a control — see src/lib/entitlement.ts.
+  if (!(await canSolve(admin, user.id))) {
+    return NextResponse.json(SOLVE_DENIAL, { status: 403 });
+  }
 
   const { data: hint } = await admin
     .from("case_hints")

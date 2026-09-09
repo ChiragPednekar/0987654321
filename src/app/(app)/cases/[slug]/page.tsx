@@ -37,6 +37,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
 import { cn, initials, plural, timeAgo, truncate } from "@/lib/utils";
+import { canSolve } from "@/lib/entitlement";
+import { LicenceGate } from "@/components/case/licence-gate";
 import type {
   Attachment,
   Difficulty,
@@ -157,6 +159,8 @@ export default async function CaseDetailPage({
   const revealedIds = new Set<string>();
   const revealedBodies = new Map<string, string>();
 
+  let entitled = true;
+
   if (profile) {
     // Bodies of already-revealed hints need the service role for the same
     // reason; this is still scoped to the viewer's own reveals.
@@ -165,6 +169,13 @@ export default async function CaseDetailPage({
     // no service-role key configured the hints panel simply shows them as
     // unrevealed rather than the whole case 500ing.
     const admin = createAdminClientOrNull();
+
+    // Licensing: browsing is open, practising is not. Resolved here so the
+    // page can offer the right thing rather than a submit button that 403s.
+    // No key configured means no claim either way, so the editor stays and the
+    // route makes the real decision.
+    entitled = admin ? await canSolve(admin, profile.id) : true;
+
     const { data: reveals } = admin
       ? await admin
           .from("hint_reveals")
@@ -619,12 +630,16 @@ export default async function CaseDetailPage({
           ) : (
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <AnswerEditor
-                caseId={caseData.id}
-                caseSlug={caseData.slug}
-                signedIn={Boolean(profile)}
-                storageKey={`casecode:draft:${caseData.id}`}
-              />
+              {entitled ? (
+                <AnswerEditor
+                  caseId={caseData.id}
+                  caseSlug={caseData.slug}
+                  signedIn={Boolean(profile)}
+                  storageKey={`casecode:draft:${caseData.id}`}
+                />
+              ) : (
+                <LicenceGate />
+              )}
             </div>
 
             <Card className="h-fit">

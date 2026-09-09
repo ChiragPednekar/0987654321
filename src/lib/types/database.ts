@@ -947,6 +947,8 @@ export interface Database {
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       has_pro: { Args: { p_user: string }; Returns: boolean };
+      /** Entitlement to practise, not merely browse (20250101000032). */
+      can_solve: { Args: { p_user: string }; Returns: boolean };
       institution_commercials: {
         Args: {
           p_in_rate_per_million: number;

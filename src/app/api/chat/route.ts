@@ -6,6 +6,7 @@ import { callChat, interviewerSystemPrompt, type ChatTurn } from "@/lib/ai/chat"
 import { RATE_LIMIT } from "@/lib/constants";
 import { getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { recordUsage } from "@/lib/usage";
+import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 
 // A model turn takes several seconds; the default function timeout is tight.
 export const maxDuration = 60;
@@ -58,6 +59,13 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient();
+
+  // Licensing gate. Browsing a case is open to anyone; practising against it is
+  // the product being sold. Checked server-side because the client gate is a
+  // courtesy, not a control — see src/lib/entitlement.ts.
+  if (!(await canSolve(admin, user.id))) {
+    return NextResponse.json(SOLVE_DENIAL, { status: 403 });
+  }
 
   // Same database-backed limiter the grading route uses, for the same reason:
   // it has to hold across serverless instances.

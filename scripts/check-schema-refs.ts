@@ -55,6 +55,7 @@ const COLUMNS: { table: string; column: string }[] = [
   { table: "users", column: "show_on_leaderboard" },
   { table: "users", column: "notify_assignments" },
   { table: "role_grants", column: "role" },
+  { table: "solve_allowlist", column: "email" },
 ];
 
 function walk(dir: string, out: string[] = []): string[] {

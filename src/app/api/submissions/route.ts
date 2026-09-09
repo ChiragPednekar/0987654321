@@ -8,6 +8,7 @@ import { getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { recordUsage } from "@/lib/usage";
 import type { RubricRow } from "@/lib/types/database";
 import { wantsAssignmentNotices } from "@/lib/notify";
+import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 
 // Model evaluation regularly takes 15-40s; the default function timeout is not
 // enough. (Vercel: requires Pro for >60s.)
@@ -70,6 +71,13 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient();
+
+  // Licensing gate. Browsing a case is open to anyone; practising against it is
+  // the product being sold. Checked server-side because the client gate is a
+  // courtesy, not a control — see src/lib/entitlement.ts.
+  if (!(await canSolve(admin, user.id))) {
+    return NextResponse.json(SOLVE_DENIAL, { status: 403 });
+  }
 
   // ---- annual fair-use quota ----------------------------------------------
   // RATE_LIMIT above stops a burst; this bounds the year. Without it a single
