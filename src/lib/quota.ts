@@ -20,6 +20,8 @@ export interface QuotaStatus {
   interviewsUsed: number;
   gradingsLeft: number;
   interviewsLeft: number;
+  /** True when the allowance comes from a campus licence rather than a retail plan. */
+  viaInstitution: boolean;
 }
 
 type Admin = SupabaseClient<Database>;
@@ -38,6 +40,23 @@ export async function getQuotaStatus(
   });
 
   const row = Array.isArray(data) ? data[0] : data;
+
+  /**
+   * Where the allowance came from changes what the refusal should say.
+   *
+   * A retail Pro user who runs out can be told to wait for the window to roll.
+   * A student on a campus licence cannot act on that at all — waiting a year is
+   * not an answer during placement season, and they cannot buy their own way
+   * past it either. Their placement cell can, because the per-institution quota
+   * is a contract term. So the message has to point at the person who can
+   * actually fix it.
+   */
+  const { count: institutionSeats } = await admin
+    .from("institution_members")
+    .select("institution_id", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  const viaInstitution = (institutionSeats ?? 0) > 0;
 
   // A missing row means the user has no scores and no licence yet — treat that
   // as a free tier at zero usage rather than failing the request. Refusing to
@@ -79,6 +98,7 @@ export async function getQuotaStatus(
     interviewLimit,
     gradingsUsed,
     interviewsUsed,
+    viaInstitution,
     gradingsLeft: Math.max(0, gradingLimit - gradingsUsed),
     interviewsLeft: Math.max(0, interviewLimit - interviewsUsed),
   };
@@ -125,9 +145,11 @@ export function quotaDenial(
     : limit === 0
       ? "Mock interviews are part of CaseCode Pro."
       : `You have used all ${limit} ${noun} for the year (${used} of ${limit}). ` +
-        (status.isPro
-          ? `Your allowance frees up as older attempts pass the ${QUOTA.windowDays}-day window.`
-          : `Pro raises this to ${QUOTA.pro.gradings} graded answers and ${QUOTA.pro.interviews} interviews.`);
+        (status.viaInstitution
+          ? "Your college sets this allowance. Ask your placement cell to raise it — they can do that without you losing any of your work."
+          : status.isPro
+            ? `Your allowance frees up as older attempts pass the ${QUOTA.windowDays}-day window.`
+            : `Pro raises this to ${QUOTA.pro.gradings} graded answers and ${QUOTA.pro.interviews} interviews.`);
 
   return {
     error: message,

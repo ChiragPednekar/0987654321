@@ -63,7 +63,22 @@ describe("quota denial messages", () => {
     interviewsUsed: 0,
     gradingsLeft: 0,
     interviewsLeft: QUOTA.pro.interviews,
+    viaInstitution: false,
   };
+
+  it("sends a campus student to the person who can actually raise it", () => {
+    // A licensed student cannot buy their way past this and cannot wait a year
+    // through placement season. Only the placement cell can change it.
+    const denial = quotaDenial("gradings", { ...base, viaInstitution: true });
+    expect(denial.error).toContain("placement cell");
+    expect(denial.error).not.toContain("Pro raises this");
+  });
+
+  it("tells a retail Pro user the window rolls", () => {
+    const denial = quotaDenial("gradings", base);
+    expect(denial.error).toContain(String(QUOTA.windowDays));
+    expect(denial.error).not.toContain("placement cell");
+  });
 
   it("states the actual numbers so a student can act on it", () => {
     const denial = quotaDenial("gradings", base);
@@ -124,9 +139,20 @@ describe("quota denial messages", () => {
 });
 
 describe("quota status", () => {
-  /** Stands in for the supabase client: only `.rpc()` is reached. */
-  function clientReturning(row: unknown) {
-    return { rpc: async () => ({ data: row, error: null }) } as never;
+  /**
+   * Stands in for the supabase client. Two calls are reached: the quota RPC,
+   * and a count of institution seats used to decide whose allowance this is —
+   * which changes what the refusal tells the student to do about it.
+   */
+  function clientReturning(row: unknown, institutionSeats = 0) {
+    return {
+      rpc: async () => ({ data: row, error: null }),
+      from: () => ({
+        select: () => ({
+          eq: async () => ({ count: institutionSeats, error: null }),
+        }),
+      }),
+    } as never;
   }
 
   it("applies the free tier when the licence does not grant Pro", async () => {
