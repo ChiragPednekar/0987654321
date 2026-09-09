@@ -90,9 +90,9 @@ export async function evaluateSubmission(
         maxScore,
         percentage: maxScore > 0 ? (totalScore / maxScore) * 100 : 0,
         feedback: {
-          strengths: parsed.feedback.strengths.slice(0, 6),
-          weaknesses: parsed.feedback.weaknesses.slice(0, 6),
-          improvements: parsed.feedback.improvements.slice(0, 6),
+          strengths: parsed.feedback.strengths.slice(0, 3),
+          weaknesses: parsed.feedback.weaknesses.slice(0, 3),
+          improvements: parsed.feedback.improvements.slice(0, 3),
           verdict: parsed.verdict,
         },
         model,

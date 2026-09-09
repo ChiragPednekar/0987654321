@@ -160,6 +160,49 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  /**
+   * ---- identical resubmission ---------------------------------------------
+   *
+   * Grading the same text twice produces the same grade and bills twice for
+   * it. The common cause is not gaming — it is a double-click, or a student
+   * hitting submit again because the first attempt seemed slow, which is
+   * exactly when a 20-second model call is most likely to be interrupted.
+   *
+   * Bounded to a short window and to the same case and user, so a genuine
+   * second attempt weeks later is still graded fresh. Contest entries are
+   * excluded: they have their own one-entry rule above, and a contest score
+   * should never be inherited from an earlier practice run.
+   */
+  if (!body.contest_id) {
+    const since = new Date(Date.now() - 15 * 60_000).toISOString();
+    const { data: recent } = await admin
+      .from("submissions")
+      .select("id, answer, scores(total_score, max_score, percentage, breakdown, feedback)")
+      .eq("user_id", user.id)
+      .eq("case_id", body.case_id)
+      .eq("status", "evaluated")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recent?.answer === body.answer) {
+      const score = Array.isArray(recent.scores) ? recent.scores[0] : recent.scores;
+      if (score) {
+        return NextResponse.json({
+          submission_id: recent.id,
+          total_score: score.total_score,
+          max_score: score.max_score,
+          percentage: score.percentage,
+          breakdown: score.breakdown,
+          feedback: score.feedback,
+          hint_penalty_pct: 0,
+          reused: true,
+        });
+      }
+    }
+  }
+
   // ---- record the attempt --------------------------------------------------
   // Inserted through the user's own client so RLS confirms they may write it.
   const { data: submission, error: insertError } = await supabase
