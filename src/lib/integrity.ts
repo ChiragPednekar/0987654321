@@ -48,9 +48,13 @@ export interface ProctorSignals {
   blurCount: number;
   /** Total milliseconds spent away. */
   blurMs: number;
-  /** Exits from fullscreen while exam mode was on. */
+  /** Exits from fullscreen during the attempt. */
   fullscreenExits: number;
-  /** Whether exam mode was active for this attempt. */
+  /**
+   * Whether exam mode was running. True for every attempt made through the
+   * current editor, which does not offer a way to decline it; false only for a
+   * client old enough to predate the gate, or a forged payload.
+   */
   proctored: boolean;
 }
 
@@ -200,8 +204,26 @@ export function assessIntegrity({
     add("long_absence", "Spent several minutes away from the page mid-answer.", 10);
   }
 
+  /**
+   * Leaving fullscreen.
+   *
+   * Weighted higher than a plain tab-away, and scaled, because exam mode is
+   * now mandatory rather than chosen: the student was told the page stays
+   * fullscreen, and the only way out is pressing Esc. One exit is still
+   * cheap — Esc gets hit by accident, and some browsers drop fullscreen on
+   * their own when a system dialog appears. A pattern of them is not an
+   * accident.
+   *
+   * Still not enough on its own to reach a strike at any count, which is the
+   * point of the behavioural floor further down: a student whose browser keeps
+   * dropping fullscreen should lose marks for it at worst, not an account.
+   */
   if (signals.proctored && signals.fullscreenExits > 0) {
-    add("left_exam_mode", `Left exam mode ${signals.fullscreenExits} time(s).`, 15);
+    add(
+      "left_exam_mode",
+      `Left fullscreen ${signals.fullscreenExits} time(s) during the attempt.`,
+      signals.fullscreenExits >= 3 ? 30 : 12,
+    );
   }
 
   // ---- the model's read of the prose ---------------------------------------

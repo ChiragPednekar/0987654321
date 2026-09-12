@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Lock, Send, ShieldCheck, Timer } from "lucide-react";
+import { Loader2, Lock, Send, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +17,7 @@ import {
 import { cn, formatDuration } from "@/lib/utils";
 import type { AnswerSections } from "@/lib/types/database";
 import { useProctor } from "@/hooks/use-proctor";
-import { ProctorNotice, ProctorOverlay } from "./proctor-overlay";
+import { ProctorGate, ProctorOverlay } from "./proctor-overlay";
 
 interface AnswerEditorProps {
   caseId: string;
@@ -87,13 +87,6 @@ export function AnswerEditor({
     });
   }, [signedIn, caseId]);
 
-  // A contest is an exam, so it is proctored without asking. Practice is opt-in:
-  // forcing fullscreen on someone working through a case for fun would drive
-  // them to a browser with no supervision at all.
-  const { enterExamMode } = proctor;
-  React.useEffect(() => {
-    if (contestId && signedIn) void enterExamMode();
-  }, [contestId, signedIn, enterExamMode]);
 
   // Restore any local draft on mount.
   React.useEffect(() => {
@@ -232,6 +225,17 @@ export function AnswerEditor({
     );
   }
 
+  /**
+   * Nothing to write in until the attempt has been started.
+   *
+   * The editor is withheld rather than merely disabled so there is no path
+   * where text can be entered outside supervision — and because the gate is
+   * what produces the user gesture fullscreen requires.
+   */
+  if (!proctor.examMode) {
+    return <ProctorGate starting={proctor.starting} onStart={proctor.start} />;
+  }
+
   return (
     <div className="space-y-3">
       {/*
@@ -247,24 +251,18 @@ export function AnswerEditor({
       )}
 
       {/*
-        Said before they write, not after they are marked down. A student who
-        drafts in Google Docs and pastes is doing something this platform now
-        penalises, and that is only fair if they were told first.
+        Kept visible for the whole attempt rather than shown once on the gate.
+        A student who is about to be marked down for how their answer arrived
+        should be able to see the rule at the moment they are breaking it, not
+        only in a card they clicked past forty minutes ago.
       */}
       <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
-        <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+        <Lock className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
         <p className="text-muted-foreground">
-          Write your answer here. Pasted text, long gaps and time away from this
-          page are recorded and can reduce your mark.{" "}
-          {proctor.examMode
-            ? "Exam mode is on: pasting is disabled."
-            : "Turn on exam mode to lock the page while you work."}
+          Exam conditions. Pasting is disabled — type your answer here. Time
+          away from this page is recorded and can reduce your mark.
         </p>
       </div>
-
-      {!proctor.examMode && proctor.signals.blurCount > 0 && (
-        <ProctorNotice count={proctor.signals.blurCount} />
-      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex rounded-lg bg-muted p-1 text-sm">
@@ -292,31 +290,16 @@ export function AnswerEditor({
 
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           {/*
-            Not offered during a contest: exam mode is already on and turning it
-            off is not the student's to decide.
+            A statement, not a switch. Exam mode cannot be declined, so offering
+            a control that turns it off would be a lie about what the button
+            does. `fullscreen` is reported separately because it genuinely may
+            not be available — iOS Safari has no fullscreen API — while every
+            other control still applies.
           */}
-          {!contestId && (
-            <button
-              type="button"
-              onClick={() =>
-                proctor.examMode ? proctor.exitExamMode() : proctor.enterExamMode()
-              }
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors",
-                proctor.examMode
-                  ? "bg-[var(--warning,#d97706)]/10 text-[var(--warning,#d97706)]"
-                  : "hover:text-foreground",
-              )}
-              title="Fullscreen, paste disabled, interruptions recorded"
-            >
-              {proctor.examMode ? (
-                <Lock className="size-3.5" />
-              ) : (
-                <ShieldCheck className="size-3.5" />
-              )}
-              {proctor.examMode ? "Exam mode on" : "Exam mode"}
-            </button>
-          )}
+          <span className="flex items-center gap-1.5 text-[var(--warning,#d97706)]">
+            <Lock className="size-3.5" />
+            {proctor.fullscreen ? "Exam mode" : "Exam mode (no fullscreen)"}
+          </span>
           <span className="flex items-center gap-1.5">
             <Timer className="size-3.5" />
             <span className="tabular">{formatDuration(elapsed)}</span>

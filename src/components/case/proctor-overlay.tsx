@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, ShieldAlert } from "lucide-react";
+import { Eye, Loader2, Lock, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -20,7 +20,7 @@ export function ProctorOverlay({
   onResume,
 }: {
   count: number;
-  onResume: () => void;
+  onResume: () => void | Promise<void>;
 }) {
   return (
     <div
@@ -41,7 +41,13 @@ export function ProctorOverlay({
         <p className="text-sm font-medium tabular">
           {count === 1 ? "1 interruption" : `${count} interruptions`} so far
         </p>
-        <Button onClick={onResume} className="w-full">
+        {/*
+          The click matters for more than dismissing this card: re-entering
+          fullscreen needs a user gesture, and this button is the gesture. That
+          is why an interruption is repaired through an overlay the student has
+          to press rather than silently in the background.
+        */}
+        <Button onClick={() => void onResume()} className="w-full">
           <Eye />
           Resume
         </Button>
@@ -50,17 +56,35 @@ export function ProctorOverlay({
   );
 }
 
-/** The quieter practice-mode equivalent: counted, mentioned, not blocking. */
-export function ProctorNotice({ count }: { count: number }) {
+/**
+ * The gate every graded attempt starts behind.
+ *
+ * Exam mode is mandatory, and `requestFullscreen()` is only granted inside a
+ * user gesture — so there has to be something to press. Starting it from an
+ * effect on mount would have fullscreen refused every single time and leave
+ * the product looking supervised without being it.
+ */
+export function ProctorGate({
+  starting,
+  onStart,
+}: {
+  starting: boolean;
+  onStart: () => void | Promise<void>;
+}) {
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-[var(--warning,#d97706)]/30 bg-[var(--warning,#d97706)]/5 p-3 text-xs">
-      <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-[var(--warning,#d97706)]" />
-      <p className="text-muted-foreground">
-        You have left this page{" "}
-        <span className="font-medium text-foreground tabular">{count}</span>{" "}
-        {count === 1 ? "time" : "times"} while writing. This is recorded with
-        your answer.
-      </p>
+    <div className="rounded-xl border bg-card p-6 text-center">
+      <Lock className="mx-auto size-7 text-muted-foreground" />
+      <h3 className="mt-3 font-medium">This case is answered under exam conditions</h3>
+      <ul className="mx-auto mt-3 max-w-sm space-y-1.5 text-left text-xs text-muted-foreground">
+        <li>· The page goes fullscreen while you write.</li>
+        <li>· Pasting is disabled. Type your answer here.</li>
+        <li>· Leaving the page hides the case and is recorded with your answer.</li>
+        <li>· Answers that were not written here can lose marks.</li>
+      </ul>
+      <Button className="mt-5" onClick={() => void onStart()} disabled={starting}>
+        {starting ? <Loader2 className="animate-spin" /> : <Lock />}
+        {starting ? "Starting…" : "Start"}
+      </Button>
     </div>
   );
 }

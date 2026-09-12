@@ -15,6 +15,13 @@ import { EMPTY_SIGNALS, type ProctorSignals } from "@/lib/integrity";
  * because a page that could do them would be malware. Anything marketed as a
  * "lockdown browser" that runs in a normal tab is doing exactly what this does.
  *
+ * Exam mode is MANDATORY for every graded attempt, not an option a student
+ * chooses. That forces one piece of structure: `requestFullscreen()` only
+ * succeeds inside a user gesture, so it cannot be fired from an effect on
+ * mount. An auto-start would leave fullscreen silently rejected on every
+ * attempt and the product merely looking proctored. Hence `start()`, called
+ * from a button the student presses before the editor unlocks.
+ *
  * So the goal is not prevention, it is making leaving expensive and visible:
  *
  *   * The moment focus is lost, `away` goes true and the case text and the
@@ -37,7 +44,18 @@ export interface ProctorState {
   away: boolean;
   /** Cleared by the student to resume after an interruption. */
   needsAcknowledgement: boolean;
+  /** The attempt has begun. Until then the editor stays locked. */
   examMode: boolean;
+  /** True while re-entering fullscreen is being attempted. */
+  starting: boolean;
+  /**
+   * Fullscreen is genuinely engaged. False on iOS Safari, which has no
+   * Element.requestFullscreen at all, and wherever the browser refuses — the
+   * attempt still proceeds under every other control, because refusing to let
+   * a student sit the case would push them to a device with no supervision
+   * rather than more.
+   */
+  fullscreen: boolean;
 }
 
 export interface ProctorApi extends ProctorState {
@@ -46,9 +64,10 @@ export interface ProctorApi extends ProctorState {
     onKeyDown: (e: React.KeyboardEvent) => void;
     onPaste: (e: React.ClipboardEvent) => void;
   };
-  enterExamMode: () => Promise<void>;
-  exitExamMode: () => Promise<void>;
-  acknowledge: () => void;
+  /** Must be called from a user gesture, or fullscreen will be refused. */
+  start: () => Promise<void>;
+  /** Acknowledge an interruption and re-enter fullscreen. Also a user gesture. */
+  acknowledge: () => Promise<void>;
   /** Freeze collection once the answer is submitted. */
   stop: () => void;
 }
@@ -61,6 +80,8 @@ export function useProctor(enabled: boolean): ProctorApi {
   const [away, setAway] = React.useState(false);
   const [needsAcknowledgement, setNeedsAcknowledgement] = React.useState(false);
   const [examMode, setExamMode] = React.useState(false);
+  const [starting, setStarting] = React.useState(false);
+  const [fullscreen, setFullscreen] = React.useState(false);
 
   const leftAt = React.useRef<number | null>(null);
   const stopped = React.useRef(false);
@@ -106,13 +127,20 @@ export function useProctor(enabled: boolean): ProctorApi {
     }
 
     function onFullscreenChange() {
-      if (!examRef.current) return;
-      if (!document.fullscreenElement) {
-        bump((s) => ({ fullscreenExits: s.fullscreenExits + 1 }));
-        setExamMode(false);
-        examRef.current = false;
-        setNeedsAcknowledgement(true);
-      }
+      const on = Boolean(document.fullscreenElement);
+      setFullscreen(on);
+      if (!examRef.current || on) return;
+
+      /**
+       * Esc always leaves fullscreen and no page can prevent it. What it must
+       * NOT do any more is end the attempt's supervision: exam mode stays on,
+       * the exit is counted, and the overlay demands a deliberate re-entry.
+       * Turning exam mode off here — which is what this did while it was
+       * opt-in — would have handed every student a one-keystroke way out of a
+       * mode they are no longer allowed to decline.
+       */
+      bump((s) => ({ fullscreenExits: s.fullscreenExits + 1 }));
+      setNeedsAcknowledgement(true);
     }
 
     document.addEventListener("visibilitychange", onVisibility);
@@ -179,40 +207,80 @@ export function useProctor(enabled: boolean): ProctorApi {
     [enabled, bump],
   );
 
-  const enterExamMode = React.useCallback(async () => {
+  /**
+   * Best-effort fullscreen. Never throws, and never blocks the attempt.
+   *
+   * iOS Safari has no Element.requestFullscreen, and any browser may refuse
+   * outside a user gesture. Both are survivable: paste blocking, the overlay,
+   * the counters and the server clock are all independent of it. Refusing to
+   * let someone sit the case because their browser will not go fullscreen
+   * would send them to a device with no supervision at all.
+   */
+  const requestFullscreen = React.useCallback(async () => {
     try {
-      // Fullscreen is not a lock — Esc always leaves it — but leaving is now a
-      // deliberate act that fires `fullscreenchange` and gets recorded.
-      await document.documentElement.requestFullscreen?.();
+      const el = document.documentElement;
+      if (!el.requestFullscreen) return false;
+      /**
+       * Raced against a timeout because the promise does not always settle.
+       * Where fullscreen is disallowed — an embedded frame without
+       * `allow="fullscreen"`, a managed browser policy — some engines neither
+       * resolve nor reject it, they simply leave it pending. Awaiting it bare
+       * left the Start button spinning and the student with no way to answer
+       * the case at all, which is a far worse failure than not being
+       * fullscreen.
+       */
+      await Promise.race([
+        el.requestFullscreen(),
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
+      return Boolean(document.fullscreenElement);
     } catch {
-      // Denied, or unsupported (iOS Safari has no Element.requestFullscreen).
-      // Exam mode still runs: the counters and the overlay are what matter,
-      // and refusing to start would just push the student to a browser with
-      // less supervision, not more.
-    }
-    examRef.current = true;
-    setExamMode(true);
-    bump(() => ({ proctored: true }));
-  }, [bump]);
-
-  const exitExamMode = React.useCallback(async () => {
-    examRef.current = false;
-    setExamMode(false);
-    if (document.fullscreenElement) {
-      try {
-        await document.exitFullscreen();
-      } catch {
-        // Nothing to do; the flag is already down.
-      }
+      return false;
     }
   }, []);
 
-  const acknowledge = React.useCallback(() => setNeedsAcknowledgement(false), []);
+  /**
+   * Begins the supervised attempt. Must be called from a user gesture.
+   *
+   * There is no counterpart. Exam mode is mandatory for every graded answer,
+   * so once it is on the only way out is submitting or leaving the page, and
+   * both of those are recorded.
+   */
+  const start = React.useCallback(async () => {
+    if (stopped.current || examRef.current) return;
+
+    // Exam mode is armed BEFORE fullscreen is attempted, never after. Paste
+    // blocking, the overlay, the counters and the server clock are what
+    // actually supervise the attempt; fullscreen is the one part that may
+    // legitimately be unavailable, and it must not be able to gate the rest.
+    examRef.current = true;
+    setExamMode(true);
+    bump(() => ({ proctored: true }));
+
+    setStarting(true);
+    setFullscreen(await requestFullscreen());
+    setStarting(false);
+  }, [bump, requestFullscreen]);
+
+  /**
+   * Dismisses the interruption overlay and goes back into fullscreen.
+   *
+   * Also a user gesture — the Resume button — which is exactly why the exit is
+   * routed through an overlay the student has to click rather than being
+   * repaired silently: nothing else would give the browser the activation it
+   * needs to re-enter.
+   */
+  const acknowledge = React.useCallback(async () => {
+    setNeedsAcknowledgement(false);
+    if (stopped.current || document.fullscreenElement) return;
+    setFullscreen(await requestFullscreen());
+  }, [requestFullscreen]);
 
   const stop = React.useCallback(() => {
     stopped.current = true;
     examRef.current = false;
     setExamMode(false);
+    setFullscreen(false);
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
   }, []);
 
@@ -221,9 +289,10 @@ export function useProctor(enabled: boolean): ProctorApi {
     away,
     needsAcknowledgement,
     examMode,
+    starting,
+    fullscreen,
     handlers,
-    enterExamMode,
-    exitExamMode,
+    start,
     acknowledge,
     stop,
   };

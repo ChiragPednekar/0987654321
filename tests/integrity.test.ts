@@ -94,6 +94,26 @@ describe("assessIntegrity", () => {
     expect(v.flags.map((f) => f.code)).not.toContain("impossible_speed");
   });
 
+  it("treats one dropped fullscreen as cheap and a pattern of them as not", () => {
+    // Esc gets pressed by accident, and some browsers drop fullscreen on their
+    // own for a system dialog. Doing it repeatedly through a mandatory exam
+    // mode is a different thing.
+    const once = assessIntegrity({
+      ...CLEAN,
+      signals: honest({ proctored: true, fullscreenExits: 1 }),
+    });
+    expect(once.severity).toBe("clean");
+
+    const repeatedly = assessIntegrity({
+      ...CLEAN,
+      signals: honest({ proctored: true, fullscreenExits: 4 }),
+    });
+    expect(repeatedly.score).toBeLessThan(once.score);
+
+    // ...but never far enough on its own to put the account at risk.
+    expect(repeatedly.severity).not.toBe("severe");
+  });
+
   it("tolerates a handful of tab switches", () => {
     const v = assessIntegrity({ ...CLEAN, signals: honest({ blurCount: 4 }) });
     expect(v.severity).toBe("clean");
