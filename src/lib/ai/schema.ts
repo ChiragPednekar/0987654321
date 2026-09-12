@@ -14,6 +14,12 @@ export const evaluationResponseSchema = z.object({
     improvements: z.array(z.string()),
   }),
   verdict: z.string(),
+  /**
+   * Optional so a provider or model that omits it still parses. A missing
+   * value means "not assessed" and is carried through as null — never as
+   * zero, which would read as a positive finding of human authorship.
+   */
+  ai_likelihood: z.number().min(0).max(100).optional(),
 });
 
 export type EvaluationResponse = z.infer<typeof evaluationResponseSchema>;
@@ -29,7 +35,7 @@ export function buildJsonSchema(criteria: RubricCriteria) {
   return {
     type: "object",
     additionalProperties: false,
-    required: ["scores", "feedback", "verdict"],
+    required: ["scores", "feedback", "verdict", "ai_likelihood"],
     properties: {
       scores: {
         type: "object",
@@ -76,6 +82,13 @@ export function buildJsonSchema(criteria: RubricCriteria) {
         type: "string",
         description:
           "One or two sentences summarising the overall quality of the answer.",
+      },
+      ai_likelihood: {
+        type: "integer",
+        minimum: 0,
+        maximum: 100,
+        description:
+          "0-100: how strongly the prose resembles unedited AI output. Judge style only, never quality. Formal or second-language English is not evidence. When unsure, answer low.",
       },
     },
   } as const;

@@ -11,6 +11,7 @@ const TABS = [
   { href: "/admin/usage", label: "AI usage" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/access", label: "Access" },
+  { href: "/admin/integrity", label: "Integrity" },
   { href: "/admin/cases", label: "Case library" },
 ];
 

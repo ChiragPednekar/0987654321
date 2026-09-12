@@ -9,6 +9,8 @@ import { recordUsage } from "@/lib/usage";
 import type { RubricRow } from "@/lib/types/database";
 import { wantsAssignmentNotices } from "@/lib/notify";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
+import { consumeAttemptElapsed, recordIntegrity } from "@/lib/proctoring";
+import { EMPTY_SIGNALS } from "@/lib/integrity";
 
 // Model evaluation regularly takes 15-40s; the default function timeout is not
 // enough. (Vercel: requires Pro for >60s.)
@@ -29,6 +31,26 @@ const bodySchema = z.object({
     })
     .default({}),
   time_spent_seconds: z.number().int().min(0).max(86_400).default(0),
+  /**
+   * How the answer was written, from the editor. Untrusted by construction —
+   * it crosses the network from a page the student controls — so every field
+   * is bounded here and the verdict built from it in src/lib/integrity.ts is
+   * treated as corroboration, never proof. Defaulted rather than required, so
+   * an older client or a restored draft still submits and is simply not
+   * assessed on behaviour.
+   */
+  signals: z
+    .object({
+      keystrokes: z.number().int().min(0).max(1_000_000).default(0),
+      pasteCount: z.number().int().min(0).max(10_000).default(0),
+      pastedChars: z.number().int().min(0).max(1_000_000).default(0),
+      largestPaste: z.number().int().min(0).max(1_000_000).default(0),
+      blurCount: z.number().int().min(0).max(10_000).default(0),
+      blurMs: z.number().int().min(0).max(86_400_000).default(0),
+      fullscreenExits: z.number().int().min(0).max(10_000).default(0),
+      proctored: z.boolean().default(false),
+    })
+    .default(EMPTY_SIGNALS),
 });
 
 export async function POST(request: NextRequest) {
@@ -249,10 +271,48 @@ export async function POST(request: NextRequest) {
       }, 0),
     );
 
-    const totalScore =
+    /**
+     * ---- integrity ---------------------------------------------------------
+     *
+     * Assessed after grading, never before: the rubric marks must be decided on
+     * the answer's merits alone, so that a student who is wrongly flagged still
+     * has a correct underlying score to appeal back to.
+     *
+     * `elapsedSeconds` comes from the server's own stamp rather than from
+     * `body.time_spent_seconds`, which the client supplies and a cheat would
+     * set first. Null when no attempt was stamped, and carried through as null
+     * so the speed check is skipped rather than assumed.
+     */
+    const elapsedSeconds = await consumeAttemptElapsed(
+      admin,
+      user.id,
+      body.case_id,
+    );
+
+    const integrity = await recordIntegrity(admin, {
+      userId: user.id,
+      caseId: body.case_id,
+      submissionId: submission.id,
+      signals: body.signals,
+      answerChars: body.answer.length,
+      elapsedSeconds,
+      aiLikelihood: result.aiLikelihood,
+    });
+
+    // Applied in sequence rather than summed, so neither deduction can ever
+    // drive the total negative and each stays independently explainable: this
+    // is what hints cost you, and this is what the flag cost you.
+    const afterHints =
       penaltyPct > 0
-        ? Math.max(0, Math.round(result.totalScore * (1 - penaltyPct / 100)))
+        ? Math.round(result.totalScore * (1 - penaltyPct / 100))
         : result.totalScore;
+
+    const totalScore = Math.max(
+      0,
+      integrity.verdict.penaltyPct > 0
+        ? Math.round(afterHints * (1 - integrity.verdict.penaltyPct / 100))
+        : afterHints,
+    );
 
     // Scores are written with the service role: there is deliberately no RLS
     // policy that would let a user insert their own score.
@@ -278,7 +338,21 @@ export async function POST(request: NextRequest) {
       breakdown: result.breakdown,
       total_score: totalScore,
       max_score: result.maxScore,
-      feedback: { ...result.feedback, hint_penalty_pct: penaltyPct },
+      feedback: {
+        ...result.feedback,
+        hint_penalty_pct: penaltyPct,
+        // Embedded alongside the hint penalty it sits next to, so the score
+        // panel can explain the deduction without a second round trip. The
+        // full evidence lives in submission_integrity, which the student may
+        // also read for their own work.
+        integrity: {
+          severity: integrity.verdict.severity,
+          penalty_pct: integrity.verdict.penaltyPct,
+          flags: integrity.verdict.flags
+            .filter((f) => f.points > 0 || !f.behavioural)
+            .map((f) => f.label),
+        },
+      },
       model: result.model,
       tokens_used: result.tokensUsed,
     });
@@ -382,6 +456,13 @@ export async function POST(request: NextRequest) {
       hint_penalty_pct: penaltyPct,
       breakdown: result.breakdown,
       feedback: result.feedback,
+      integrity: {
+        severity: integrity.verdict.severity,
+        penalty_pct: integrity.verdict.penaltyPct,
+        flags: integrity.verdict.flags.map((f) => f.label),
+        warning: integrity.warning,
+        blocked: integrity.blocked,
+      },
     });
   } catch (error) {
     // Mark the attempt failed rather than leaving it stuck on "evaluating".

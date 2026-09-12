@@ -15,6 +15,14 @@ export interface EvaluationResult {
   maxScore: number;
   percentage: number;
   feedback: EvaluationFeedback & { verdict: string };
+  /**
+   * The grader's 0-100 read of how much the prose resembles AI output, or null
+   * when the model did not return one. Null means "not assessed" — it must
+   * never be collapsed to 0, which would read as a finding of human
+   * authorship. Consumed by src/lib/integrity.ts, which never lets it reduce a
+   * mark on its own.
+   */
+  aiLikelihood: number | null;
   model: string;
   tokensUsed: number;
   inputTokens: number;
@@ -99,6 +107,7 @@ export async function evaluateSubmission(
           improvements: parsed.feedback.improvements.slice(0, 6),
           verdict: parsed.verdict,
         },
+        aiLikelihood: parsed.ai_likelihood ?? null,
         model,
         tokensUsed,
         inputTokens,

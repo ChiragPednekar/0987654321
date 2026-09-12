@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Send, Timer } from "lucide-react";
+import { Loader2, Lock, Send, ShieldCheck, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,8 @@ import {
 } from "@/lib/constants";
 import { cn, formatDuration } from "@/lib/utils";
 import type { AnswerSections } from "@/lib/types/database";
+import { useProctor } from "@/hooks/use-proctor";
+import { ProctorNotice, ProctorOverlay } from "./proctor-overlay";
 
 interface AnswerEditorProps {
   caseId: string;
@@ -61,6 +63,37 @@ export function AnswerEditor({
   const [submitting, setSubmitting] = React.useState(false);
   const [elapsed, setElapsed] = React.useState(0);
   const startedAt = React.useRef<number>(Date.now());
+
+  const proctor = useProctor(signedIn);
+
+  /**
+   * Stamp the start server-side.
+   *
+   * The on-screen timer runs off `startedAt` and always will, but that number
+   * lives in the student's browser. This tells the server when the case was
+   * opened so the integrity check has a clock nobody can wind back. Fired once
+   * per mount; the route keeps the earliest stamp, so a reload never shortens
+   * the recorded attempt.
+   */
+  React.useEffect(() => {
+    if (!signedIn) return;
+    void fetch("/api/attempts/start", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ case_id: caseId }),
+    }).catch(() => {
+      // Best effort. A missing stamp means the speed check is skipped for this
+      // attempt, which is the lenient outcome and the right one.
+    });
+  }, [signedIn, caseId]);
+
+  // A contest is an exam, so it is proctored without asking. Practice is opt-in:
+  // forcing fullscreen on someone working through a case for fun would drive
+  // them to a browser with no supervision at all.
+  const { enterExamMode } = proctor;
+  React.useEffect(() => {
+    if (contestId && signedIn) void enterExamMode();
+  }, [contestId, signedIn, enterExamMode]);
 
   // Restore any local draft on mount.
   React.useEffect(() => {
@@ -146,6 +179,7 @@ export function AnswerEditor({
           answer,
           answer_sections,
           time_spent_seconds: Math.floor((Date.now() - startedAt.current) / 1000),
+          signals: proctor.signals,
         }),
       });
 
@@ -157,7 +191,18 @@ export function AnswerEditor({
       }
 
       window.localStorage.removeItem(storageKey);
-      toast.success("Evaluated. Scroll down for your score.");
+      // Release the beforeunload guard and fullscreen before navigating, or the
+      // router push below trips the very dialog meant to deter abandoning an
+      // attempt.
+      proctor.stop();
+
+      if (payload.integrity?.blocked) {
+        toast.error(payload.integrity.warning, { duration: 30_000 });
+      } else if (payload.integrity?.warning) {
+        toast.warning(payload.integrity.warning, { duration: 15_000 });
+      } else {
+        toast.success("Evaluated. Scroll down for your score.");
+      }
       router.push(`/cases/${caseSlug}?submission=${payload.submission_id}#review`);
       router.refresh();
     } catch {
@@ -189,6 +234,38 @@ export function AnswerEditor({
 
   return (
     <div className="space-y-3">
+      {/*
+        Only while exam mode is on. Blanking the page every time a practising
+        student alt-tabs to their calculator would teach them to resent the
+        feature rather than to stay put.
+      */}
+      {proctor.examMode && proctor.needsAcknowledgement && (
+        <ProctorOverlay
+          count={proctor.signals.blurCount}
+          onResume={proctor.acknowledge}
+        />
+      )}
+
+      {/*
+        Said before they write, not after they are marked down. A student who
+        drafts in Google Docs and pastes is doing something this platform now
+        penalises, and that is only fair if they were told first.
+      */}
+      <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
+        <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+        <p className="text-muted-foreground">
+          Write your answer here. Pasted text, long gaps and time away from this
+          page are recorded and can reduce your mark.{" "}
+          {proctor.examMode
+            ? "Exam mode is on: pasting is disabled."
+            : "Turn on exam mode to lock the page while you work."}
+        </p>
+      </div>
+
+      {!proctor.examMode && proctor.signals.blurCount > 0 && (
+        <ProctorNotice count={proctor.signals.blurCount} />
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex rounded-lg bg-muted p-1 text-sm">
           {(
@@ -214,6 +291,32 @@ export function AnswerEditor({
         </div>
 
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          {/*
+            Not offered during a contest: exam mode is already on and turning it
+            off is not the student's to decide.
+          */}
+          {!contestId && (
+            <button
+              type="button"
+              onClick={() =>
+                proctor.examMode ? proctor.exitExamMode() : proctor.enterExamMode()
+              }
+              className={cn(
+                "flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors",
+                proctor.examMode
+                  ? "bg-[var(--warning,#d97706)]/10 text-[var(--warning,#d97706)]"
+                  : "hover:text-foreground",
+              )}
+              title="Fullscreen, paste disabled, interruptions recorded"
+            >
+              {proctor.examMode ? (
+                <Lock className="size-3.5" />
+              ) : (
+                <ShieldCheck className="size-3.5" />
+              )}
+              {proctor.examMode ? "Exam mode on" : "Exam mode"}
+            </button>
+          )}
           <span className="flex items-center gap-1.5">
             <Timer className="size-3.5" />
             <span className="tabular">{formatDuration(elapsed)}</span>
@@ -267,6 +370,8 @@ export function AnswerEditor({
                   onChange={(event) =>
                     updateSection(section.key, event.target.value)
                   }
+                  onKeyDown={proctor.handlers.onKeyDown}
+                  onPaste={proctor.handlers.onPaste}
                   placeholder={section.placeholder}
                   className="min-h-[150px] resize-y font-mono text-[13px] leading-relaxed"
                   spellCheck
@@ -287,6 +392,8 @@ export function AnswerEditor({
             "4. A clear recommendation you commit to\n\n" +
             "Markdown works here."
           }
+          onKeyDown={proctor.handlers.onKeyDown}
+          onPaste={proctor.handlers.onPaste}
           className="min-h-[420px] resize-y font-mono text-[13px] leading-relaxed"
           spellCheck
         />

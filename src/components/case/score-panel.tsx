@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowUpRight, CheckCircle2 } from "lucide-react";
+import { AlertCircle, ArrowUpRight, CheckCircle2, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { EvaluationFeedback, ScoreRow } from "@/lib/types/database";
@@ -41,7 +41,27 @@ export function ScorePanel({
   score: ScoreRow;
   criteria: Record<string, number>;
 }) {
-  const feedback = score.feedback as EvaluationFeedback & { verdict?: string };
+  const feedback = score.feedback as EvaluationFeedback & {
+    verdict?: string;
+    hint_penalty_pct?: number;
+    integrity?: {
+      severity: "clean" | "suspect" | "severe";
+      penalty_pct: number;
+      flags: string[];
+    };
+  };
+
+  /**
+   * A deduction the student cannot see is an accusation, not a process. So the
+   * flags are listed in full — including the ones that cost nothing — and the
+   * appeal route is named on the same card. Shown only when the mark was
+   * actually reduced; a clean submission should not be handed a report on its
+   * own honesty.
+   */
+  const integrity =
+    feedback?.integrity && feedback.integrity.penalty_pct > 0
+      ? feedback.integrity
+      : null;
   const percentage = Number(score.percentage);
   const t = tone(percentage);
 
@@ -139,6 +159,29 @@ export function ScorePanel({
               )}
             </div>
           </div>
+
+          {integrity && (
+            <div className="mt-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+                <div className="min-w-0 space-y-2">
+                  <p className="text-sm font-medium">
+                    Marked down {integrity.penalty_pct}% for academic integrity
+                  </p>
+                  <ul className="space-y-1 text-xs text-muted-foreground">
+                    {integrity.flags.map((flag) => (
+                      <li key={flag}>· {flag}</li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-muted-foreground">
+                    The score above already includes this deduction. If you
+                    believe it is wrong, ask your teacher or placement cell to
+                    review it — they can clear it and restore the full mark.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="mt-6 space-y-3 border-t border-border pt-5">
             {Object.entries(criteria).map(([key, max]) => {

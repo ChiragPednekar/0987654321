@@ -42,6 +42,8 @@ export type NotificationType =
   | "contest_starting"
   | "contest_result"
   | "comment_reply"
+  /** A flagged submission or a suspension (20250101000036). */
+  | "integrity_warning"
   | "system";
 
 export type ContestStatus = "scheduled" | "live" | "grading" | "completed";
@@ -283,6 +285,33 @@ export type SubmissionRow = {
   error_message: string | null;
   created_at: string;
   submitted_at: string;
+}
+
+/** Server-stamped open time, so elapsed cannot be read from the client (20250101000035). */
+export type SolveAttemptRow = {
+  user_id: string;
+  case_id: string;
+  started_at: string;
+}
+
+/** Proctoring evidence and the penalty derived from it (20250101000035). */
+export type SubmissionIntegrityRow = {
+  submission_id: string;
+  user_id: string;
+  case_id: string;
+  /** Raw browser telemetry. Untrusted; kept as the audit trail behind a penalty. */
+  signals: Record<string, number | boolean>;
+  flags: string[];
+  score: number;
+  penalty_pct: number;
+  severity: "clean" | "suspect" | "severe";
+  /** Null means the grader did not assess authorship — never "human". */
+  ai_likelihood: number | null;
+  server_elapsed_seconds: number | null;
+  cleared_at: string | null;
+  cleared_by: string | null;
+  cleared_note: string | null;
+  created_at: string;
 }
 
 export type ScoreRow = {
@@ -673,6 +702,26 @@ export interface Database {
           },
         ];
       };
+      solve_attempts: {
+        Row: SolveAttemptRow;
+        Insert: Partial<SolveAttemptRow>;
+        Update: Partial<SolveAttemptRow>;
+        Relationships: [];
+      };
+      submission_integrity: {
+        Row: SubmissionIntegrityRow;
+        Insert: Partial<SubmissionIntegrityRow>;
+        Update: Partial<SubmissionIntegrityRow>;
+        Relationships: [
+          {
+            foreignKeyName: "submission_integrity_submission_id_fkey";
+            columns: ["submission_id"];
+            isOneToOne: true;
+            referencedRelation: "submissions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       submissions: {
         Row: SubmissionRow;
         Insert: Partial<SubmissionRow>;
@@ -961,6 +1010,8 @@ export interface Database {
       has_pro: { Args: { p_user: string }; Returns: boolean };
       /** Entitlement to practise, not merely browse (20250101000032). */
       can_solve: { Args: { p_user: string }; Returns: boolean };
+      /** Uncleared severe integrity findings in the last year (20250101000035). */
+      integrity_strikes: { Args: { p_user: string }; Returns: number };
       institution_commercials: {
         Args: {
           p_in_rate_per_million: number;

@@ -3,7 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Award, Bell, CheckCheck, MessageSquare, Trophy } from "lucide-react";
+import {
+  Award,
+  Bell,
+  CheckCheck,
+  MessageSquare,
+  ShieldAlert,
+  Trophy,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +27,7 @@ const ICON: Record<NotificationType, typeof Bell> = {
   contest_starting: Trophy,
   contest_result: Trophy,
   comment_reply: MessageSquare,
+  integrity_warning: ShieldAlert,
   system: Bell,
 };
 
