@@ -17,6 +17,9 @@ import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/lib/types/database";
 import { WRITTEN_SEEDS } from "./content/written-formats";
+import { WRITTEN_SEEDS_MORE } from "./content/written-formats-more";
+
+const ALL_SEEDS = [...WRITTEN_SEEDS, ...WRITTEN_SEEDS_MORE];
 
 config({ path: ".env.local" });
 config({ path: ".env" });
@@ -35,7 +38,7 @@ async function main() {
   // criterion is worth, and nothing downstream would complain.
   const problems: string[] = [];
   const slugs = new Set<string>();
-  for (const seed of WRITTEN_SEEDS) {
+  for (const seed of ALL_SEEDS) {
     const total = Object.values(seed.rubric).reduce((n, [w]) => n + w, 0);
     if (total !== 100) problems.push(`${seed.slug}: rubric weights total ${total}, not 100`);
     if (slugs.has(seed.slug)) problems.push(`${seed.slug}: duplicate slug`);
@@ -49,11 +52,11 @@ async function main() {
     process.exit(1);
   }
 
-  const byFormat = WRITTEN_SEEDS.reduce<Record<string, number>>((acc, s) => {
+  const byFormat = ALL_SEEDS.reduce<Record<string, number>>((acc, s) => {
     acc[s.format] = (acc[s.format] ?? 0) + 1;
     return acc;
   }, {});
-  console.log(`${WRITTEN_SEEDS.length} written exercises, all valid.`);
+  console.log(`${ALL_SEEDS.length} written exercises, all valid.`);
   for (const [f, n] of Object.entries(byFormat)) {
     console.log(`  ${f.padEnd(16)} ${n}`);
   }
@@ -67,7 +70,7 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  for (const seed of WRITTEN_SEEDS) {
+  for (const seed of ALL_SEEDS) {
     const { data: row, error } = await admin
       .from("cases")
       .upsert(
@@ -120,7 +123,7 @@ async function main() {
     console.log(`  ✓ ${seed.format.padEnd(16)} ${seed.slug}`);
   }
 
-  console.log(`\nSeeded ${WRITTEN_SEEDS.length} exercises.`);
+  console.log(`\nSeeded ${ALL_SEEDS.length} exercises.`);
 }
 
 main().catch((error) => {

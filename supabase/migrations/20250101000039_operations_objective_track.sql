@@ -1,0 +1,13 @@
+-- Operations was a case domain with no objective track, while finance,
+-- accounting and marketing all had one. That asymmetry was an oversight rather
+-- than a decision: inventory, lead time, capacity and quality are exactly the
+-- short technicals asked of anyone interviewing for a supply-chain or
+-- manufacturing role, and they mark cleanly against a key.
+--
+-- Strategy and consulting deliberately get no track. They are not well tested
+-- by multiple choice — a strategy question worth asking has no single right
+-- option — and they are already served by the case library.
+--
+-- Its own migration: ALTER TYPE ... ADD VALUE cannot run in the same
+-- transaction that uses the new value.
+alter type public.objective_track add value if not exists 'operations_concepts';

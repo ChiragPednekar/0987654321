@@ -29,6 +29,18 @@ import {
   FINANCE_CONCEPTS,
   MARKETING_CONCEPTS,
 } from "./content/objective-domain";
+import {
+  ACCOUNTING_MORE,
+  FINANCE_CONCEPTS_MORE,
+  MARKETING_CONCEPTS_MORE,
+  CURRENT_AFFAIRS_MORE,
+  OPERATIONS_CONCEPTS,
+} from "./content/objective-domain-more";
+import {
+  DATA_INTERPRETATION_FILL,
+  LOGICAL_REASONING_FILL,
+  VERBAL_FILL,
+} from "./content/objective-aptitude-fill";
 
 config({ path: ".env.local" });
 config({ path: ".env" });
@@ -37,13 +49,14 @@ type Track = Database["public"]["Tables"]["objective_questions"]["Row"]["track"]
 
 const BANKS: [Track, ObjectiveSeed[]][] = [
   ["quant", [...QUANT, ...QUANT_MORE]],
-  ["data_interpretation", [...DATA_INTERPRETATION, ...DATA_INTERPRETATION_MORE]],
-  ["logical_reasoning", [...LOGICAL_REASONING, ...LOGICAL_REASONING_MORE]],
-  ["verbal", [...VERBAL, ...VERBAL_MORE]],
-  ["finance_concepts", FINANCE_CONCEPTS],
-  ["accounting", ACCOUNTING],
-  ["marketing_concepts", MARKETING_CONCEPTS],
-  ["current_affairs", CURRENT_AFFAIRS],
+  ["data_interpretation", [...DATA_INTERPRETATION, ...DATA_INTERPRETATION_MORE, ...DATA_INTERPRETATION_FILL]],
+  ["logical_reasoning", [...LOGICAL_REASONING, ...LOGICAL_REASONING_MORE, ...LOGICAL_REASONING_FILL]],
+  ["verbal", [...VERBAL, ...VERBAL_MORE, ...VERBAL_FILL]],
+  ["finance_concepts", [...FINANCE_CONCEPTS, ...FINANCE_CONCEPTS_MORE]],
+  ["accounting", [...ACCOUNTING, ...ACCOUNTING_MORE]],
+  ["marketing_concepts", [...MARKETING_CONCEPTS, ...MARKETING_CONCEPTS_MORE]],
+  ["operations_concepts", OPERATIONS_CONCEPTS],
+  ["current_affairs", [...CURRENT_AFFAIRS, ...CURRENT_AFFAIRS_MORE]],
 ];
 
 const dryRun = process.argv.includes("--dry-run");

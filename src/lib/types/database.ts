@@ -331,6 +331,8 @@ export type ObjectiveTrack =
   | "finance_concepts"
   | "accounting"
   | "marketing_concepts"
+  /** 20250101000039. */
+  | "operations_concepts"
   | "current_affairs";
 
 export type ObjectiveQuestionRow = {
