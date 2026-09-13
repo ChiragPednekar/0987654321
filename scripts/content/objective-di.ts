@@ -32,7 +32,7 @@ export const DATA_INTERPRETATION: ObjectiveSeed[] = [
     context: TABLE,
     stem: "What was the gross margin percentage in Q3?",
     options: ["40.0%", "38.5%", "42.2%", "36.7%"],
-    correct_index: 0,
+    answer: "40.0%",
     explanation:
       "Gross profit = 540 − 324 = 216. 216 / 540 = 40.0%.",
   },
@@ -42,7 +42,7 @@ export const DATA_INTERPRETATION: ObjectiveSeed[] = [
     context: TABLE,
     stem: "In which quarter was operating margin (revenue less COGS less opex) highest as a percentage of revenue?",
     options: ["Q4", "Q3", "Q2", "Q1"],
-    correct_index: 0,
+    answer: "Q4",
     explanation:
       "Q1: (420−252−105)/420 = 15.0%. Q2: (480−278−115)/480 = 18.1%. Q3: (540−324−118)/540 = 18.1%. Q4: (600−342−132)/600 = 21.0%. Q4 is highest.",
   },
@@ -52,7 +52,7 @@ export const DATA_INTERPRETATION: ObjectiveSeed[] = [
     context: TABLE,
     stem: "Revenue grew fastest quarter-on-quarter between which pair?",
     options: ["Q1 to Q2", "Q2 to Q3", "Q3 to Q4", "Growth was equal throughout"],
-    correct_index: 0,
+    answer: "Q1 to Q2",
     explanation:
       "Q1→Q2: 60/420 = 14.3%. Q2→Q3: 60/480 = 12.5%. Q3→Q4: 60/540 = 11.1%. The absolute rise is ₹60 crore every time, so the percentage falls as the base grows — the point the question is testing.",
   },
@@ -62,7 +62,7 @@ export const DATA_INTERPRETATION: ObjectiveSeed[] = [
     context: TABLE,
     stem: "If Q4 opex had held at the same percentage of revenue as Q1, what would Q4 operating profit have been?",
     options: ["₹108 crore", "₹126 crore", "₹132 crore", "₹96 crore"],
-    correct_index: 0,
+    answer: "₹108 crore",
     explanation:
       "Q1 opex ratio = 105/420 = 25%. On ₹600 crore that is ₹150 crore, not ₹132 crore. Operating profit = 600 − 342 − 150 = ₹108 crore.",
   },
@@ -72,7 +72,7 @@ export const DATA_INTERPRETATION: ObjectiveSeed[] = [
     context: FUNNEL,
     stem: "What was the visitor-to-signup conversion rate in February?",
     options: ["5.5%", "5.0%", "6.0%", "4.5%"],
-    correct_index: 0,
+    answer: "5.5%",
     explanation: "8,250 / 150,000 = 5.5%.",
   },
   {
@@ -86,7 +86,7 @@ export const DATA_INTERPRETATION: ObjectiveSeed[] = [
       "Held flat at 15.0%",
       "Rose from 14.0% to 15.0%",
     ],
-    correct_index: 0,
+    answer: "Rose from 15.0% to 17.0%",
     explanation:
       "Jan: 900/6,000 = 15.0%. Mar: 1,530/9,000 = 17.0%. Note the trap of comparing paid to visitors instead of to signups.",
   },
@@ -101,7 +101,7 @@ export const DATA_INTERPRETATION: ObjectiveSeed[] = [
       "Flat at about 12%",
       "Cannot be determined from the table",
     ],
-    correct_index: 0,
+    answer: "Rising, from 10.0% to 13.0%",
     explanation:
       "Jan 90/900 = 10.0%, Feb 139/1,155 = 12.0%, Mar 199/1,530 = 13.0%. Churn is worsening even as paid customers grow, which is the insight the numbers are hiding.",
   },

@@ -15,8 +15,14 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/lib/types/database";
 import type { ObjectiveSeed } from "./content/types";
 import { QUANT } from "./content/objective-quant";
+import { QUANT_MORE } from "./content/objective-quant-more";
 import { DATA_INTERPRETATION } from "./content/objective-di";
+import { DATA_INTERPRETATION_MORE } from "./content/objective-di-more";
 import { LOGICAL_REASONING, VERBAL } from "./content/objective-reasoning";
+import {
+  LOGICAL_REASONING_MORE,
+  VERBAL_MORE,
+} from "./content/objective-reasoning-more";
 import {
   ACCOUNTING,
   CURRENT_AFFAIRS,
@@ -30,10 +36,10 @@ config({ path: ".env" });
 type Track = Database["public"]["Tables"]["objective_questions"]["Row"]["track"];
 
 const BANKS: [Track, ObjectiveSeed[]][] = [
-  ["quant", QUANT],
-  ["data_interpretation", DATA_INTERPRETATION],
-  ["logical_reasoning", LOGICAL_REASONING],
-  ["verbal", VERBAL],
+  ["quant", [...QUANT, ...QUANT_MORE]],
+  ["data_interpretation", [...DATA_INTERPRETATION, ...DATA_INTERPRETATION_MORE]],
+  ["logical_reasoning", [...LOGICAL_REASONING, ...LOGICAL_REASONING_MORE]],
+  ["verbal", [...VERBAL, ...VERBAL_MORE]],
   ["finance_concepts", FINANCE_CONCEPTS],
   ["accounting", ACCOUNTING],
   ["marketing_concepts", MARKETING_CONCEPTS],
@@ -56,6 +62,7 @@ const dryRun = process.argv.includes("--dry-run");
  * past sittings were right.
  */
 function rotateOptions(q: ObjectiveSeed): { options: string[]; correct_index: number } {
+  const authoredIndex = q.options.indexOf(q.answer);
   let hash = 0;
   for (let i = 0; i < q.stem.length; i++) {
     hash = (hash * 31 + q.stem.charCodeAt(i)) | 0;
@@ -66,7 +73,7 @@ function rotateOptions(q: ObjectiveSeed): { options: string[]; correct_index: nu
   // Rotation preserves the relative order of the distractors, which matters
   // where options are numeric and were authored in a deliberate sequence.
   const options = q.options.map((_, i) => q.options[(i - shift + n * n) % n]);
-  return { options, correct_index: (q.correct_index + shift) % n };
+  return { options, correct_index: (authoredIndex + shift) % n };
 }
 
 /**
@@ -82,8 +89,13 @@ function validate(track: Track, q: ObjectiveSeed): string[] {
   if (q.options.length < 2 || q.options.length > 6) {
     problems.push(`${where} has ${q.options.length} options (need 2-6)`);
   }
-  if (q.correct_index < 0 || q.correct_index >= q.options.length) {
-    problems.push(`${where} correct_index ${q.correct_index} is out of range`);
+  const matches = q.options.filter((o) => o === q.answer).length;
+  if (matches === 0) {
+    problems.push(
+      `${where} answer ${JSON.stringify(q.answer)} is not one of its options`,
+    );
+  } else if (matches > 1) {
+    problems.push(`${where} answer ${JSON.stringify(q.answer)} matches two options`);
   }
   const seen = new Set(q.options.map((o) => o.trim().toLowerCase()));
   if (seen.size !== q.options.length) {
@@ -92,6 +104,30 @@ function validate(track: Track, q: ObjectiveSeed): string[] {
   if (!q.explanation.trim()) {
     problems.push(`${where} has no explanation`);
   }
+
+  /**
+   * Refuses content the author had not finished checking.
+   *
+   * Three questions in the second quant batch shipped past review with no
+   * correct option at all, or with the key pointing at a different number from
+   * the one the working produced. A wrong key is the worst failure this
+   * product has — the student is told they are wrong when they are right, and
+   * they have no way to appeal a multiple-choice mark. A validator cannot do
+   * the arithmetic, but it can refuse anything still carrying the marks of an
+   * unresolved doubt.
+   */
+  if ((q.source ?? "").toLowerCase().includes("flag")) {
+    problems.push(`${where} is flagged for review and must not be seeded`);
+  }
+  // Narrow on purpose. "Treat the pair as one block" is ordinary explanation
+  // prose; these four only appear when the author was arguing with their own
+  // arithmetic in the text a student will read.
+  for (const tell of ["recompute", "should read", "closest option", "no option matches"]) {
+    if (q.explanation.toLowerCase().includes(tell)) {
+      problems.push(`${where} explanation contains unresolved working ("${tell.trim()}")`);
+    }
+  }
+
   return problems;
 }
 

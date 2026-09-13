@@ -12,7 +12,7 @@ export const LOGICAL_REASONING: ObjectiveSeed[] = [
       "No consultant is an engineer",
       "All engineers are analysts",
     ],
-    correct_index: 0,
+    answer: "Nothing about consultants and engineers follows",
     explanation:
       "The engineers who are analysts need not be among the consultants. An overlap is possible but not necessary, and 'some' never licenses a conclusion about a specific subset.",
   },
@@ -26,7 +26,7 @@ export const LOGICAL_REASONING: ObjectiveSeed[] = [
       "The product is unchanged from last year",
       "Competitors will not launch in October",
     ],
-    correct_index: 0,
+    answer: "The October uplift was seasonal rather than caused by something one-off",
     explanation:
       "The argument moves from one observed month to a rule about October. It only works if the uplift repeats — that is, if it was seasonal and not caused by, say, a one-time campaign. The others are plausible concerns but are not what the inference rests on.",
   },
@@ -40,7 +40,7 @@ export const LOGICAL_REASONING: ObjectiveSeed[] = [
       "The training cost more than budgeted",
       "Productivity also rose 2% the previous year",
     ],
-    correct_index: 0,
+    answer: "A new production line was installed in the same month",
     explanation:
       "A confounder that could independently produce the same effect is the strongest attack on a causal claim. Cost and satisfaction say nothing about causation, and a 2% prior trend does not account for 12%.",
   },
@@ -49,7 +49,7 @@ export const LOGICAL_REASONING: ObjectiveSeed[] = [
     difficulty: "medium",
     stem: "Five candidates sit in a row. B is immediately right of A. C is at one end. D is not adjacent to B. If A is second from the left, who is at the far right?",
     options: ["D", "C", "E", "Cannot be determined"],
-    correct_index: 0,
+    answer: "D",
     explanation:
       "A is position 2, so B is 3. C must be at an end and position 1 is the only end left open to it once we test both, giving C-A-B-?-?. D cannot be adjacent to B, so D is not position 4; D takes 5 and E takes 4.",
   },
@@ -63,7 +63,7 @@ export const LOGICAL_REASONING: ObjectiveSeed[] = [
       "Basket size is the wrong metric for a retailer",
       "The study did not measure staff satisfaction",
     ],
-    correct_index: 0,
+    answer: "Stores that adopted it may already have had different shopper mixes",
     explanation:
       "Adoption was not random. If self-checkout went first to stores with more small top-up trips, the fall is selection, not effect. This is the standard selection-bias objection and is worth naming in an interview.",
   },
@@ -77,7 +77,7 @@ export const LOGICAL_REASONING: ObjectiveSeed[] = [
       "Orion is unprofitable",
       "The new platform is better",
     ],
-    correct_index: 0,
+    answer: "Orion was launched in or before 2022",
     explanation:
       "Contrapositive. If launched after 2022 then new platform; Orion is not on the new platform, so Orion was not launched after 2022.",
   },
@@ -91,7 +91,7 @@ export const LOGICAL_REASONING: ObjectiveSeed[] = [
       "Statement 2 alone is sufficient",
       "Both together are sufficient",
     ],
-    correct_index: 0,
+    answer: "Neither alone nor both together are sufficient",
     explanation:
       "Profit needs contribution (revenue × margin) to exceed fixed costs, not revenue itself. Knowing revenue > fixed costs and a 35% margin still leaves both outcomes possible — contribution could be above or below fixed costs depending on the actual magnitudes.",
   },
@@ -111,7 +111,7 @@ export const VERBAL: ObjectiveSeed[] = [
       "Fixed-fee distribution contracts are always unwise",
       "The firm should have exited the category sooner",
     ],
-    correct_index: 0,
+    answer: "The usual explanation mistakes a symptom for a cause",
     explanation:
       "The passage explicitly rejects the rival-driven account and relocates the cause to the contract. It does not generalise about contracts, nor recommend exit.",
   },
@@ -127,7 +127,7 @@ export const VERBAL: ObjectiveSeed[] = [
       "Been discounted by the stock market",
       "Been passed on to customers",
     ],
-    correct_index: 0,
+    answer: "Already been reflected in the firm's economics before rivals appeared",
     explanation:
       "The phrase is borrowed from markets but used loosely: the damage was already present in the numbers. Option 3 is the literal market sense and is the trap.",
   },
@@ -141,7 +141,7 @@ export const VERBAL: ObjectiveSeed[] = [
       "First-year savings are usually overstated by accountants.",
       "Third-year reporting standards are weaker.",
     ],
-    correct_index: 0,
+    answer: "The costs that were removed tend to return under different names.",
     explanation:
       "The completion must explain the gap between year one and year three. Option 1 does exactly that. Option 2 overreaches, and the others assert unsupported claims about reporting.",
   },
@@ -155,7 +155,7 @@ export const VERBAL: ObjectiveSeed[] = [
       "Between the three options, the second is best.",
       "The effect of the policy will effect margins.",
     ],
-    correct_index: 0,
+    answer: "The data suggest that margins are recovering.",
     explanation:
       "'Data' takes a plural verb in formal usage. Option 2 is a comma splice, option 3 should be 'among' for three, and option 4 confuses effect with affect.",
   },
@@ -169,7 +169,7 @@ export const VERBAL: ObjectiveSeed[] = [
       "Our cost base must be reduced immediately.",
       "Market share is not worth defending.",
     ],
-    correct_index: 0,
+    answer: "Winning a price war here would still destroy value.",
     explanation:
       "The sentence concedes the war is winnable and objects on economics. Options 2 and 4 discard the concession; option 3 adds a recommendation the sentence never makes.",
   },

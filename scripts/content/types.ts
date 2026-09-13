@@ -11,7 +11,19 @@ export interface ObjectiveSeed {
   context?: string;
   stem: string;
   options: string[];
-  correct_index: number;
+  /**
+   * The correct option, written out in full rather than as an index.
+   *
+   * Indices were the original design and produced three wrong answer keys in
+   * one authoring session: the options and the index are written separately,
+   * so nothing catches it when the options are reordered or the working ends
+   * up pointing somewhere else. A wrong key is the worst failure this product
+   * has — the student is told they are wrong when they are right, with no
+   * appeal on a multiple-choice mark. Written as text, the key cannot drift
+   * from the options, and the seeder refuses anything that does not match one
+   * exactly.
+   */
+  answer: string;
   explanation: string;
   source?: string;
 }

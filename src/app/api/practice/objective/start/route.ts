@@ -77,6 +77,26 @@ export async function POST(request: NextRequest) {
   }
 
   /**
+   * What this student has already been given, most recent first.
+   *
+   * Without this, a random draw from a bank of ninety repeats a question
+   * inside four sittings, and a repeat is worse than it sounds: the student
+   * remembers the answer rather than the method, their accuracy chart drifts
+   * upward for no reason, and the practice stops teaching. Bounded to the last
+   * twenty sittings so a returning user eventually cycles back rather than
+   * running out.
+   */
+  const { data: recent } = await admin
+    .from("objective_sessions")
+    .select("question_ids")
+    .eq("user_id", user.id)
+    .eq("track", body.track)
+    .order("started_at", { ascending: false })
+    .limit(20);
+
+  const seen = new Set((recent ?? []).flatMap((s) => s.question_ids));
+
+  /**
    * Shuffled in the application rather than with `order by random()`.
    *
    * The pool is small enough that the sort cost is irrelevant, and doing it
@@ -84,12 +104,24 @@ export async function POST(request: NextRequest) {
    * student's paper is reproducible afterwards, which matters when they
    * dispute a mark.
    */
-  const shuffled = [...pool];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  const picked = shuffled.slice(0, Math.min(body.count, shuffled.length));
+  const shuffle = <T,>(items: T[]): T[] => {
+    const out = [...items];
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  };
+
+  // Unseen questions first, then the rest. Falling back rather than filtering
+  // matters: a student who has worked through the whole track must still get a
+  // set, not an empty one.
+  const unseen = shuffle(pool.filter((q) => !seen.has(q.id)));
+  const repeats = shuffle(pool.filter((q) => seen.has(q.id)));
+  const picked = [...unseen, ...repeats].slice(
+    0,
+    Math.min(body.count, pool.length),
+  );
 
   const { data: session, error: sessionError } = await admin
     .from("objective_sessions")
