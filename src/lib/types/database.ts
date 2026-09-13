@@ -482,6 +482,30 @@ export type PiMessageRow = {
   created_at: string;
 }
 
+// ---- business simulation (20250101000042) ---------------------------------
+
+export type SimRunRow = {
+  id: string;
+  user_id: string;
+  status: "live" | "completed" | "bankrupt";
+  current_round: number;
+  cumulative_profit: number;
+  final_score: number | null;
+  debrief: { strengths?: string[]; weaknesses?: string[]; verdict?: string };
+  started_at: string;
+  ended_at: string | null;
+}
+
+export type SimRoundRow = {
+  run_id: string;
+  round: number;
+  /** Decisions, outcome and post-round state, so a run replays exactly. */
+  decisions: unknown;
+  outcome: unknown;
+  states: unknown;
+  created_at: string;
+}
+
 export type ScoreRow = {
   id: string;
   submission_id: string;
@@ -975,6 +999,18 @@ export interface Database {
         Row: PiMessageRow;
         Insert: Partial<PiMessageRow>;
         Update: Partial<PiMessageRow>;
+        Relationships: [];
+      };
+      sim_runs: {
+        Row: SimRunRow;
+        Insert: Partial<SimRunRow>;
+        Update: Partial<SimRunRow>;
+        Relationships: [];
+      };
+      sim_rounds: {
+        Row: SimRoundRow;
+        Insert: Partial<SimRoundRow>;
+        Update: Partial<SimRoundRow>;
         Relationships: [];
       };
       solve_attempts: {
