@@ -16,6 +16,7 @@ import {
   Route,
   Trophy,
   Users,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types/database";
@@ -57,6 +58,7 @@ const STUDENT_GROUPS: { heading: string; items: Item[] }[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/cases", label: "Cases", icon: Library },
+      { href: "/practice", label: "Aptitude", icon: Zap },
       { href: "/paths", label: "Paths", icon: Route },
     ],
   },
@@ -91,6 +93,7 @@ const TEACHER_GROUPS: { heading: string; items: Item[] }[] = [
     heading: "Library",
     items: [
       { href: "/cases", label: "Cases", icon: Library },
+      { href: "/practice", label: "Aptitude", icon: Zap },
       { href: "/paths", label: "Paths", icon: Route },
     ],
   },

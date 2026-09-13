@@ -314,6 +314,68 @@ export type SubmissionIntegrityRow = {
   created_at: string;
 }
 
+/** Auto-marked practice question (20250101000037). Key columns are withheld from clients. */
+export type ObjectiveTrack =
+  | "quant"
+  | "data_interpretation"
+  | "logical_reasoning"
+  | "verbal"
+  | "finance_concepts"
+  | "accounting"
+  | "marketing_concepts"
+  | "current_affairs";
+
+export type ObjectiveQuestionRow = {
+  id: string;
+  track: ObjectiveTrack;
+  topic: string;
+  difficulty: Difficulty;
+  context: string | null;
+  stem: string;
+  options: string[];
+  /**
+   * The answer key. `authenticated` has no grant on this column or on
+   * `explanation`, so a client read that selects either gets 42501 rather than
+   * a value — see 20250101000037. Typed here because the service role does
+   * read them, in the route that marks a sitting.
+   */
+  correct_index: number;
+  explanation: string;
+  source: string | null;
+  is_published: boolean;
+  created_by: string | null;
+  created_at: string;
+}
+
+/** What a client is allowed to see of a question. */
+export type ObjectiveQuestionPublic = Omit<
+  ObjectiveQuestionRow,
+  "correct_index" | "explanation" | "source" | "created_by" | "created_at"
+>;
+
+export type ObjectiveSessionRow = {
+  id: string;
+  user_id: string;
+  track: ObjectiveTrack;
+  difficulty: Difficulty | null;
+  question_ids: string[];
+  /** {questionId: chosenIndex}. A missing key is a skip, not a wrong answer. */
+  answers: Record<string, number>;
+  correct_count: number | null;
+  total: number;
+  seconds: number | null;
+  started_at: string;
+  submitted_at: string | null;
+}
+
+export type ObjectiveSummaryRow = {
+  track: ObjectiveTrack;
+  sittings: number;
+  questions: number;
+  correct: number;
+  accuracy_pct: number;
+}
+
 export type ScoreRow = {
   id: string;
   submission_id: string;
@@ -702,6 +764,26 @@ export interface Database {
           },
         ];
       };
+      objective_questions: {
+        Row: ObjectiveQuestionRow;
+        Insert: Partial<ObjectiveQuestionRow>;
+        Update: Partial<ObjectiveQuestionRow>;
+        Relationships: [];
+      };
+      objective_sessions: {
+        Row: ObjectiveSessionRow;
+        Insert: Partial<ObjectiveSessionRow>;
+        Update: Partial<ObjectiveSessionRow>;
+        Relationships: [
+          {
+            foreignKeyName: "objective_sessions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       solve_attempts: {
         Row: SolveAttemptRow;
         Insert: Partial<SolveAttemptRow>;
@@ -1012,6 +1094,8 @@ export interface Database {
       can_solve: { Args: { p_user: string }; Returns: boolean };
       /** Uncleared severe integrity findings in the last year (20250101000035). */
       integrity_strikes: { Args: { p_user: string }; Returns: number };
+      /** Per-track objective accuracy for one account (20250101000037). */
+      objective_summary: { Args: { p_user: string }; Returns: ObjectiveSummaryRow[] };
       institution_commercials: {
         Args: {
           p_in_rate_per_million: number;
