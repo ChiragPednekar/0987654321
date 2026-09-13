@@ -35,11 +35,22 @@ export interface ChatReply {
 
 /** Interviewers should be varied and human, not repeatable like a grader. */
 const TEMPERATURE = 0.8;
+
+/**
+ * Enough for a conversational turn. Callers that need more must say so.
+ *
+ * The negotiation counterparty asks for JSON carrying a message plus a
+ * complete counter-offer, and 700 tokens truncated it mid-object often enough
+ * that replies arrived as unparseable text — which silently blocked the
+ * counterparty from ever accepting a deal, because the accept flag lives in
+ * the JSON that never finished.
+ */
 const MAX_TOKENS = 700;
 
 async function chatOpenAI(
   system: string,
   turns: ChatTurn[],
+  maxTokens: number,
 ): Promise<ChatReply> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
@@ -51,7 +62,7 @@ async function chatOpenAI(
   const completion = await client.chat.completions.create({
     model,
     temperature: TEMPERATURE,
-    max_tokens: MAX_TOKENS,
+    max_tokens: maxTokens,
     messages: [
       { role: "system", content: system },
       ...turns.map((turn) => ({
@@ -79,6 +90,7 @@ async function chatOpenAI(
 async function chatAnthropic(
   system: string,
   turns: ChatTurn[],
+  maxTokens: number,
 ): Promise<ChatReply> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
@@ -94,7 +106,7 @@ async function chatAnthropic(
     },
     body: JSON.stringify({
       model,
-      max_tokens: MAX_TOKENS,
+      max_tokens: maxTokens,
       temperature: TEMPERATURE,
       // Anthropic takes the system prompt as a top-level field rather than a
       // message, and rejects a conversation that does not start with `user`.
@@ -130,6 +142,7 @@ async function chatAnthropic(
 async function chatGemini(
   system: string,
   turns: ChatTurn[],
+  maxTokens: number,
 ): Promise<ChatReply> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
@@ -150,7 +163,7 @@ async function chatGemini(
         })),
         generationConfig: {
           temperature: TEMPERATURE,
-          maxOutputTokens: MAX_TOKENS,
+          maxOutputTokens: maxTokens,
         },
       }),
     },
@@ -181,17 +194,21 @@ async function chatGemini(
   };
 }
 
-export function callChat(system: string, turns: ChatTurn[]): Promise<ChatReply> {
+export function callChat(
+  system: string,
+  turns: ChatTurn[],
+  maxTokens: number = MAX_TOKENS,
+): Promise<ChatReply> {
   const provider = (process.env.AI_PROVIDER || "openai").toLowerCase();
 
   switch (provider) {
     case "anthropic":
-      return chatAnthropic(system, turns);
+      return chatAnthropic(system, turns, maxTokens);
     case "gemini":
     case "google":
-      return chatGemini(system, turns);
+      return chatGemini(system, turns, maxTokens);
     default:
-      return chatOpenAI(system, turns);
+      return chatOpenAI(system, turns, maxTokens);
   }
 }
 

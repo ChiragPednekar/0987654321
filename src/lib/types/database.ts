@@ -506,6 +506,58 @@ export type SimRoundRow = {
   created_at: string;
 }
 
+// ---- negotiation role-play (20250101000043) -------------------------------
+
+/** What a client is allowed to read: the counterparty's side is withheld by grant. */
+export type NegotiationCasePublic = {
+  id: string;
+  slug: string;
+  title: string;
+  shared_brief: string;
+  student_role: string;
+  counterparty_role: string;
+  student_brief: string;
+  issues: { key: string; label: string; options: { key: string; label: string }[] }[];
+  student_payoffs: Record<string, Record<string, number>>;
+  student_batna: number;
+  difficulty: Difficulty;
+  is_published: boolean;
+  created_at: string;
+}
+
+/** The full row, readable only with the service role. */
+export type NegotiationCaseRow = NegotiationCasePublic & {
+  counterparty_brief: string;
+  counterparty_payoffs: Record<string, Record<string, number>>;
+  counterparty_batna: number;
+}
+
+export type NegotiationSessionRow = {
+  id: string;
+  user_id: string;
+  case_id: string;
+  status: "live" | "deal" | "no_deal";
+  agreed_terms: Record<string, string> | null;
+  student_score: number | null;
+  counterparty_score: number | null;
+  joint_value: number | null;
+  max_joint: number | null;
+  efficiency_pct: number | null;
+  beat_batna: boolean | null;
+  debrief: { strengths?: string[]; weaknesses?: string[]; verdict?: string };
+  started_at: string;
+  ended_at: string | null;
+}
+
+export type NegotiationMessageRow = {
+  id: string;
+  session_id: string;
+  role: "student" | "counterparty";
+  content: string;
+  offer: Record<string, string> | null;
+  created_at: string;
+}
+
 export type ScoreRow = {
   id: string;
   submission_id: string;
@@ -1011,6 +1063,24 @@ export interface Database {
         Row: SimRoundRow;
         Insert: Partial<SimRoundRow>;
         Update: Partial<SimRoundRow>;
+        Relationships: [];
+      };
+      negotiation_cases: {
+        Row: NegotiationCaseRow;
+        Insert: Partial<NegotiationCaseRow>;
+        Update: Partial<NegotiationCaseRow>;
+        Relationships: [];
+      };
+      negotiation_sessions: {
+        Row: NegotiationSessionRow;
+        Insert: Partial<NegotiationSessionRow>;
+        Update: Partial<NegotiationSessionRow>;
+        Relationships: [];
+      };
+      negotiation_messages: {
+        Row: NegotiationMessageRow;
+        Insert: Partial<NegotiationMessageRow>;
+        Update: Partial<NegotiationMessageRow>;
         Relationships: [];
       };
       solve_attempts: {
