@@ -9,6 +9,7 @@ import {
   Building2,
   ChevronLeft,
   ClipboardCheck,
+  Database,
   GraduationCap,
   Handshake,
   LayoutDashboard,
@@ -62,6 +63,7 @@ const STUDENT_GROUPS: { heading: string; items: Item[] }[] = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/cases", label: "Cases", icon: Library },
       { href: "/practice", label: "Aptitude", icon: Zap },
+      { href: "/sql", label: "SQL", icon: Database },
       { href: "/interview", label: "HR interview", icon: MessageSquare },
       { href: "/simulation", label: "Simulation", icon: LineChart },
       { href: "/negotiation", label: "Negotiation", icon: Handshake },
@@ -102,6 +104,7 @@ const TEACHER_GROUPS: { heading: string; items: Item[] }[] = [
     items: [
       { href: "/cases", label: "Cases", icon: Library },
       { href: "/practice", label: "Aptitude", icon: Zap },
+      { href: "/sql", label: "SQL", icon: Database },
       { href: "/paths", label: "Paths", icon: Route },
     ],
   },

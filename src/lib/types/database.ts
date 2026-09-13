@@ -621,6 +621,41 @@ export type CompetitionLeaderboardRow = {
   member_count: number;
 }
 
+// ---- SQL exercises (20250101000045) ---------------------------------------
+
+/** What a client may read: the solution and the hidden fixture are withheld by grant. */
+export type SqlExercisePublic = {
+  id: string;
+  slug: string;
+  title: string;
+  prompt: string;
+  topic: string;
+  difficulty: Difficulty;
+  schema_note: string;
+  setup_sql: string;
+  order_matters: boolean;
+  hint: string | null;
+  is_published: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export type SqlExerciseRow = SqlExercisePublic & {
+  hidden_setup_sql: string;
+  solution_sql: string;
+}
+
+export type SqlAttemptRow = {
+  id: string;
+  user_id: string;
+  exercise_id: string;
+  query: string;
+  correct: boolean;
+  /** 'hidden' means it only worked on the data they could see. */
+  failed_on: "visible" | "hidden" | "error" | null;
+  created_at: string;
+}
+
 export type ScoreRow = {
   id: string;
   submission_id: string;
@@ -1176,6 +1211,18 @@ export interface Database {
         Row: CompetitionEntryRow;
         Insert: Partial<CompetitionEntryRow>;
         Update: Partial<CompetitionEntryRow>;
+        Relationships: [];
+      };
+      sql_exercises: {
+        Row: SqlExerciseRow;
+        Insert: Partial<SqlExerciseRow>;
+        Update: Partial<SqlExerciseRow>;
+        Relationships: [];
+      };
+      sql_attempts: {
+        Row: SqlAttemptRow;
+        Insert: Partial<SqlAttemptRow>;
+        Update: Partial<SqlAttemptRow>;
         Relationships: [];
       };
       solve_attempts: {
