@@ -558,6 +558,69 @@ export type NegotiationMessageRow = {
   created_at: string;
 }
 
+// ---- team case competitions (20250101000044) ------------------------------
+
+export type CompetitionRow = {
+  id: string;
+  slug: string;
+  title: string;
+  sponsor: string | null;
+  brief: string;
+  instructions: string;
+  expected_framework: string | null;
+  criteria: RubricCriteria;
+  descriptors: RubricDescriptors;
+  max_score: number;
+  min_team_size: number;
+  max_team_size: number;
+  opens_at: string;
+  closes_at: string;
+  /** Null means results are embargoed whatever the clock says. */
+  results_at: string | null;
+  is_published: boolean;
+  created_at: string;
+}
+
+export type CompetitionTeamRow = {
+  id: string;
+  competition_id: string;
+  name: string;
+  join_code: string;
+  created_by: string;
+  created_at: string;
+}
+
+export type CompetitionMemberRow = {
+  team_id: string;
+  user_id: string;
+  competition_id: string;
+  is_lead: boolean;
+  joined_at: string;
+}
+
+export type CompetitionEntryRow = {
+  /** Keyed by team: this is what makes it a team competition. */
+  team_id: string;
+  competition_id: string;
+  answer: string;
+  submitted_by: string;
+  submitted_at: string;
+  breakdown: Record<string, number>;
+  total_score: number | null;
+  max_score: number | null;
+  feedback: EvaluationFeedback & { verdict?: string };
+  graded_at: string | null;
+}
+
+export type CompetitionLeaderboardRow = {
+  rank: number;
+  team_id: string;
+  team_name: string;
+  total_score: number;
+  max_score: number;
+  member_count: number;
+}
+
 export type ScoreRow = {
   id: string;
   submission_id: string;
@@ -1083,6 +1146,38 @@ export interface Database {
         Update: Partial<NegotiationMessageRow>;
         Relationships: [];
       };
+      competitions: {
+        Row: CompetitionRow;
+        Insert: Partial<CompetitionRow>;
+        Update: Partial<CompetitionRow>;
+        Relationships: [];
+      };
+      competition_teams: {
+        Row: CompetitionTeamRow;
+        Insert: Partial<CompetitionTeamRow>;
+        Update: Partial<CompetitionTeamRow>;
+        Relationships: [];
+      };
+      competition_members: {
+        Row: CompetitionMemberRow;
+        Insert: Partial<CompetitionMemberRow>;
+        Update: Partial<CompetitionMemberRow>;
+        Relationships: [
+          {
+            foreignKeyName: "competition_members_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      competition_entries: {
+        Row: CompetitionEntryRow;
+        Insert: Partial<CompetitionEntryRow>;
+        Update: Partial<CompetitionEntryRow>;
+        Relationships: [];
+      };
       solve_attempts: {
         Row: SolveAttemptRow;
         Insert: Partial<SolveAttemptRow>;
@@ -1395,6 +1490,11 @@ export interface Database {
       integrity_strikes: { Args: { p_user: string }; Returns: number };
       /** Per-track objective accuracy for one account (20250101000037). */
       objective_summary: { Args: { p_user: string }; Returns: ObjectiveSummaryRow[] };
+      /** Ranked entries, embargoed until results_at (20250101000044). */
+      competition_leaderboard: {
+        Args: { p_competition: string };
+        Returns: CompetitionLeaderboardRow[];
+      };
       institution_commercials: {
         Args: {
           p_in_rate_per_million: number;

@@ -79,6 +79,7 @@ const STUDENT_GROUPS: { heading: string; items: Item[] }[] = [
     heading: "Community",
     items: [
       { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
+      { href: "/competitions", label: "Competitions", icon: Trophy },
       { href: "/gd", label: "Group discussions", icon: Users },
       { href: "/groups", label: "Groups", icon: MessagesSquare },
       { href: "/classrooms", label: "Classrooms", icon: GraduationCap },

@@ -21,6 +21,7 @@
     "seed:written": "tsx scripts/seed-written.ts",
     "seed:gd": "tsx scripts/seed-gd-topics.ts",
     "seed:negotiations": "tsx scripts/seed-negotiations.ts",
+    "seed:competitions": "tsx scripts/seed-competitions.ts",
     "test": "vitest run",
     "check:schema": "tsx scripts/check-schema-refs.ts",
     "test:watch": "vitest"
