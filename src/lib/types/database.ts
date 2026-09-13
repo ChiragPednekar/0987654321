@@ -656,6 +656,43 @@ export type SqlAttemptRow = {
   created_at: string;
 }
 
+// ---- Excel exercises (20250101000046) -------------------------------------
+
+export type ExcelCell = string | number | boolean | null;
+
+/** What a client may read: the second grid and the solution are withheld by grant. */
+export type ExcelExercisePublic = {
+  id: string;
+  slug: string;
+  title: string;
+  prompt: string;
+  topic: string;
+  difficulty: Difficulty;
+  grid: ExcelCell[][];
+  answer_label: string;
+  tolerance: number;
+  hint: string | null;
+  is_published: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export type ExcelExerciseRow = ExcelExercisePublic & {
+  hidden_grid: ExcelCell[][];
+  solution_formula: string;
+}
+
+export type ExcelAttemptRow = {
+  id: string;
+  user_id: string;
+  exercise_id: string;
+  formula: string;
+  correct: boolean;
+  /** 'hidden' is what a typed-in constant looks like; 'refused' is a function not on the allow-list. */
+  failed_on: "visible" | "hidden" | "error" | "refused" | null;
+  created_at: string;
+}
+
 export type ScoreRow = {
   id: string;
   submission_id: string;
@@ -1223,6 +1260,18 @@ export interface Database {
         Row: SqlAttemptRow;
         Insert: Partial<SqlAttemptRow>;
         Update: Partial<SqlAttemptRow>;
+        Relationships: [];
+      };
+      excel_exercises: {
+        Row: ExcelExerciseRow;
+        Insert: Partial<ExcelExerciseRow>;
+        Update: Partial<ExcelExerciseRow>;
+        Relationships: [];
+      };
+      excel_attempts: {
+        Row: ExcelAttemptRow;
+        Insert: Partial<ExcelAttemptRow>;
+        Update: Partial<ExcelAttemptRow>;
         Relationships: [];
       };
       solve_attempts: {
