@@ -221,13 +221,28 @@ export const ANSWER_SECTIONS = [
 
 export type AnswerSectionKey = (typeof ANSWER_SECTIONS)[number]["key"];
 
-/** Case formats (spec §6). Only full_case is seeded today. */
+/**
+ * What a student is asked to write.
+ *
+ * Every one of these runs through the same grader: a scenario, a rubric and a
+ * free-text answer. They differ in what the rubric rewards — a guesstimate is
+ * marked on assumptions and arithmetic where a case is marked on analysis and
+ * a recommendation — and a rubric is data, so adding a format costs content
+ * rather than code.
+ */
 export const CASE_FORMATS: { value: CaseFormat; label: string; hint: string }[] = [
   { value: "framework", label: "Framework", hint: "Structure only — build the issue tree" },
   { value: "full_case", label: "Full Case", hint: "Clarify, structure, analyse, recommend" },
+  { value: "guesstimate", label: "Guesstimate", hint: "Size it from assumptions you can defend" },
   { value: "model", label: "Model", hint: "Spreadsheet build, graded on the numbers" },
   { value: "drill", label: "Drill", hint: "Timed sprint — sizing and mental math" },
   { value: "debug", label: "Debug", hint: "Find and fix the flaw" },
+  { value: "rca", label: "Root Cause", hint: "A metric moved — find out why" },
+  { value: "stock_pitch", label: "Stock Pitch", hint: "Buy or sell, with the thesis and the risks" },
+  { value: "brand_teardown", label: "Brand Teardown", hint: "Pull a brand's positioning apart" },
+  { value: "memo", label: "Memo", hint: "One page to a decision-maker" },
+  { value: "wat", label: "Written Ability", hint: "An argued essay against the clock" },
+  { value: "behavioural", label: "Behavioural", hint: "The HR answer, structured" },
 ];
 
 export const CASE_FORMAT_LABEL: Record<CaseFormat, string> = Object.fromEntries(

@@ -21,7 +21,15 @@ export type CaseFormat =
   | "full_case"
   | "model"
   | "drill"
-  | "debug";
+  | "debug"
+  /** The written formats added in 20250101000038. All reuse the case engine. */
+  | "guesstimate"
+  | "stock_pitch"
+  | "brand_teardown"
+  | "rca"
+  | "wat"
+  | "memo"
+  | "behavioural";
 export type UserRole = "student" | "teacher" | "admin" | "recruiter";
 export type SubmissionStatus =
   | "draft"
