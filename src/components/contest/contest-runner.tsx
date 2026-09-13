@@ -2,13 +2,15 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Send, Timer } from "lucide-react";
+import { Loader2, Lock, Play, Send, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { MAX_ANSWER_CHARS, MIN_ANSWER_CHARS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useProctor } from "@/hooks/use-proctor";
+import { ProctorGate, ProctorOverlay } from "@/components/case/proctor-overlay";
 
 interface ContestRunnerProps {
   contestId: string;
@@ -38,6 +40,28 @@ export function ContestRunner({
   const [now, setNow] = React.useState(() => Date.now());
 
   const storageKey = `casecode:contest:${contestId}`;
+
+  /**
+   * Contests are the one surface where the answer is ranked against other
+   * people, and they were the one surface with no supervision at all: this
+   * component has its own textarea and posts to /api/submissions directly,
+   * so none of the proctoring wired into the case editor reached it.
+   */
+  const proctor = useProctor(true);
+
+  // The same server-side clock the case editor stamps. Without it every
+  // contest entry reached the integrity check with an unknown elapsed time and
+  // silently skipped the speed test.
+  React.useEffect(() => {
+    void fetch("/api/attempts/start", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ case_id: caseId }),
+    }).catch(() => {
+      // Best effort, as in the case editor: a missing stamp skips the speed
+      // check, which is the lenient outcome and the right one.
+    });
+  }, [caseId]);
 
   React.useEffect(() => {
     const saved = window.localStorage.getItem(storageKey);
@@ -73,6 +97,18 @@ export function ContestRunner({
 
   async function start() {
     setStarting(true);
+
+    /**
+     * Before the await, deliberately.
+     *
+     * requestFullscreen() is only granted during transient user activation,
+     * which this click carries and an awaited network round trip can outlive.
+     * Entering exam mode after the fetch resolved would have fullscreen
+     * refused on a slow connection and nowhere else — the worst kind of bug,
+     * since it would work every time it was tested locally.
+     */
+    void proctor.start();
+
     const response = await fetch(`/api/contests/${contestId}/start`, {
       method: "POST",
     });
@@ -99,6 +135,7 @@ export function ContestRunner({
           contest_id: contestId,
           answer,
           time_spent_seconds: elapsedSeconds,
+          signals: proctor.signals,
         }),
       });
 
@@ -110,6 +147,7 @@ export function ContestRunner({
       }
 
       window.localStorage.removeItem(storageKey);
+      proctor.stop();
       toast.success("Submitted. Final ranks are published when the contest closes.");
       router.refresh();
     } catch {
@@ -158,6 +196,11 @@ export function ContestRunner({
               close the tab. Finishing early earns up to {maxSpeedBonus} bonus
               points.
             </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              This entry is answered under exam conditions: the page goes
+              fullscreen, pasting is disabled, and leaving the page is recorded
+              with your answer.
+            </p>
           </div>
           <Button onClick={start} disabled={starting}>
             {starting ? <Loader2 className="animate-spin" /> : <Play />}
@@ -168,12 +211,43 @@ export function ContestRunner({
     );
   }
 
+  /**
+   * The timer is running but exam mode is not — this tab reloaded, or the entry
+   * was begun on another device. Unlike the case editor, whose gate is the only
+   * way to reach a textarea at all, this component's textarea is unlocked by
+   * `startedAt`, which comes from the server and survives a refresh. Without
+   * this the answer box would come back live with supervision silently off:
+   * paste allowed, departures uncounted.
+   *
+   * The clock keeps running behind the gate. That is the honest trade — the
+   * contest timer is server-stamped and cannot be paused for a reload, and one
+   * click is a small price against an unsupervised entry on a ranked board.
+   */
+  if (!proctor.examMode) {
+    return <ProctorGate resumed starting={proctor.starting} onStart={proctor.start} />;
+  }
+
   const minutes = Math.floor(remainingSeconds / 60);
   const seconds = remainingSeconds % 60;
   const tooShort = answer.trim().length < MIN_ANSWER_CHARS;
 
   return (
     <div className="space-y-3">
+      {proctor.examMode && proctor.needsAcknowledgement && (
+        <ProctorOverlay
+          count={proctor.signals.blurCount}
+          onResume={proctor.acknowledge}
+        />
+      )}
+
+      <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
+        <Lock className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+        <p className="text-muted-foreground">
+          Exam conditions. Pasting is disabled — type your answer here. Time
+          away from this page is recorded and can reduce your mark.
+        </p>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-4 py-2.5">
         <span
           className={cn(
@@ -201,6 +275,8 @@ export function ContestRunner({
       <Textarea
         value={answer}
         onChange={(event) => setAnswer(event.target.value)}
+        onKeyDown={proctor.handlers.onKeyDown}
+        onPaste={proctor.handlers.onPaste}
         placeholder="Structure, analysis, risks, recommendation…"
         className="min-h-[420px] resize-y font-mono text-[13px] leading-relaxed"
         maxLength={MAX_ANSWER_CHARS}

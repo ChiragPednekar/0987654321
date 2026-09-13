@@ -67,14 +67,26 @@ export function ProctorOverlay({
 export function ProctorGate({
   starting,
   onStart,
+  /**
+   * The attempt was already under way and the page was reloaded. Exam mode
+   * cannot survive a reload — nothing in the browser may re-enter fullscreen
+   * without a fresh gesture — so the gate reappears rather than letting the
+   * student carry on unsupervised.
+   */
+  resumed = false,
 }: {
   starting: boolean;
   onStart: () => void | Promise<void>;
+  resumed?: boolean;
 }) {
   return (
     <div className="rounded-xl border bg-card p-6 text-center">
       <Lock className="mx-auto size-7 text-muted-foreground" />
-      <h3 className="mt-3 font-medium">This case is answered under exam conditions</h3>
+      <h3 className="mt-3 font-medium">
+        {resumed
+          ? "Re-enter exam mode to carry on"
+          : "This case is answered under exam conditions"}
+      </h3>
       <ul className="mx-auto mt-3 max-w-sm space-y-1.5 text-left text-xs text-muted-foreground">
         <li>· The page goes fullscreen while you write.</li>
         <li>· Pasting is disabled. Type your answer here.</li>
@@ -83,7 +95,7 @@ export function ProctorGate({
       </ul>
       <Button className="mt-5" onClick={() => void onStart()} disabled={starting}>
         {starting ? <Loader2 className="animate-spin" /> : <Lock />}
-        {starting ? "Starting…" : "Start"}
+        {starting ? "Starting…" : resumed ? "Resume" : "Start"}
       </Button>
     </div>
   );
