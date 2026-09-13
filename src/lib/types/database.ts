@@ -447,6 +447,41 @@ export type GdScoreRow = {
   created_at: string;
 }
 
+// ---- personal / HR interviews (20250101000041) ----------------------------
+
+export type PiKind = "hr_fit" | "resume_deep_dive" | "why_firm" | "stress";
+
+export type PiProfileRow = {
+  user_id: string;
+  /** Untrusted free text written by the candidate; goes into the prompt delimited. */
+  background: string;
+  target_role: string | null;
+  target_firms: string | null;
+  updated_at: string;
+}
+
+export type PiSessionRow = {
+  id: string;
+  user_id: string;
+  kind: PiKind;
+  target_firm: string | null;
+  status: "live" | "completed" | "abandoned";
+  breakdown: Record<string, number>;
+  total: number | null;
+  max_score: number;
+  feedback: { strengths?: string[]; weaknesses?: string[]; verdict?: string };
+  started_at: string;
+  ended_at: string | null;
+}
+
+export type PiMessageRow = {
+  id: string;
+  session_id: string;
+  role: ChatRole;
+  content: string;
+  created_at: string;
+}
+
 export type ScoreRow = {
   id: string;
   submission_id: string;
@@ -923,6 +958,24 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      pi_profiles: {
+        Row: PiProfileRow;
+        Insert: Partial<PiProfileRow>;
+        Update: Partial<PiProfileRow>;
+        Relationships: [];
+      };
+      pi_sessions: {
+        Row: PiSessionRow;
+        Insert: Partial<PiSessionRow>;
+        Update: Partial<PiSessionRow>;
+        Relationships: [];
+      };
+      pi_messages: {
+        Row: PiMessageRow;
+        Insert: Partial<PiMessageRow>;
+        Update: Partial<PiMessageRow>;
+        Relationships: [];
       };
       solve_attempts: {
         Row: SolveAttemptRow;

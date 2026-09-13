@@ -1,6 +1,7 @@
 import "server-only";
 
 import OpenAI from "openai";
+import { parseRetryAfter, RateLimitError } from "./errors";
 
 /**
  * Free-form conversational completion for the Case Chat interviewer (spec §6).
@@ -156,9 +157,14 @@ async function chatGemini(
   );
 
   if (!response.ok) {
-    throw new Error(
-      `Gemini API error ${response.status}: ${await response.text()}`,
-    );
+    const detail = await response.text();
+    if (response.status === 429) {
+      throw new RateLimitError(
+        "The AI provider is rate limiting us.",
+        parseRetryAfter(detail),
+      );
+    }
+    throw new Error(`Gemini API error ${response.status}: ${detail}`);
   }
 
   const data = await response.json();

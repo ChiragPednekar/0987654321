@@ -3,6 +3,7 @@ import "server-only";
 import OpenAI from "openai";
 import type { RubricCriteria } from "@/lib/types/database";
 import { buildJsonSchema } from "./schema";
+import { parseRetryAfter, RateLimitError } from "./errors";
 
 export interface ProviderResult {
   raw: string;
@@ -213,6 +214,12 @@ async function callGemini({
 
   if (!response.ok) {
     const detail = await response.text();
+    if (response.status === 429) {
+      throw new RateLimitError(
+        "The AI provider is rate limiting us.",
+        parseRetryAfter(detail),
+      );
+    }
     throw new Error(`Gemini API error ${response.status}: ${detail}`);
   }
 
