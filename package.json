@@ -19,6 +19,7 @@
     "seed:drills": "tsx scripts/drills.ts",
     "seed:objective": "tsx scripts/seed-objective.ts",
     "seed:written": "tsx scripts/seed-written.ts",
+    "seed:gd": "tsx scripts/seed-gd-topics.ts",
     "test": "vitest run",
     "check:schema": "tsx scripts/check-schema-refs.ts",
     "test:watch": "vitest"

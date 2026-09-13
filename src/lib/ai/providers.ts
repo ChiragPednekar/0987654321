@@ -27,6 +27,17 @@ export interface ProviderArgs {
   system: string;
   user: string;
   criteria: RubricCriteria;
+  /**
+   * Overrides the schema built from `criteria`.
+   *
+   * Case grading returns one object keyed by rubric criterion, which
+   * buildJsonSchema() constructs from the rubric. A group discussion returns
+   * an array of those — one per participant — and that shape cannot be
+   * expressed by a criteria map. Rather than bend the GD result into a shape
+   * it is not, the caller supplies its own schema and `criteria` is left to
+   * serve only as the fallback.
+   */
+  jsonSchema?: Record<string, unknown>;
 }
 
 /**
@@ -37,6 +48,7 @@ async function callOpenAI({
   system,
   user,
   criteria,
+  jsonSchema,
 }: ProviderArgs): Promise<ProviderResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
@@ -68,7 +80,7 @@ async function callOpenAI({
           json_schema: {
             name: "case_evaluation",
             strict: true,
-            schema: buildJsonSchema(criteria),
+            schema: jsonSchema ?? buildJsonSchema(criteria),
           },
         }
       : { type: "json_object" },
@@ -101,6 +113,7 @@ async function callAnthropic({
   system,
   user,
   criteria,
+  jsonSchema,
 }: ProviderArgs): Promise<ProviderResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
@@ -124,7 +137,7 @@ async function callAnthropic({
         {
           name: "submit_evaluation",
           description: "Submit the graded evaluation of the student's answer.",
-          input_schema: buildJsonSchema(criteria),
+          input_schema: jsonSchema ?? buildJsonSchema(criteria),
         },
       ],
       tool_choice: { type: "tool", name: "submit_evaluation" },
@@ -164,6 +177,7 @@ async function callGemini({
   system,
   user,
   criteria,
+  jsonSchema,
 }: ProviderArgs): Promise<ProviderResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
@@ -173,7 +187,7 @@ async function callGemini({
   // Gemini's responseSchema is an OpenAPI subset: it rejects
   // additionalProperties, so strip it from the shared builder's output.
   const schema = JSON.parse(
-    JSON.stringify(buildJsonSchema(criteria)),
+    JSON.stringify(jsonSchema ?? buildJsonSchema(criteria)),
     (key, value) => (key === "additionalProperties" ? undefined : value),
   );
 

@@ -386,6 +386,67 @@ export type ObjectiveSummaryRow = {
   accuracy_pct: number;
 }
 
+// ---- group discussions (20250101000040) -----------------------------------
+
+export type GdStatus = "open" | "live" | "completed" | "cancelled";
+
+export type GdTopicRow = {
+  id: string;
+  title: string;
+  prompt: string;
+  category: string;
+  difficulty: Difficulty;
+  is_published: boolean;
+  created_by: string | null;
+  created_at: string;
+}
+
+export type GdSessionRow = {
+  id: string;
+  topic_id: string;
+  host_id: string;
+  status: GdStatus;
+  /** Capped at 6 by the WebRTC mesh — see the migration. */
+  max_participants: number;
+  prep_seconds: number;
+  discussion_seconds: number;
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+}
+
+export type GdParticipantRow = {
+  session_id: string;
+  user_id: string;
+  joined_at: string;
+  left_at: string | null;
+  /** False means their browser could not transcribe — not that they were quiet. */
+  transcription_ok: boolean;
+}
+
+export type GdUtteranceRow = {
+  id: number;
+  session_id: string;
+  user_id: string;
+  text: string;
+  said_at: string;
+}
+
+/** `silent` is a judgement about the student; `not_transcribed` is not. */
+export type GdOutcome = "scored" | "silent" | "not_transcribed";
+
+export type GdScoreRow = {
+  session_id: string;
+  user_id: string;
+  breakdown: Record<string, number>;
+  total: number;
+  max_score: number;
+  feedback: { strengths?: string[]; weaknesses?: string[]; verdict?: string };
+  outcome: GdOutcome;
+  words_spoken: number;
+  created_at: string;
+}
+
 export type ScoreRow = {
   id: string;
   submission_id: string;
@@ -790,6 +851,75 @@ export interface Database {
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      gd_topics: {
+        Row: GdTopicRow;
+        Insert: Partial<GdTopicRow>;
+        Update: Partial<GdTopicRow>;
+        Relationships: [];
+      };
+      gd_sessions: {
+        Row: GdSessionRow;
+        Insert: Partial<GdSessionRow>;
+        Update: Partial<GdSessionRow>;
+        Relationships: [
+          {
+            foreignKeyName: "gd_sessions_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "gd_topics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      gd_participants: {
+        Row: GdParticipantRow;
+        Insert: Partial<GdParticipantRow>;
+        Update: Partial<GdParticipantRow>;
+        Relationships: [
+          {
+            foreignKeyName: "gd_participants_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      gd_utterances: {
+        Row: GdUtteranceRow;
+        Insert: Partial<GdUtteranceRow>;
+        Update: Partial<GdUtteranceRow>;
+        Relationships: [
+          {
+            foreignKeyName: "gd_utterances_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      gd_scores: {
+        Row: GdScoreRow;
+        Insert: Partial<GdScoreRow>;
+        Update: Partial<GdScoreRow>;
+        Relationships: [
+          {
+            foreignKeyName: "gd_scores_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "gd_scores_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "gd_sessions";
             referencedColumns: ["id"];
           },
         ];
