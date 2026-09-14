@@ -56,6 +56,38 @@ export function ProctorOverlay({
   );
 }
 
+export const CASE_RULES = [
+  "The page goes fullscreen while you write.",
+  "Pasting is disabled. Type your answer here.",
+  "Leaving the page hides the case and is recorded with your answer.",
+  "Answers that were not written here can lose marks.",
+];
+
+/**
+ * The rules differ by surface, and saying the wrong ones is worse than saying
+ * none. Telling a student "pasting is disabled, type your answer here" above
+ * a multiple-choice paper reads as boilerplate nobody checked, and the moment
+ * one rule is visibly untrue the rest stop being believed. So each surface
+ * states what is actually enforced on it.
+ */
+export const QUIZ_RULES = [
+  "The page goes fullscreen while you answer.",
+  "Leaving the page is recorded with every answer.",
+  "Looking a question up in another tab is the thing this counts.",
+];
+
+export const WORKBENCH_RULES = [
+  "The page goes fullscreen while you work.",
+  "Pasting is disabled. Type the query or formula yourself.",
+  "Leaving the page is recorded with your attempt.",
+];
+
+export const CONVERSATION_RULES = [
+  "The page goes fullscreen for the whole session.",
+  "Pasting is disabled. Answer in your own words.",
+  "Leaving the page is recorded and shown with your result.",
+];
+
 /**
  * The gate every graded attempt starts behind.
  *
@@ -74,10 +106,14 @@ export function ProctorGate({
    * student carry on unsupervised.
    */
   resumed = false,
+  title,
+  rules = CASE_RULES,
 }: {
   starting: boolean;
   onStart: () => void | Promise<void>;
   resumed?: boolean;
+  title?: string;
+  rules?: readonly string[];
 }) {
   return (
     <div className="rounded-xl border bg-card p-6 text-center">
@@ -85,13 +121,12 @@ export function ProctorGate({
       <h3 className="mt-3 font-medium">
         {resumed
           ? "Re-enter exam mode to carry on"
-          : "This case is answered under exam conditions"}
+          : (title ?? "This case is answered under exam conditions")}
       </h3>
       <ul className="mx-auto mt-3 max-w-sm space-y-1.5 text-left text-xs text-muted-foreground">
-        <li>· The page goes fullscreen while you write.</li>
-        <li>· Pasting is disabled. Type your answer here.</li>
-        <li>· Leaving the page hides the case and is recorded with your answer.</li>
-        <li>· Answers that were not written here can lose marks.</li>
+        {rules.map((rule) => (
+          <li key={rule}>· {rule}</li>
+        ))}
       </ul>
       <Button className="mt-5" onClick={() => void onStart()} disabled={starting}>
         {starting ? <Loader2 className="animate-spin" /> : <Lock />}

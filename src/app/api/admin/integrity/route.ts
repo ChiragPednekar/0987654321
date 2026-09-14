@@ -6,7 +6,12 @@ import { AuthzError, requireAdminActor } from "@/lib/authz";
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  submission_id: z.string().uuid(),
+  /**
+   * The finding's own id, not the submission's. Since 20250101000057 a verdict
+   * can be about an aptitude session or a SQL attempt, which have no row in
+   * `submissions` to be addressed by.
+   */
+  finding_id: z.string().uuid(),
   note: z.string().max(500).optional(),
   /** Lift the automatic suspension this finding contributed to. */
   reinstate: z.boolean().default(false),
@@ -57,7 +62,7 @@ export async function POST(request: NextRequest) {
       cleared_by: actor.id,
       cleared_note: body.note ?? null,
     })
-    .eq("submission_id", body.submission_id)
+    .eq("id", body.finding_id)
     .is("cleared_at", null)
     .select("user_id")
     .maybeSingle();
@@ -68,7 +73,7 @@ export async function POST(request: NextRequest) {
 
   if (!finding) {
     return NextResponse.json(
-      { error: "No open finding for that submission." },
+      { error: "No open finding with that id." },
       { status: 404 },
     );
   }

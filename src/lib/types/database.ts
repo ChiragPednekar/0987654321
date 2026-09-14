@@ -310,11 +310,45 @@ export type SolveAttemptRow = {
   started_at: string;
 }
 
-/** Proctoring evidence and the penalty derived from it (20250101000035). */
-export type SubmissionIntegrityRow = {
-  submission_id: string;
+/**
+ * Which surface an integrity verdict is about (20250101000057). Mirrors the
+ * `integrity_activity` enum.
+ */
+export type IntegrityActivityKind =
+  | "case"
+  | "contest"
+  | "objective"
+  | "daily_quiz"
+  | "sql"
+  | "excel"
+  | "interview"
+  | "negotiation"
+  | "simulation"
+  | "competition"
+  | "group_discussion"
+  | "sales";
+
+/** Server-stamped open time for a non-case activity (20250101000057). */
+export type ActivityAttemptRow = {
   user_id: string;
-  case_id: string;
+  activity: IntegrityActivityKind;
+  activity_ref: string;
+  started_at: string;
+}
+
+/**
+ * Proctoring evidence and the penalty derived from it (20250101000035,
+ * generalised to every assessed activity in 20250101000057).
+ */
+export type SubmissionIntegrityRow = {
+  id: string;
+  activity: IntegrityActivityKind;
+  /** The row a human can look at. Null only for a case, which uses submission_id. */
+  activity_ref: string | null;
+  /** Null for everything that is not a case submission. */
+  submission_id: string | null;
+  user_id: string;
+  case_id: string | null;
   /** Raw browser telemetry. Untrusted; kept as the audit trail behind a penalty. */
   signals: Record<string, number | boolean>;
   flags: string[];
@@ -1517,6 +1551,12 @@ export interface Database {
         Row: SolveAttemptRow;
         Insert: Partial<SolveAttemptRow>;
         Update: Partial<SolveAttemptRow>;
+        Relationships: [];
+      };
+      activity_attempts: {
+        Row: ActivityAttemptRow;
+        Insert: Partial<ActivityAttemptRow>;
+        Update: Partial<ActivityAttemptRow>;
         Relationships: [];
       };
       submission_integrity: {

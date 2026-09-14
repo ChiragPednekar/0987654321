@@ -3,6 +3,11 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ObjectiveResultRow } from "@/lib/objective";
+import { signalsSchema } from "@/lib/integrity-request";
+import {
+  consumeActivityElapsed,
+  recordActivityIntegrity,
+} from "@/lib/proctoring";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +16,7 @@ const bodySchema = z.object({
   /** {questionId: chosenIndex}. Omit a question entirely to skip it. */
   answers: z.record(z.string().uuid(), z.number().int().min(0).max(5)),
   seconds: z.number().int().min(0).max(86_400).default(0),
+  signals: signalsSchema,
 });
 
 /**
@@ -127,10 +133,41 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Could not save your answers." }, { status: 500 });
   }
 
+  /**
+   * Integrity is assessed after the answers are safely stored, never before.
+   *
+   * A verdict that failed would otherwise be able to cost a student the sitting
+   * they had already completed. The same ordering as the case path, and the
+   * same ladder — a tab-switch here counts towards exactly the strike count a
+   * pasted case answer does.
+   *
+   * `answerChars` is 0 and `aiLikelihood` is null on purpose. There is no prose
+   * in a chosen option to measure or to read for style, so the checks that need
+   * one must see an honest absence rather than a fabricated number. What is
+   * left is the part that genuinely applies: how often the page was left, and
+   * how that compares with the server's own clock.
+   */
+  const elapsedSeconds = await consumeActivityElapsed(
+    admin,
+    user.id,
+    "objective",
+    session.id,
+  );
+
+  const integrity = await recordActivityIntegrity(admin, {
+    userId: user.id,
+    activity: "objective",
+    activityRef: session.id,
+    signals: body.signals,
+    elapsedSeconds,
+  });
+
   return NextResponse.json({
     correct,
     total: session.total,
     seconds: body.seconds,
     results,
+    integrity_warning: integrity.warning,
+    blocked: integrity.blocked,
   });
 }

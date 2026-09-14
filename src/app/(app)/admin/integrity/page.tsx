@@ -26,13 +26,29 @@ const FLAG_LABEL: Record<string, string> = {
   ai_style: "Reads as AI",
 };
 
+/** What each surface is called in the console. */
+const ACTIVITY_LABEL: Record<string, string> = {
+  case: "Case",
+  contest: "Contest",
+  objective: "Aptitude paper",
+  daily_quiz: "Daily quiz",
+  sql: "SQL exercise",
+  excel: "Excel exercise",
+  interview: "HR interview",
+  negotiation: "Negotiation",
+  simulation: "Simulation",
+  competition: "Competition entry",
+  group_discussion: "Group discussion",
+  sales: "Sales role-play",
+};
+
 export default async function IntegrityPage() {
   const admin = createAdminClient();
 
   const { data } = await admin
     .from("submission_integrity")
     .select(
-      "submission_id, user_id, severity, score, penalty_pct, flags, ai_likelihood, server_elapsed_seconds, cleared_at, created_at, users(email, full_name, deactivated_at), cases(slug, title)",
+      "id, activity, submission_id, user_id, severity, score, penalty_pct, flags, ai_likelihood, server_elapsed_seconds, cleared_at, created_at, users(email, full_name, deactivated_at), cases(slug, title)",
     )
     .order("created_at", { ascending: false })
     .neq("severity", "clean")
@@ -54,7 +70,7 @@ export default async function IntegrityPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Integrity</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Flagged submissions, newest first. {plural(open.length, "open finding")}
+          Flagged attempts, newest first. {plural(open.length, "open finding")}
           {suspended.size > 0
             ? `, ${plural(suspended.size, "suspended account")}`
             : ""}
@@ -95,7 +111,7 @@ export default async function IntegrityPage() {
 
             return (
               <Card
-                key={row.submission_id}
+                key={row.id}
                 className={row.cleared_at ? "opacity-60" : undefined}
               >
                 <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
@@ -119,7 +135,13 @@ export default async function IntegrityPage() {
                     </div>
 
                     <p className="text-xs text-muted-foreground">
-                      {kase ? (
+                      {/*
+                        A verdict is no longer necessarily about a case, so the
+                        subject line names the surface. Only a case submission
+                        can be linked to — the other activities have no
+                        equivalent review view to open.
+                      */}
+                      {kase && row.submission_id ? (
                         <Link
                           href={`/cases/${kase.slug}?submission=${row.submission_id}#review`}
                           className="underline underline-offset-2 hover:text-foreground"
@@ -127,12 +149,12 @@ export default async function IntegrityPage() {
                           {kase.title}
                         </Link>
                       ) : (
-                        "Case removed"
+                        (ACTIVITY_LABEL[row.activity] ?? row.activity)
                       )}{" "}
                       · {timeAgo(row.created_at)} · integrity {row.score}/100 ·
                       −{row.penalty_pct}% applied
                       {row.server_elapsed_seconds !== null
-                        ? ` · ${Math.round(row.server_elapsed_seconds / 60)} min on the case`
+                        ? ` · ${Math.round(row.server_elapsed_seconds / 60)} min spent`
                         : " · start not recorded"}
                     </p>
 
@@ -153,7 +175,7 @@ export default async function IntegrityPage() {
 
                   {!row.cleared_at && (
                     <IntegrityActions
-                      submissionId={row.submission_id}
+                      findingId={row.id}
                       suspended={isSuspended}
                     />
                   )}

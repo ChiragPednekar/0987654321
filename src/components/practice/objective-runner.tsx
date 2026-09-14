@@ -14,6 +14,12 @@ import {
   type ObjectiveResultRow,
   type ObjectiveTrackMeta,
 } from "@/lib/objective";
+import { useProctor } from "@/hooks/use-proctor";
+import {
+  ProctorGate,
+  ProctorOverlay,
+  QUIZ_RULES,
+} from "@/components/case/proctor-overlay";
 
 interface Results {
   correct: number;
@@ -45,6 +51,14 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
   const [elapsed, setElapsed] = React.useState(0);
   const startedAt = React.useRef<number>(0);
 
+  /**
+   * A multiple-choice paper is the easiest thing on the platform to cheat:
+   * four options and one tab away from the answer. There is no prose to read
+   * for AI style here and no paste to block on a radio button — what actually
+   * catches it is that leaving the page is counted, which is what this does.
+   */
+  const proctor = useProctor(true);
+
   React.useEffect(() => {
     if (!sessionId || results) return;
     const t = setInterval(
@@ -56,6 +70,15 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
 
   async function start(difficulty?: "easy" | "medium" | "hard") {
     setBusy(true);
+
+    /**
+     * Before the await, deliberately. requestFullscreen() is only granted
+     * during the transient activation this click carries, and an awaited
+     * network round trip outlives it — arming afterwards would have fullscreen
+     * refused on a slow connection and nowhere else.
+     */
+    void proctor.start();
+
     try {
       const response = await fetch("/api/practice/objective/start", {
         method: "POST",
@@ -95,6 +118,7 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
           session_id: sessionId,
           answers,
           seconds: Math.floor((Date.now() - startedAt.current) / 1000),
+          signals: proctor.signals,
         }),
       });
       const payload = await response.json();
@@ -103,6 +127,7 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
         return;
       }
       setResults(payload);
+      proctor.stop();
       router.refresh();
     } catch {
       toast.error("Network error.");
@@ -120,6 +145,10 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
           <p className="mx-auto max-w-md text-sm text-muted-foreground">
             {track.description} {OBJECTIVE_SET_SIZE.default} questions, marked
             instantly with a worked explanation for every one.
+          </p>
+          <p className="mx-auto max-w-md text-xs text-muted-foreground">
+            Answered under exam conditions: the page goes fullscreen, and
+            leaving it is recorded with your answers.
           </p>
           <div className="flex flex-wrap justify-center gap-2 pt-2">
             <Button onClick={() => start()} disabled={busy}>
@@ -222,10 +251,34 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
   }
 
   // ---- answering ----------------------------------------------------------
+  /**
+   * The set is live but exam mode is not — the tab was reloaded. Exam mode
+   * cannot survive a reload, because nothing may re-enter fullscreen without a
+   * fresh gesture, so the gate reappears rather than letting the rest of the
+   * paper be answered unsupervised. The session and the answers already given
+   * are untouched behind it.
+   */
+  if (!proctor.examMode) {
+    return (
+      <ProctorGate
+        resumed
+        starting={proctor.starting}
+        onStart={proctor.start}
+        rules={QUIZ_RULES}
+      />
+    );
+  }
+
   const answered = Object.keys(answers).length;
 
   return (
     <div className="space-y-4">
+      {proctor.needsAcknowledgement && (
+        <ProctorOverlay
+          count={proctor.signals.blurCount}
+          onResume={proctor.acknowledge}
+        />
+      )}
       <div className="sticky top-0 z-10 flex items-center justify-between gap-4 rounded-lg border bg-background px-4 py-2.5">
         <span className="flex items-center gap-2 text-sm text-muted-foreground">
           <Timer className="size-4" />

@@ -4,6 +4,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Briefcase, Loader2, LogOut, Send } from "lucide-react";
 import { toast } from "sonner";
+import { useProctor } from "@/hooks/use-proctor";
+import {
+  CONVERSATION_RULES,
+  ProctorGate,
+  ProctorOverlay,
+} from "@/components/case/proctor-overlay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,6 +76,12 @@ export function SalesRoom({
   const [used, setUsed] = React.useState(turnsUsed);
   const [draft, setDraft] = React.useState("");
   const [busy, setBusy] = React.useState(false);
+
+  /**
+   * Scored on how the pitch is handled, which makes a pasted answer the cheat
+   * worth blocking here too.
+   */
+  const proctor = useProctor(true);
   const endRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -120,15 +132,38 @@ export function SalesRoom({
     if (!window.confirm("End the meeting without a sale?")) return;
     setBusy(true);
     try {
-      await fetch(`/api/sales/sessions/${sessionId}/end`, { method: "POST" });
+      await fetch(`/api/sales/sessions/${sessionId}/end`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        // The session is the assessed unit, so the sitting's cumulative
+        // signals are sent once, when it ends.
+        body: JSON.stringify({ signals: proctor.signals }),
+      });
       router.push(`/sales/${sessionId}/result`);
     } finally {
       setBusy(false);
     }
   }
 
+  if (!proctor.examMode) {
+    return (
+      <ProctorGate
+        starting={proctor.starting}
+        onStart={proctor.start}
+        title="This role-play is conducted under exam conditions"
+        rules={CONVERSATION_RULES}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {proctor.needsAcknowledgement && (
+        <ProctorOverlay
+          count={proctor.signals.blurCount}
+          onResume={proctor.acknowledge}
+        />
+      )}
       <div className="space-y-3">
         {turns.length === 0 && (
           <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
@@ -164,7 +199,9 @@ export function SalesRoom({
         <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          onPaste={proctor.handlers.onPaste}
           onKeyDown={(e) => {
+            proctor.handlers.onKeyDown(e);
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               void send();

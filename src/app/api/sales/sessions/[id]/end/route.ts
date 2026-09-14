@@ -1,15 +1,29 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { z } from "zod";
+import { signalsSchema } from "@/lib/integrity-request";
+import { recordActivityIntegrity } from "@/lib/proctoring";
+import { EMPTY_SIGNALS } from "@/lib/integrity";
 
 export const dynamic = "force-dynamic";
 
 /** The seller ends the meeting without a sale. */
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+
+  /**
+   * Tolerant: this route was previously called with no body, and a tab open
+   * across the deploy still will be. No signals means nothing was reported,
+   * which assessIntegrity reads as an absence of evidence.
+   */
+  const signals = await request
+    .json()
+    .then((raw) => z.object({ signals: signalsSchema }).parse(raw).signals)
+    .catch(() => EMPTY_SIGNALS);
   const supabase = await createClient();
   const {
     data: { user },
@@ -35,5 +49,35 @@ export async function POST(
     .eq("id", id)
     .eq("status", "live");
 
-  return NextResponse.json({ ok: true });
+  /**
+   * Only the student's own words. Counting the model's replies too would
+   * inflate the denominator and make every sitting look under-typed, which is
+   * precisely the false positive the typing check exists to avoid.
+   */
+  const { data: mine } = await admin
+    .from("sales_messages")
+    .select("content")
+    .eq("session_id", id)
+    .eq("role", "student");
+
+  const studentChars = (mine ?? []).reduce(
+    (total, row) => total + (row.content?.length ?? 0),
+    0,
+  );
+
+  /**
+   * One verdict for the sitting, recorded after the session is safely closed
+   * so a failure here cannot cost the student the work they already did. No
+   * ai_likelihood: nothing in this path asks a model to judge authorship, and
+   * inventing a number would be worse than having none.
+   */
+  const integrity = await recordActivityIntegrity(admin, {
+    userId: user.id,
+    activity: "sales",
+    activityRef: id,
+    signals,
+    answerChars: studentChars,
+  });
+
+  return NextResponse.json({ ok: true, integrity_warning: integrity.warning });
 }

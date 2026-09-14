@@ -204,3 +204,62 @@ describe("strikeWarning", () => {
     expect(strikeWarning(STRIKES_BEFORE_BLOCK)).toMatch(/suspended/);
   });
 });
+
+/**
+ * Multiple choice, SQL and Excel have no prose. Passing answerChars: 0 must
+ * therefore disable every check that needs text rather than reading the
+ * absence as evidence — a quiz that scored "almost none of this was typed"
+ * would flag every honest student on the platform.
+ */
+describe("an activity with no prose", () => {
+  const noProse = { answerChars: 0, elapsedSeconds: 600, aiLikelihood: null };
+
+  it("cannot raise a paste, typing or speed flag", () => {
+    const verdict = assessIntegrity({
+      ...noProse,
+      // Deliberately absurd: a huge paste and no keystrokes, which on a case
+      // would be the strongest possible finding.
+      signals: {
+        ...EMPTY_SIGNALS,
+        proctored: true,
+        pastedChars: 5000,
+        largestPaste: 5000,
+        pasteCount: 3,
+        keystrokes: 0,
+      },
+    });
+    const codes = verdict.flags.map((f) => f.code);
+    expect(codes).not.toContain("pasted_answer");
+    expect(codes).not.toContain("pasted_section");
+    expect(codes).not.toContain("not_typed");
+    expect(codes).not.toContain("little_typing");
+    expect(codes).not.toContain("impossible_speed");
+  });
+
+  it("still counts leaving the page, which is the whole point on a quiz", () => {
+    const verdict = assessIntegrity({
+      ...noProse,
+      signals: { ...EMPTY_SIGNALS, proctored: true, blurCount: 9 },
+    });
+    expect(verdict.flags.map((f) => f.code)).toContain("frequent_tab_away");
+    expect(verdict.score).toBeLessThan(100);
+  });
+
+  it("does not punish an ordinary sitting", () => {
+    const verdict = assessIntegrity({
+      ...noProse,
+      // One glance away, which everyone does.
+      signals: { ...EMPTY_SIGNALS, proctored: true, blurCount: 1, blurMs: 4000 },
+    });
+    expect(verdict.severity).toBe("clean");
+    expect(verdict.penaltyPct).toBe(0);
+  });
+
+  it("never reaches a strike on a single stray fullscreen exit", () => {
+    const verdict = assessIntegrity({
+      ...noProse,
+      signals: { ...EMPTY_SIGNALS, proctored: true, fullscreenExits: 1 },
+    });
+    expect(verdict.severity).not.toBe("severe");
+  });
+});

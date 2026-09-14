@@ -4,6 +4,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Send, Square } from "lucide-react";
 import { toast } from "sonner";
+import { useProctor } from "@/hooks/use-proctor";
+import {
+  CONVERSATION_RULES,
+  ProctorGate,
+  ProctorOverlay,
+} from "@/components/case/proctor-overlay";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +45,15 @@ export function PiChat({
   const [busy, setBusy] = React.useState(false);
   const [finishing, setFinishing] = React.useState(false);
   const [asked, setAsked] = React.useState(questionsAsked);
+
+  /**
+   * The one new surface where AI-written prose is the actual risk rather than
+   * a tab switch: an interview answer is exactly the thing a chat window will
+   * write for you. Paste is refused, and the cumulative signals for the
+   * sitting are sent once when the interview ends, which is the unit that is
+   * assessed.
+   */
+  const proctor = useProctor(true);
   const endRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -79,6 +94,10 @@ export function PiChat({
     try {
       const response = await fetch(`/api/pi/sessions/${sessionId}/end`, {
         method: "POST",
+        headers: { "content-type": "application/json" },
+        // The interview is the assessed unit, not any single answer, so the
+        // cumulative signals for the whole sitting travel with the end call.
+        body: JSON.stringify({ signals: proctor.signals }),
       });
       const payload = await response.json();
       if (!response.ok || payload.abandoned) {
@@ -96,8 +115,25 @@ export function PiChat({
 
   const nearlyDone = asked >= maxQuestions;
 
+  if (!proctor.examMode) {
+    return (
+      <ProctorGate
+        starting={proctor.starting}
+        onStart={proctor.start}
+        title="This interview is answered under exam conditions"
+        rules={CONVERSATION_RULES}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {proctor.needsAcknowledgement && (
+        <ProctorOverlay
+          count={proctor.signals.blurCount}
+          onResume={proctor.acknowledge}
+        />
+      )}
       <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
         <span className="tabular">
           Question {Math.min(asked, maxQuestions)} of about {maxQuestions}
@@ -151,7 +187,9 @@ export function PiChat({
         <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          onPaste={proctor.handlers.onPaste}
           onKeyDown={(e) => {
+            proctor.handlers.onKeyDown(e);
             // Enter sends, shift+enter breaks the line — the shape people
             // already expect from a chat box.
             if (e.key === "Enter" && !e.shiftKey) {

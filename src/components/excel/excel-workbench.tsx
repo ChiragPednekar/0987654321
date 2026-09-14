@@ -4,6 +4,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, Play, Send, X } from "lucide-react";
 import { toast } from "sonner";
+import { useProctor } from "@/hooks/use-proctor";
+import {
+  ProctorGate,
+  ProctorOverlay,
+  WORKBENCH_RULES,
+} from "@/components/case/proctor-overlay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -69,6 +75,14 @@ export function ExcelWorkbench({
   const [showHint, setShowHint] = React.useState(false);
   const [showFunctions, setShowFunctions] = React.useState(false);
 
+  /**
+   * Same reasoning as the SQL workbench. The hidden second grid already
+   * exposes a typed-in constant, but a formula pasted from a chat window is
+   * correct on both grids — the only thing that separates it from the
+   * student's own work is that it was never typed.
+   */
+  const proctor = useProctor(true);
+
   const width = grid.reduce((widest, row) => Math.max(widest, row.length), 0);
   const empty = !formula.replace(/^=/, "").trim();
 
@@ -80,7 +94,7 @@ export function ExcelWorkbench({
       const response = await fetch("/api/excel/run", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug, formula }),
+        body: JSON.stringify({ slug, formula, signals: proctor.signals }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -117,8 +131,10 @@ export function ExcelWorkbench({
       setVerdict(payload);
       if ("value" in payload) setValue({ value: payload.value });
       if (payload.error) setError(payload.error);
+      if (payload.integrity_warning) toast.warning(payload.integrity_warning);
       if (payload.correct) {
         toast.success("Correct.");
+        proctor.stop();
         router.refresh();
       }
     } catch {
@@ -128,8 +144,30 @@ export function ExcelWorkbench({
     }
   }
 
+  /**
+   * The grid is the exercise. Rendering it before exam mode is armed would let
+   * a student read the data, work the answer out elsewhere and then press
+   * Start with nothing recorded.
+   */
+  if (!proctor.examMode) {
+    return (
+      <ProctorGate
+        starting={proctor.starting}
+        onStart={proctor.start}
+        title="This exercise is worked under exam conditions"
+        rules={WORKBENCH_RULES}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {proctor.needsAcknowledgement && (
+        <ProctorOverlay
+          count={proctor.signals.blurCount}
+          onResume={proctor.acknowledge}
+        />
+      )}
       <div className="max-h-[420px] overflow-auto rounded-lg border">
         <table className="border-collapse text-[13px]">
           <thead className="sticky top-0 z-10">
@@ -181,7 +219,9 @@ export function ExcelWorkbench({
           <Input
             value={formula}
             onChange={(e) => setFormula(e.target.value)}
+            onPaste={proctor.handlers.onPaste}
             onKeyDown={(e) => {
+              proctor.handlers.onKeyDown(e);
               // Enter runs, as it commits a cell in a spreadsheet.
               if (e.key === "Enter" && !busy && !empty) {
                 e.preventDefault();

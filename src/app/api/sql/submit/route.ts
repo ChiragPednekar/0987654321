@@ -4,11 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { compareResults, runQuery } from "@/lib/sql/runner";
+import { signalsSchema } from "@/lib/integrity-request";
+import { recordActivityIntegrity } from "@/lib/proctoring";
 
 export const maxDuration = 30;
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
+  signals: signalsSchema,
   slug: z.string().trim().min(1).max(120),
   query: z.string().trim().min(1).max(8_000),
 });
@@ -53,14 +56,43 @@ export async function POST(request: NextRequest) {
 
   if (!exercise) return NextResponse.json({ error: "Exercise not found." }, { status: 404 });
 
+  /**
+   * Integrity is assessed once, on the attempt that solves the exercise.
+   *
+   * The signals are cumulative for the whole sitting, so a student iterating
+   * honestly towards a working query sends a steadily worse-looking payload
+   * each time; recording a verdict per attempt would let one sitting produce
+   * three separate strikes for one piece of behaviour. A wrong query has
+   * nothing to penalise either — it already scored nothing.
+   *
+   * No aiLikelihood and no answerChars: a query is not prose. What this
+   * catches is a query that was never typed. A query that was typed but not
+   * understood is the hidden dataset's job, not this one's.
+   */
+  let integrityWarning: string | null = null;
+
   const record = async (correct: boolean, failedOn: string | null) => {
-    await admin.from("sql_attempts").insert({
-      user_id: user.id,
-      exercise_id: exercise.id,
-      query: body.query,
-      correct,
-      failed_on: failedOn as "visible" | "hidden" | "error" | null,
-    });
+    const { data: attempt } = await admin
+      .from("sql_attempts")
+      .insert({
+        user_id: user.id,
+        exercise_id: exercise.id,
+        query: body.query,
+        correct,
+        failed_on: failedOn as "visible" | "hidden" | "error" | null,
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (correct && attempt?.id) {
+      const integrity = await recordActivityIntegrity(admin, {
+        userId: user.id,
+        activity: "sql",
+        activityRef: attempt.id,
+        signals: body.signals,
+      });
+      integrityWarning = integrity.warning;
+    }
   };
 
   const mine = await runQuery(exercise.setup_sql, body.query);
@@ -130,5 +162,9 @@ export async function POST(request: NextRequest) {
   }
 
   await record(true, null);
-  return NextResponse.json({ correct: true, result: mine.result });
+  return NextResponse.json({
+    correct: true,
+    result: mine.result,
+    integrity_warning: integrityWarning,
+  });
 }

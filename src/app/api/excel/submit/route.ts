@@ -4,10 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { markFormula, type Grid } from "@/lib/excel/runner";
+import { signalsSchema } from "@/lib/integrity-request";
+import { recordActivityIntegrity } from "@/lib/proctoring";
 
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
+  signals: signalsSchema,
   slug: z.string().trim().min(1).max(120),
   formula: z.string().trim().min(1).max(1_000),
 });
@@ -67,13 +70,42 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await admin.from("excel_attempts").insert({
-    user_id: user.id,
-    exercise_id: exercise.id,
-    formula: body.formula,
-    correct: verdict.correct,
-    failed_on: verdict.correct ? null : verdict.stage,
-  });
+  const { data: attempt } = await admin
+    .from("excel_attempts")
+    .insert({
+      user_id: user.id,
+      exercise_id: exercise.id,
+      formula: body.formula,
+      correct: verdict.correct,
+      failed_on: verdict.correct ? null : verdict.stage,
+    })
+    .select("id")
+    .maybeSingle();
 
-  return NextResponse.json(verdict);
+  /**
+   * Assessed once, on the attempt that solves the exercise — not on every
+   * submission.
+   *
+   * The signals are cumulative for the whole sitting, so a student iterating
+   * honestly towards a working formula would send a steadily worse-looking
+   * payload each time, and recording a verdict per attempt would let one
+   * sitting produce three separate strikes for one piece of behaviour. A wrong
+   * formula also has nothing to penalise: it already scored nothing.
+   *
+   * No aiLikelihood and no answerChars: a formula is not prose. The cheat this
+   * catches is a formula that was never typed, and the hidden second grid
+   * catches the one that was typed but not worked out.
+   */
+  let warning: string | null = null;
+  if (verdict.correct && attempt?.id) {
+    const integrity = await recordActivityIntegrity(admin, {
+      userId: user.id,
+      activity: "excel",
+      activityRef: attempt.id,
+      signals: body.signals,
+    });
+    warning = integrity.warning;
+  }
+
+  return NextResponse.json({ ...verdict, integrity_warning: warning });
 }

@@ -4,6 +4,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Handshake, Loader2, Send, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useProctor } from "@/hooks/use-proctor";
+import {
+  CONVERSATION_RULES,
+  ProctorGate,
+  ProctorOverlay,
+} from "@/components/case/proctor-overlay";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,6 +57,15 @@ export function NegotiationRoom({
   const [terms, setTerms] = React.useState<Terms>({});
   const [attach, setAttach] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+
+  /**
+   * A negotiation is scored on what the student says, so an argument written
+   * somewhere else and pasted in is the cheat worth blocking. The
+   * counterparty's willingness to settle is arithmetic rather than prose, so
+   * there is nothing here for a style detector to read — what matters is that
+   * the words were the student's own.
+   */
+  const proctor = useProctor(true);
   const endRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -102,15 +117,38 @@ export function NegotiationRoom({
     if (!confirm("Walk away with no deal? This ends the negotiation.")) return;
     setBusy(true);
     try {
-      await fetch(`/api/negotiation/sessions/${sessionId}/end`, { method: "POST" });
+      await fetch(`/api/negotiation/sessions/${sessionId}/end`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        // The session is the assessed unit, so the sitting's cumulative
+        // signals are sent once, when it ends.
+        body: JSON.stringify({ signals: proctor.signals }),
+      });
       router.push(`/negotiation/${sessionId}/result`);
     } finally {
       setBusy(false);
     }
   }
 
+  if (!proctor.examMode) {
+    return (
+      <ProctorGate
+        starting={proctor.starting}
+        onStart={proctor.start}
+        title="This negotiation is conducted under exam conditions"
+        rules={CONVERSATION_RULES}
+      />
+    );
+  }
+
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+      {proctor.needsAcknowledgement && (
+        <ProctorOverlay
+          count={proctor.signals.blurCount}
+          onResume={proctor.acknowledge}
+        />
+      )}
       <div className="space-y-4">
         <div className="space-y-3">
           {turns.map((t, i) => (
@@ -169,7 +207,9 @@ export function NegotiationRoom({
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            onPaste={proctor.handlers.onPaste}
             onKeyDown={(e) => {
+              proctor.handlers.onKeyDown(e);
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 void send();

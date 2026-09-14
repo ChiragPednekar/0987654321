@@ -4,6 +4,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Check, ExternalLink, Loader2, Send, X } from "lucide-react";
 import { toast } from "sonner";
+import { useProctor } from "@/hooks/use-proctor";
+import {
+  ProctorGate,
+  ProctorOverlay,
+  QUIZ_RULES,
+} from "@/components/case/proctor-overlay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -146,7 +152,32 @@ export function DailyQuiz({
   const [review, setReview] = React.useState<Review | null>(initialReview);
   const [busy, setBusy] = React.useState(false);
 
+  /**
+   * One attempt, five questions, and every answer a search away. Proctoring a
+   * quiz is not about paste — there is nothing to paste into a radio button —
+   * it is about whether the page was left between reading a question and
+   * answering it.
+   */
+  const proctor = useProctor(true);
+
   if (review) return <ReviewView review={review} />;
+
+  /**
+   * The questions are not rendered until exam mode is armed. On every other
+   * surface the gate guards an empty editor; here it has to guard the
+   * questions themselves, because a student who can read them before starting
+   * could look all five up and then press Start with a clean record.
+   */
+  if (!proctor.examMode) {
+    return (
+      <ProctorGate
+        starting={proctor.starting}
+        onStart={proctor.start}
+        title="Today's quiz is answered under exam conditions"
+        rules={QUIZ_RULES}
+      />
+    );
+  }
 
   const live = questions.filter((q) => !q.isPulled);
   const answered = live.filter((q) => answers[q.position] !== undefined).length;
@@ -163,6 +194,7 @@ export function DailyQuiz({
         body: JSON.stringify({
           quiz_id: quizId,
           answers: questions.map((q) => answers[q.position] ?? -1),
+          signals: proctor.signals,
         }),
       });
       const payload = await response.json();
@@ -171,6 +203,7 @@ export function DailyQuiz({
         return;
       }
       setReview(payload.review);
+      proctor.stop();
       if (payload.repeat) toast.info("You had already answered this quiz. Showing your first attempt.");
       window.scrollTo({ top: 0, behavior: "smooth" });
       router.refresh();
@@ -183,6 +216,12 @@ export function DailyQuiz({
 
   return (
     <div className="space-y-4">
+      {proctor.needsAcknowledgement && (
+        <ProctorOverlay
+          count={proctor.signals.blurCount}
+          onResume={proctor.acknowledge}
+        />
+      )}
       {live.map((q, i) => (
         <Card key={q.position}>
           <CardContent className="space-y-3 p-5">

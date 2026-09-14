@@ -5,11 +5,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { istDate } from "@/lib/current-affairs/questions";
 import { loadReview } from "@/lib/current-affairs/review";
+import { signalsSchema } from "@/lib/integrity-request";
+import { recordActivityIntegrity } from "@/lib/proctoring";
 
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   quiz_id: z.string().uuid(),
+  signals: signalsSchema,
   answers: z.array(z.number().int().min(-1).max(3)).min(1).max(10),
 });
 
@@ -82,6 +85,28 @@ export async function POST(request: NextRequest) {
     repeat = true;
   }
 
+  /**
+   * Only the attempt that actually counted is assessed.
+   *
+   * A repeat submission returns the first attempt's answers unchanged, so
+   * recording a verdict against it would let a student collect strikes — or
+   * launder a bad one — by resubmitting a quiz that was already closed.
+   */
+  let warning: string | null = null;
+  if (!repeat) {
+    // No elapsed clock: the quiz is released for the day rather than opened,
+    // so there is no meaningful start to stamp. assessIntegrity reads the null
+    // as "not known" and skips the checks that need it.
+    const integrity = await recordActivityIntegrity(admin, {
+      userId: user.id,
+      activity: "daily_quiz",
+      activityRef: quiz.id,
+      signals: body.signals,
+      elapsedSeconds: null,
+    });
+    warning = integrity.warning;
+  }
+
   const review = await loadReview(admin, quiz.id, answers);
-  return NextResponse.json({ review, repeat });
+  return NextResponse.json({ review, repeat, integrity_warning: warning });
 }

@@ -4,6 +4,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, Play, Send, X } from "lucide-react";
 import { toast } from "sonner";
+import { useProctor } from "@/hooks/use-proctor";
+import {
+  ProctorGate,
+  ProctorOverlay,
+  WORKBENCH_RULES,
+} from "@/components/case/proctor-overlay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,6 +53,14 @@ export function SqlWorkbench({
   const [busy, setBusy] = React.useState(false);
   const [showHint, setShowHint] = React.useState(false);
 
+  /**
+   * The cheat this blocks is specific: paste a query from a chat window. The
+   * hidden second dataset already catches an answer written out as literals,
+   * but it cannot tell a correct query someone else wrote from one the student
+   * did. Refusing the paste is what makes them type it.
+   */
+  const proctor = useProctor(true);
+
   async function run() {
     setBusy(true);
     setVerdict(null);
@@ -55,7 +69,7 @@ export function SqlWorkbench({
       const response = await fetch("/api/sql/run", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug, query }),
+        body: JSON.stringify({ slug, query, signals: proctor.signals }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -95,8 +109,10 @@ export function SqlWorkbench({
       setVerdict(payload);
       if (payload.result) setResult(payload.result);
       if (payload.error) setError(payload.error);
+      if (payload.integrity_warning) toast.warning(payload.integrity_warning);
       if (payload.correct) {
         toast.success("Correct.");
+        proctor.stop();
         router.refresh();
       }
     } catch {
@@ -106,8 +122,30 @@ export function SqlWorkbench({
     }
   }
 
+  /**
+   * The schema and the prompt stay hidden until exam mode is armed, for the
+   * same reason the quiz hides its questions: being able to read the exercise
+   * before starting is most of what an unsupervised window is worth.
+   */
+  if (!proctor.examMode) {
+    return (
+      <ProctorGate
+        starting={proctor.starting}
+        onStart={proctor.start}
+        title="This exercise is worked under exam conditions"
+        rules={WORKBENCH_RULES}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {proctor.needsAcknowledgement && (
+        <ProctorOverlay
+          count={proctor.signals.blurCount}
+          onResume={proctor.acknowledge}
+        />
+      )}
       <Card>
         <CardContent className="p-4">
           <p className="text-xs font-medium text-muted-foreground">
@@ -123,7 +161,9 @@ export function SqlWorkbench({
         <Textarea
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onPaste={proctor.handlers.onPaste}
           onKeyDown={(e) => {
+            proctor.handlers.onKeyDown(e);
             // Cmd/Ctrl+Enter runs, which is what every SQL client does.
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();

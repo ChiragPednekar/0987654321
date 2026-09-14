@@ -5,6 +5,10 @@ import { assessPersonalInterview } from "@/lib/ai/pi-interview";
 import { PI_MAX_SCORE } from "@/lib/pi";
 import { recordUsage } from "@/lib/usage";
 import { RateLimitError } from "@/lib/ai/errors";
+import { z } from "zod";
+import { signalsSchema } from "@/lib/integrity-request";
+import { recordActivityIntegrity } from "@/lib/proctoring";
+import { EMPTY_SIGNALS } from "@/lib/integrity";
 
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
@@ -17,10 +21,21 @@ export const dynamic = "force-dynamic";
  * assessments of the same transcript.
  */
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+
+  /**
+   * Tolerant on purpose. This route used to be called with no body at all, and
+   * a tab left open across the deploy will still call it that way. A missing
+   * or malformed payload means no signals were reported, which assessIntegrity
+   * treats as an absence of evidence rather than as evidence.
+   */
+  const signals = await request
+    .json()
+    .then((raw) => z.object({ signals: signalsSchema }).parse(raw).signals)
+    .catch(() => EMPTY_SIGNALS);
   const supabase = await createClient();
   const {
     data: { user },
@@ -51,6 +66,11 @@ export async function POST(
 
   const turns = history ?? [];
   const answered = turns.filter((t) => t.role === "candidate").length;
+  // Only the candidate's own words. Including the interviewer's questions
+  // would inflate the denominator and make every answer look under-typed.
+  const candidateChars = turns
+    .filter((t) => t.role === "candidate")
+    .reduce((total, t) => total + (t.content?.length ?? 0), 0);
 
   // Nothing to assess. Closed rather than graded, and said plainly — a score
   // out of 100 on an interview the candidate never answered would be noise
@@ -106,7 +126,31 @@ export async function POST(
       })
       .eq("id", id);
 
-    return NextResponse.json({ ok: true, total: assessment.total, max: PI_MAX_SCORE });
+    /**
+     * One verdict for the whole interview.
+     *
+     * Recorded after the assessment is stored, so a failure here can never
+     * cost a student the interview they already sat. Unlike the quiz and the
+     * workbenches this surface DOES have prose — an interview answer is
+     * exactly what a chat window will write for you — but the model that
+     * grades a PI does not return an ai_likelihood, so none is passed rather
+     * than one being invented. What is recorded is how the answers were
+     * typed and whether the page was left.
+     */
+    const integrity = await recordActivityIntegrity(admin, {
+      userId: user.id,
+      activity: "interview",
+      activityRef: id,
+      signals,
+      answerChars: candidateChars,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      total: assessment.total,
+      max: PI_MAX_SCORE,
+      integrity_warning: integrity.warning,
+    });
   } catch (err) {
     console.error("[pi] assessment failed", err);
 

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { signalsSchema } from "@/lib/integrity-request";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateSubmission } from "@/lib/ai/evaluate";
@@ -10,7 +11,6 @@ import type { RubricRow } from "@/lib/types/database";
 import { wantsAssignmentNotices } from "@/lib/notify";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { consumeAttemptElapsed, recordIntegrity } from "@/lib/proctoring";
-import { EMPTY_SIGNALS } from "@/lib/integrity";
 
 // Model evaluation regularly takes 15-40s; the default function timeout is not
 // enough. (Vercel: requires Pro for >60s.)
@@ -39,18 +39,7 @@ const bodySchema = z.object({
    * an older client or a restored draft still submits and is simply not
    * assessed on behaviour.
    */
-  signals: z
-    .object({
-      keystrokes: z.number().int().min(0).max(1_000_000).default(0),
-      pasteCount: z.number().int().min(0).max(10_000).default(0),
-      pastedChars: z.number().int().min(0).max(1_000_000).default(0),
-      largestPaste: z.number().int().min(0).max(1_000_000).default(0),
-      blurCount: z.number().int().min(0).max(10_000).default(0),
-      blurMs: z.number().int().min(0).max(86_400_000).default(0),
-      fullscreenExits: z.number().int().min(0).max(10_000).default(0),
-      proctored: z.boolean().default(false),
-    })
-    .default(EMPTY_SIGNALS),
+  signals: signalsSchema,
 });
 
 export async function POST(request: NextRequest) {

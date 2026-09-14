@@ -35,6 +35,22 @@ const FLAG_LABEL: Record<string, string> = {
  * Read through the student's own client, so RLS is what decides they may see
  * these rows rather than a filter that could be got wrong.
  */
+/** What each surface is called when a finding is shown to the student. */
+const ACTIVITY_LABEL: Record<string, string> = {
+  case: "Case",
+  contest: "Contest",
+  objective: "Aptitude paper",
+  daily_quiz: "Daily quiz",
+  sql: "SQL exercise",
+  excel: "Excel exercise",
+  interview: "HR interview",
+  negotiation: "Negotiation",
+  simulation: "Simulation",
+  competition: "Competition entry",
+  group_discussion: "Group discussion",
+  sales: "Sales role-play",
+};
+
 export default async function IntegrityRecordPage() {
   const supabase = await createClient();
   const {
@@ -46,7 +62,7 @@ export default async function IntegrityRecordPage() {
   const { data } = await supabase
     .from("submission_integrity")
     .select(
-      "submission_id, severity, score, penalty_pct, flags, cleared_at, created_at, cases(slug, title)",
+      "id, activity, submission_id, severity, score, penalty_pct, flags, cleared_at, created_at, cases(slug, title)",
     )
     .neq("severity", "clean")
     .order("created_at", { ascending: false })
@@ -118,7 +134,7 @@ export default async function IntegrityRecordPage() {
             const kase = Array.isArray(row.cases) ? row.cases[0] : row.cases;
             return (
               <Card
-                key={row.submission_id}
+                key={row.id}
                 className={row.cleared_at ? "opacity-60" : undefined}
               >
                 <CardContent className="space-y-2 p-4">
@@ -134,7 +150,7 @@ export default async function IntegrityRecordPage() {
                     >
                       {row.cleared_at ? "cleared" : row.severity}
                     </Badge>
-                    {kase ? (
+                    {kase && row.submission_id ? (
                       <Link
                         href={`/cases/${kase.slug}?submission=${row.submission_id}#review`}
                         className="text-sm font-medium underline underline-offset-2"
@@ -142,7 +158,13 @@ export default async function IntegrityRecordPage() {
                         {kase.title}
                       </Link>
                     ) : (
-                      <span className="text-sm font-medium">Case removed</span>
+                      // Since 20250101000057 a finding can be about an aptitude
+                      // paper or a SQL attempt, neither of which has a review
+                      // view to link to. Naming the surface at least tells the
+                      // student which sitting is being described.
+                      <span className="text-sm font-medium">
+                        {ACTIVITY_LABEL[row.activity] ?? "Attempt"}
+                      </span>
                     )}
                     <span className="text-xs text-muted-foreground">
                       {timeAgo(row.created_at)}

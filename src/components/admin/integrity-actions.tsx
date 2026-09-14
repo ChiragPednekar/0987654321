@@ -14,10 +14,10 @@ import { Button } from "@/components/ui/button";
  * is a decision somebody should make on purpose.
  */
 export function IntegrityActions({
-  submissionId,
+  findingId,
   suspended,
 }: {
-  submissionId: string;
+  findingId: string;
   suspended: boolean;
 }) {
   const router = useRouter();
@@ -29,7 +29,7 @@ export function IntegrityActions({
       const response = await fetch("/api/admin/integrity", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ submission_id: submissionId, reinstate }),
+        body: JSON.stringify({ finding_id: findingId, reinstate }),
       });
       const payload = await response.json();
       if (!response.ok) {

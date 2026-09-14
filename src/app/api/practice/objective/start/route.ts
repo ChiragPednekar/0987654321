@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { OBJECTIVE_SET_SIZE, OBJECTIVE_TRACK_VALUES } from "@/lib/objective";
+import { startActivityAttempt } from "@/lib/proctoring";
 
 export const dynamic = "force-dynamic";
 
@@ -139,6 +140,13 @@ export async function POST(request: NextRequest) {
     console.error("[objective] session insert failed", sessionError?.message);
     return NextResponse.json({ error: "Could not start the set." }, { status: 500 });
   }
+
+  /**
+   * The clock that decides anything. The client reports its own elapsed time
+   * because it drives the on-screen timer, and that copy is never read for a
+   * verdict — same rule as solve_attempts on the case path.
+   */
+  await startActivityAttempt(admin, user.id, "objective", session.id);
 
   return NextResponse.json({
     session_id: session.id,
