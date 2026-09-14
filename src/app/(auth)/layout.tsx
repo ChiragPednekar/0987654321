@@ -10,7 +10,7 @@ export default function AuthLayout({
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="flex flex-col px-6 py-8">
         <Link href="/" className="flex items-center gap-2 self-start">
-          <div className="grid size-7 place-items-center rounded-md bg-primary font-mono text-sm font-bold text-primary-foreground">
+          <div className="grid size-7 place-items-center rounded-md bg-foreground text-sm font-semibold text-background">
             C
           </div>
           <span className="font-semibold tracking-tight">CaseCode</span>

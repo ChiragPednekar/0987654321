@@ -77,7 +77,7 @@ export function CreateGroupForm() {
 
   if (createdGroup?.join_code) {
     return (
-      <Card className="w-full sm:max-w-md border-primary/40 bg-card shadow-lg">
+      <Card className="w-full sm:max-w-md bg-card shadow-lg">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2 text-primary">
             <KeyRound className="size-5" />
@@ -90,10 +90,10 @@ export function CreateGroupForm() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border border-border bg-muted/60 px-4 py-3">
             <div>
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <span className="text-[11px] text-muted-foreground">
                 Invite Code
               </span>
-              <p className="font-mono text-xl font-bold tracking-widest text-foreground">
+              <p className="font-mono text-xl font-medium tracking-widest text-foreground">
                 {createdGroup.join_code}
               </p>
             </div>

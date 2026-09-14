@@ -115,7 +115,7 @@ export default async function AdminPage() {
       */}
       {overview ? (
         <>
-          <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="mt-8 text-sm font-semibold text-foreground">
             People
           </h2>
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -160,7 +160,7 @@ export default async function AdminPage() {
             />
           </div>
 
-          <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="mt-8 text-sm font-semibold text-foreground">
             Activity
           </h2>
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -198,7 +198,7 @@ export default async function AdminPage() {
 
       {svc ? (
         <>
-          <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="mt-8 text-sm font-semibold text-foreground">
             Commercial
           </h2>
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

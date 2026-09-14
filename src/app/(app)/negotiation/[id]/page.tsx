@@ -56,8 +56,8 @@ export default async function NegotiationPage({
         <CardContent className="p-5">
           <h1 className="font-semibold">{kase.title}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{kase.shared_brief}</p>
-          <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-3">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
+            <p className="text-xs font-medium text-muted-foreground">
               Your brief — {kase.student_role}
             </p>
             <p className="mt-1 text-sm">{kase.student_brief}</p>

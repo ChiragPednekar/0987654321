@@ -66,7 +66,7 @@ function ReviewView({ review }: { review: StoredDeckReview }) {
           <p className="text-sm">{result.summary}</p>
           {result.top_fixes.length > 0 && (
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Fix these first</p>
+              <p className="text-xs font-medium text-muted-foreground">Fix these first</p>
               <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-sm">
                 {result.top_fixes.map((fix, i) => (
                   <li key={i}>{fix}</li>
@@ -227,7 +227,7 @@ export function DeckReviewer({
 
       {history.length > 0 && (
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Your reviews</p>
+          <p className="text-xs font-medium text-muted-foreground">Your reviews</p>
           <div className="mt-2 space-y-2">
             {history.map((r) => (
               <Card key={r.id} className={cn(shown?.id === r.id && "border-primary/40")}>

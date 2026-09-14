@@ -143,10 +143,10 @@ export function ScorePanel({
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 Total score
               </p>
-              <p className="mt-1 text-4xl font-semibold leading-none tracking-tight tabular">
+              <p className="mt-1 text-4xl font-medium leading-none tracking-tight tabular">
                 {score.total_score}
                 <span className="text-2xl text-muted-foreground">
                   /{score.max_score}
@@ -225,7 +225,7 @@ export function ScorePanel({
                 <div key={section.key}>
                   <h3
                     className={cn(
-                      "flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider",
+                      "flex items-center gap-2 text-xs font-medium",
                       section.text,
                     )}
                   >

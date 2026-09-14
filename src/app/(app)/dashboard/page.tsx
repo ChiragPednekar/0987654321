@@ -5,7 +5,6 @@ import {
   Award,
   CheckCircle2,
   Flame,
-  Sparkles,
   Target,
   TrendingUp,
 } from "lucide-react";
@@ -427,7 +426,7 @@ export default async function DashboardPage() {
                     if (!badge) return null;
                     return (
                       <li key={index} className="flex items-start gap-3">
-                        <Sparkles className="mt-0.5 size-4 shrink-0 text-[var(--warning)]" />
+                        <Award className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
                           <p className="text-sm font-medium">{badge.name}</p>
                           <p className="truncate text-xs text-muted-foreground">

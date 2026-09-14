@@ -35,7 +35,7 @@ function ReviewView({ review }: { review: Review }) {
     <div className="space-y-4">
       <Card>
         <CardContent className="p-6">
-          <p className="text-3xl font-semibold tabular">
+          <p className="text-3xl font-medium tabular">
             {review.score.correct}
             <span className="text-xl text-muted-foreground">/{review.score.total}</span>
           </p>
@@ -206,7 +206,7 @@ export function DailyQuiz({
                     <span
                       className={cn(
                         "flex size-5 shrink-0 items-center justify-center rounded-full border text-[11px]",
-                        chosen ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                        chosen ? "border-action bg-action text-action-foreground" : "border-border",
                       )}
                     >
                       {String.fromCharCode(65 + idx)}

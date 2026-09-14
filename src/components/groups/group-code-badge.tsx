@@ -16,11 +16,11 @@ export function GroupCodeBadge({ code, isOwner }: { code: string; isOwner: boole
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs text-foreground">
+    <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs text-foreground">
       <KeyRound className="size-3.5 text-primary shrink-0" />
       <span>
         {isOwner ? "Invite Code:" : "Group Code:"}{" "}
-        <span className="font-mono font-bold tracking-wider">{code}</span>
+        <span className="font-mono font-medium tracking-wider">{code}</span>
       </span>
       <Button
         variant="ghost"

@@ -45,7 +45,7 @@ export default async function PiSessionPage({
     <div className="mx-auto w-full max-w-3xl">
       <Card>
         <CardContent className="p-4">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Round
           </p>
           <p className="mt-0.5 font-medium">

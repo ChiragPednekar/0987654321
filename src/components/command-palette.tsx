@@ -9,8 +9,8 @@ import {
   LayoutDashboard,
   Route,
   Search,
+  Gauge,
   Settings,
-  Trophy,
   Users,
 } from "lucide-react";
 import { DOMAIN_LABEL } from "@/lib/constants";
@@ -60,7 +60,7 @@ const ADMIN_PAGES: Page[] = [
   { title: "Users", href: "/admin/users", icon: Users },
   { title: "Licences", href: "/admin/licences", icon: FileText },
   { title: "Renewals", href: "/admin/renewals", icon: FileText },
-  { title: "AI usage", href: "/admin/usage", icon: Trophy },
+  { title: "AI usage", href: "/admin/usage", icon: Gauge },
   { title: "Case library", href: "/admin/cases", icon: BookOpen },
 ];
 
@@ -138,7 +138,7 @@ export function CommandPalette({ role }: { role?: UserRole | null }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-[12vh] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[12vh]"
       onClick={() => setOpen(false)}
       role="presentation"
     >
@@ -147,7 +147,7 @@ export function CommandPalette({ role }: { role?: UserRole | null }) {
         // or a match on scenario text would be thrown away client-side.
         shouldFilter={false}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-xl overflow-hidden rounded-xl border border-border bg-popover shadow-2xl"
+        className="w-full max-w-xl overflow-hidden rounded-xl border border-border bg-popover shadow-lg"
         loop
       >
         <div className="flex items-center gap-2 border-b border-border px-3">
@@ -230,7 +230,7 @@ function Group({
   return (
     <Command.Group
       heading={heading}
-      className="mb-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground"
+      className="mb-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
     >
       {children}
     </Command.Group>

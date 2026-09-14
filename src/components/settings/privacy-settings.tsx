@@ -89,7 +89,7 @@ export function PrivacySettings({ initial }: { initial?: Partial<PrivacyConfig> 
         <div className="flex items-center justify-between gap-4 pt-3 first:pt-0">
           <div className="space-y-0.5">
             <span className="font-medium text-foreground flex items-center gap-1.5">
-              <Trophy className="size-3.5 text-amber-500" />
+              <Trophy className="size-3.5 text-muted-foreground" />
               Global Platform Leaderboard Visibility
             </span>
             <p className="text-xs text-muted-foreground">

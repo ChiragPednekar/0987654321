@@ -120,11 +120,11 @@ export function PiChat({
             <Card
               className={cn(
                 "max-w-[85%]",
-                turn.role === "candidate" && "bg-primary/5 border-primary/30",
+                turn.role === "candidate" && "bg-muted/50",
               )}
             >
               <CardContent className="p-3.5">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="text-[11px] font-medium text-muted-foreground">
                   {turn.role === "interviewer" ? "Interviewer" : "You"}
                 </p>
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">

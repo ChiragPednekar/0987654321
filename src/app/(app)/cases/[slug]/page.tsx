@@ -119,7 +119,7 @@ export default async function CaseDetailPage({
         <div className="mt-6 flex justify-center gap-3">
           <Link
             href="/pricing"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            className="rounded-md bg-action px-4 py-2 text-sm font-medium text-action-foreground hover:bg-action-hover"
           >
             See Pro
           </Link>
@@ -792,7 +792,7 @@ export default async function CaseDetailPage({
           {selectedScore && rubric ? (
             <div className="space-y-6">
               {nextCase && (
-                <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 p-4">
                   <div>
                     <p className="text-sm font-medium">Ready for the next challenge?</p>
                     <p className="text-xs text-muted-foreground">Up next: {nextCase.title}</p>

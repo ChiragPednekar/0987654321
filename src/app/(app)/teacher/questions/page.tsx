@@ -59,7 +59,7 @@ export default async function QuestionBank() {
         </CardContent>
       </Card>
 
-      <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+      <h2 className="mt-8 text-sm font-semibold text-foreground">
         Your questions
       </h2>
 

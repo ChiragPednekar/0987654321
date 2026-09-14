@@ -25,7 +25,9 @@ import {
   Sheet,
   Trophy,
   Users,
-  Zap,
+  Calculator,
+  Gauge,
+  ListOrdered,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types/database";
@@ -69,7 +71,7 @@ const STUDENT_GROUPS: { heading: string; items: Item[] }[] = [
       { href: "/cases", label: "Cases", icon: Library },
       { href: "/companies", label: "Companies", icon: Building2 },
       { href: "/daily", label: "Daily quiz", icon: Newspaper },
-      { href: "/practice", label: "Aptitude", icon: Zap },
+      { href: "/practice", label: "Aptitude", icon: Calculator },
       { href: "/sql", label: "SQL", icon: Database },
       { href: "/excel", label: "Excel", icon: Sheet },
       { href: "/interview", label: "HR interview", icon: MessageSquare },
@@ -91,7 +93,7 @@ const STUDENT_GROUPS: { heading: string; items: Item[] }[] = [
   {
     heading: "Community",
     items: [
-      { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
+      { href: "/leaderboard", label: "Leaderboard", icon: ListOrdered },
       { href: "/competitions", label: "Competitions", icon: Trophy },
       { href: "/gd", label: "Group discussions", icon: Users },
       { href: "/groups", label: "Groups", icon: MessagesSquare },
@@ -114,7 +116,7 @@ const TEACHER_GROUPS: { heading: string; items: Item[] }[] = [
     heading: "Library",
     items: [
       { href: "/cases", label: "Cases", icon: Library },
-      { href: "/practice", label: "Aptitude", icon: Zap },
+      { href: "/practice", label: "Aptitude", icon: Calculator },
       { href: "/sql", label: "SQL", icon: Database },
       { href: "/excel", label: "Excel", icon: Sheet },
       { href: "/paths", label: "Paths", icon: Route },
@@ -145,7 +147,7 @@ const ADMIN_GROUPS: { heading: string; items: Item[] }[] = [
     items: [
       { href: "/admin/licences", label: "Licences", icon: Building2 },
       { href: "/admin/renewals", label: "Renewals", icon: BarChart3 },
-      { href: "/admin/usage", label: "AI usage", icon: Trophy },
+      { href: "/admin/usage", label: "AI usage", icon: Gauge },
     ],
   },
 ];
@@ -235,7 +237,7 @@ export function AppSidebar({
           <div key={group.heading} className="mb-4">
             <p
               className={cn(
-                "px-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground",
+                "px-3 pb-1 text-xs font-medium text-muted-foreground",
                 collapsed && "sr-only",
               )}
             >

@@ -75,7 +75,7 @@ export function ReportQuestion({
     <div className="space-y-3">
       {mine.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Your reports
           </p>
           {mine.map((r) => (

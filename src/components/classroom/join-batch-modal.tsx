@@ -66,8 +66,8 @@ export function JoinBatchModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-xl space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4">
+      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-lg space-y-4">
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-base font-semibold text-foreground">

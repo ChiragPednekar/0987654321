@@ -65,7 +65,7 @@ export function UpgradeButton({
         name: "CaseCode",
         description: "Pro — one year",
         prefill: { email, name: name ?? undefined },
-        theme: { color: "#6366f1" },
+        theme: { color: "#1f5566" },
         handler: async (result: Record<string, string>) => {
           const verify = await fetch("/api/billing/verify", {
             method: "POST",

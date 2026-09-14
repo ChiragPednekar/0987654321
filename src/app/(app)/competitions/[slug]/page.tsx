@@ -104,7 +104,7 @@ export default async function CompetitionPage({
             <Markdown>{comp.brief}</Markdown>
           </div>
           <div className="mt-4 rounded-md border bg-muted/30 p-3">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               What to submit
             </p>
             <p className="mt-1 text-sm">{comp.instructions}</p>
@@ -118,7 +118,7 @@ export default async function CompetitionPage({
       </Card>
 
       {/* ---- your team -------------------------------------------------- */}
-      <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+      <h2 className="mt-8 text-sm font-semibold text-foreground">
         Your team
       </h2>
       <div className="mt-3">
@@ -175,7 +175,7 @@ export default async function CompetitionPage({
       {/* ---- entry ------------------------------------------------------- */}
       {membership && open && (
         <>
-          <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="mt-8 text-sm font-semibold text-foreground">
             Your entry
           </h2>
           <div className="mt-3">
@@ -204,7 +204,7 @@ export default async function CompetitionPage({
       {/* ---- results ----------------------------------------------------- */}
       {resultsOut && (
         <>
-          <h2 className="mt-8 flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="mt-8 flex items-center gap-2 text-sm font-semibold text-foreground">
             <Trophy className="size-4" /> Final standings
           </h2>
           {leaderboard.length === 0 ? (
@@ -263,7 +263,7 @@ export default async function CompetitionPage({
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
                   {Object.entries(comp.criteria).map(([key, max]) => (
                     <div key={key}>
-                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {key.replace(/_/g, " ")}
                       </p>
                       <p className="text-sm font-medium tabular">

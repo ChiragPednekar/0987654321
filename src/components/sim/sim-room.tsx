@@ -178,7 +178,7 @@ export function SimRoom({
 
       {history.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h3 className="text-sm font-semibold text-foreground">
             Results so far
           </h3>
           <div className="mt-3 overflow-x-auto rounded-lg border">
@@ -239,7 +239,7 @@ export function SimRoom({
           {last && (
             <Card className="mt-3">
               <CardContent className="p-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   Quarter {last.round} — the market
                 </p>
                 <div className="mt-2 space-y-1 text-sm">

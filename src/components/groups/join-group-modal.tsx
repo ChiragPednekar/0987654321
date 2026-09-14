@@ -63,7 +63,7 @@ export function JoinGroupModal() {
   }
 
   return (
-    <Card className="w-full sm:max-w-sm border-primary/30 shadow-md">
+    <Card className="w-full sm:max-w-sm shadow-lg">
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-sm font-semibold">

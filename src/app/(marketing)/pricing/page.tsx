@@ -40,7 +40,7 @@ export default async function PricingPage() {
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
       <div className="text-center">
         <p className="text-sm font-medium text-primary">Pricing</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+        <h1 className="mt-2 text-3xl font-medium tracking-tight">
           Free while we get it right
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
@@ -51,10 +51,10 @@ export default async function PricingPage() {
       </div>
 
       <div className="mt-12 grid gap-6 sm:grid-cols-2">
-        <Card className="flex flex-col p-6 ring-1 ring-primary/40">
+        <Card className="flex flex-col p-6 ring-1 ring-foreground/20">
           <div>
             <h2 className="text-base font-semibold">Early access</h2>
-            <p className="mt-1 text-3xl font-semibold tracking-tight">
+            <p className="mt-1 text-3xl font-medium tracking-tight">
               Free
               <span className="ml-1.5 text-sm font-normal text-muted-foreground">
                 / forever for early users
@@ -79,7 +79,7 @@ export default async function PricingPage() {
         <Card className="flex flex-col p-6">
           <div>
             <h2 className="text-base font-semibold">Pro</h2>
-            <p className="mt-1 text-3xl font-semibold tracking-tight">
+            <p className="mt-1 text-3xl font-medium tracking-tight">
               ₹499
               <span className="ml-1.5 text-sm font-normal text-muted-foreground">
                 / year

@@ -145,7 +145,7 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
         <Card>
           <CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
             <div>
-              <p className="text-3xl font-semibold tabular">
+              <p className="text-3xl font-medium tabular">
                 {results.correct}
                 <span className="text-xl text-muted-foreground">/{results.total}</span>
               </p>
@@ -226,7 +226,7 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-4 rounded-lg border bg-background/90 px-4 py-2.5 backdrop-blur">
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-4 rounded-lg border bg-background px-4 py-2.5">
         <span className="flex items-center gap-2 text-sm text-muted-foreground">
           <Timer className="size-4" />
           <span className="tabular">{formatDuration(elapsed)}</span>
@@ -269,7 +269,7 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
                     <span
                       className={cn(
                         "flex size-5 shrink-0 items-center justify-center rounded-full border text-[11px]",
-                        chosen ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                        chosen ? "border-action bg-action text-action-foreground" : "border-border",
                       )}
                     >
                       {String.fromCharCode(65 + idx)}

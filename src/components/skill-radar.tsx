@@ -64,7 +64,7 @@ export function SkillRadar({ data }: { data: SkillPoint[] }) {
           dataKey="score"
           stroke="var(--primary)"
           fill="var(--primary)"
-          fillOpacity={0.25}
+          fillOpacity={0.16}
           strokeWidth={2}
         />
       </RadarChart>

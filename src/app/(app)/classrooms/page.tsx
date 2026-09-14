@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { FileText, GraduationCap, Sparkles, Users } from "lucide-react";
+import { FileText, GraduationCap, Library, Users } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
@@ -131,7 +131,7 @@ export default async function ClassroomsPage() {
               return (
                 <li key={room.id}>
                   <Link href={`/classrooms/${room.id}`} className="block h-full">
-                    <Card className="h-full border-border/80 transition-colors hover:border-primary/50">
+                    <Card className="h-full border-border/80 transition-colors hover:border-foreground/25">
                       <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
                         <div>
                           <div className="flex items-start justify-between gap-3">
@@ -213,7 +213,7 @@ export default async function ClassroomsPage() {
 
               return (
                 <li key={room.id}>
-                  <Card className="h-full border-border/80 transition-colors hover:border-primary/50 flex flex-col justify-between">
+                  <Card className="h-full border-border/80 transition-colors hover:border-foreground/25 flex flex-col justify-between">
                     <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
                       <div>
                         <div className="flex items-start justify-between gap-3">
@@ -268,12 +268,12 @@ export default async function ClassroomsPage() {
       </section>
 
       {/* 3. DEDICATED SUBSECTION: Public Faculty Resources & Materials */}
-      <section id="public-faculty-resources" className="space-y-5 rounded-2xl border border-primary/20 bg-muted/20 p-6 sm:p-8">
+      <section id="public-faculty-resources" className="space-y-5 rounded-lg border border-border bg-muted/20 p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary text-xs gap-1">
-                <Sparkles className="size-3" />
+              <Badge variant="outline" className="text-xs gap-1">
+                <Library className="size-3" />
                 Public Faculty Repository
               </Badge>
               <Badge variant="secondary" className="text-xs">

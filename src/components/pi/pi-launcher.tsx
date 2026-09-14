@@ -160,7 +160,7 @@ export function PiLauncher({
       </Card>
 
       <div>
-        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+        <h2 className="text-sm font-semibold text-foreground">
           Choose a round
         </h2>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">

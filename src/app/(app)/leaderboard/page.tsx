@@ -181,9 +181,9 @@ export default async function LeaderboardPage({
         <Link
           href={hrefWith({ period, sort }, { uni: null })}
           className={cn(
-            "rounded-full border px-3 py-1 text-sm transition-colors",
+            "rounded-md border px-3 py-1 text-sm transition-colors",
             !isCohort
-              ? "border-primary bg-primary/10 font-medium"
+              ? "border-foreground/40 bg-accent font-medium text-foreground"
               : "border-border text-muted-foreground hover:text-foreground",
           )}
         >
@@ -194,9 +194,9 @@ export default async function LeaderboardPage({
           <Link
             href={hrefWith({ period, sort }, { uni: myUniversity })}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors",
+              "inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-sm transition-colors",
               isMyCohort
-                ? "border-primary bg-primary/10 font-medium"
+                ? "border-foreground/40 bg-accent font-medium text-foreground"
                 : "border-border text-muted-foreground hover:text-foreground",
             )}
           >
@@ -213,9 +213,9 @@ export default async function LeaderboardPage({
               key={name}
               href={hrefWith({ period, sort }, { uni: name })}
               className={cn(
-                "rounded-full border px-3 py-1 text-sm transition-colors",
+                "rounded-md border px-3 py-1 text-sm transition-colors",
                 university === name
-                  ? "border-primary bg-primary/10 font-medium"
+                  ? "border-foreground/40 bg-accent font-medium text-foreground"
                   : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
@@ -308,7 +308,7 @@ export default async function LeaderboardPage({
                   key={row.user_id}
                   className={cn(
                     "flex items-center gap-4 px-4 py-3",
-                    isMe && "bg-primary/5",
+                    isMe && "bg-accent/60",
                   )}
                 >
                   <span className="w-10 shrink-0">
@@ -377,7 +377,7 @@ export default async function LeaderboardPage({
       </Card>
 
       {mine && !inTop && (!isCohort || isMyCohort) && (
-        <Card className="mt-4 border-primary/40 bg-primary/5">
+        <Card className="mt-4 bg-muted/40">
           <div className="flex items-center gap-4 px-4 py-3">
             <span className="w-10 shrink-0 text-sm text-muted-foreground tabular">
               {isCohort ? (myCohortRank ?? "—") : (mine.rank ?? "—")}

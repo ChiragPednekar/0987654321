@@ -102,10 +102,10 @@ export function SiteNav({
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-border bg-background">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4 sm:px-6">
         <Link href={homeHref} className="flex items-center gap-2">
-          <div className="grid size-7 place-items-center rounded-md bg-primary font-mono text-sm font-bold text-primary-foreground">
+          <div className="grid size-7 place-items-center rounded-md bg-foreground text-sm font-semibold text-background">
             C
           </div>
           <span className="text-[15px] font-semibold tracking-tight">CaseCode</span>
@@ -143,10 +143,10 @@ export function SiteNav({
         <div className="ml-auto flex items-center gap-2">
           {profile && profile.current_streak > 0 && (
             <div
-              className="hidden items-center gap-1.5 rounded-md bg-[color-mix(in_oklch,var(--warning)_12%,transparent)] px-2.5 py-1 text-xs font-medium text-[var(--warning)] sm:flex"
+              className="hidden items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground sm:flex"
               title={`${profile.current_streak} day streak`}
             >
-              <Flame className="size-3.5" />
+              <Flame className="size-3.5 text-[var(--warning)]" />
               <span className="tabular">{profile.current_streak}</span>
             </div>
           )}

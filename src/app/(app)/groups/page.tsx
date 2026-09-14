@@ -71,7 +71,7 @@ export default async function GroupsPage() {
               return (
                 <li key={group.id}>
                   <Link href={`/groups/${group.slug}`} className="block h-full">
-                    <Card className="h-full border-border/80 transition-colors hover:border-primary/50">
+                    <Card className="h-full border-border/80 transition-colors hover:border-foreground/25">
                       <CardContent className="p-4 flex flex-col justify-between h-full">
                         <div>
                           <div className="flex items-start justify-between gap-3">
@@ -152,7 +152,7 @@ export default async function GroupsPage() {
 
               return (
                 <li key={group.id}>
-                  <Card className="h-full border-border/80 transition-colors hover:border-primary/50 flex flex-col justify-between">
+                  <Card className="h-full border-border/80 transition-colors hover:border-foreground/25 flex flex-col justify-between">
                     <CardContent className="p-4 flex flex-col justify-between h-full">
                       <Link href={`/groups/${group.slug}`} className="block">
                         <div className="flex items-start justify-between gap-3">

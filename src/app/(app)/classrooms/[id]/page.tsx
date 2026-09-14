@@ -87,15 +87,15 @@ export default async function ClassroomPage({ params }: PageProps) {
           ← All classrooms & batches
         </Link>
 
-        <Card className="mt-6 border-border/80 shadow-md">
+        <Card className="mt-6">
           <CardHeader className="space-y-3 pb-4">
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="gap-1 border-amber-500/30 text-amber-500">
+              <Badge variant="outline" className="gap-1 border-border text-muted-foreground">
                 <Lock className="size-3" />
                 Private Cohort Batch
               </Badge>
             </div>
-            <CardTitle className="text-2xl font-bold">{room.name}</CardTitle>
+            <CardTitle className="text-2xl font-semibold">{room.name}</CardTitle>
             <p className="text-sm text-muted-foreground">
               Instructor: <span className="font-semibold text-foreground">{instructorName}</span>
             </p>
@@ -107,15 +107,15 @@ export default async function ClassroomPage({ params }: PageProps) {
             <div className="grid grid-cols-2 gap-4 rounded-lg border border-border/60 bg-muted/40 p-4 text-center">
               <div>
                 <span className="text-xs text-muted-foreground">Enrolled Students</span>
-                <p className="text-xl font-bold text-foreground">{studentCount ?? 0}</p>
+                <p className="text-xl font-semibold text-foreground tabular">{studentCount ?? 0}</p>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground">Teacher Assignments</span>
-                <p className="text-xl font-bold text-foreground">{assignCount ?? 0}</p>
+                <p className="text-xl font-semibold text-foreground tabular">{assignCount ?? 0}</p>
               </div>
             </div>
 
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3 text-center">
+            <div className="rounded-lg border border-border bg-muted/40 p-5 space-y-3 text-center">
               <GraduationCap className="size-8 text-primary mx-auto" />
               <h3 className="font-semibold text-foreground">Join this Batch to Access Materials</h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
@@ -167,7 +167,7 @@ export default async function ClassroomPage({ params }: PageProps) {
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">{room.name}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">{room.name}</h1>
               {isTeacher ? (
                 <Badge variant="secondary" className="text-xs">Teacher</Badge>
               ) : (
@@ -182,7 +182,7 @@ export default async function ClassroomPage({ params }: PageProps) {
             ) : null}
             {isTeacher ? (
               <div className="pt-1">
-                <span className="font-mono text-xs font-semibold bg-primary/10 text-primary px-2.5 py-1 rounded border border-primary/20">
+                <span className="font-mono text-xs font-medium bg-muted text-foreground px-2.5 py-1 rounded-sm border border-border">
                   Batch Join Code: {room.join_code}
                 </span>
               </div>
@@ -193,7 +193,7 @@ export default async function ClassroomPage({ params }: PageProps) {
       </div>
 
       {/* 1. Teacher's Batch Announcement & Guidance */}
-      <Card className="border-primary/30 bg-primary/5">
+      <Card className="bg-muted/40">
         <CardContent className="p-5 space-y-3">
           <div className="flex items-center gap-2 text-primary font-semibold text-sm">
             <Megaphone className="size-4" />
@@ -284,7 +284,7 @@ export default async function ClassroomPage({ params }: PageProps) {
                           />
                           <Link
                             href={`/cases/${c.slug}`}
-                            className="inline-flex items-center rounded-md border border-border bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                            className="inline-flex items-center rounded-md border border-action bg-action px-3 py-1 text-xs font-medium text-action-foreground hover:bg-action-hover"
                           >
                             Solve Case →
                           </Link>

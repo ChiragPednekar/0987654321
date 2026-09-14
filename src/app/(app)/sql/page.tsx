@@ -67,7 +67,7 @@ export default async function SqlIndex() {
       <div className="mt-3 space-y-2">
         {(exercises ?? []).map((e) => (
           <Link key={e.slug} href={`/sql/${e.slug}`}>
-            <Card className="transition-colors hover:border-primary/40">
+            <Card className="transition-colors hover:border-foreground/25">
               <CardContent className="flex items-start justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">

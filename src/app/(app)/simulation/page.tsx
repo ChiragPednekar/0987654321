@@ -55,7 +55,7 @@ export default async function SimulationPage() {
         {live ? (
           <Link
             href={`/simulation/${live.id}`}
-            className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            className="inline-flex rounded-md bg-action px-4 py-2 text-sm font-medium text-action-foreground hover:bg-action-hover"
           >
             Resume quarter {live.current_round}
           </Link>
@@ -66,7 +66,7 @@ export default async function SimulationPage() {
 
       {(runs ?? []).length > 0 && (
         <>
-          <h2 className="mt-10 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="mt-10 text-sm font-semibold text-foreground">
             Your runs
           </h2>
           <div className="mt-3 space-y-2">
@@ -75,7 +75,7 @@ export default async function SimulationPage() {
                 key={r.id}
                 href={r.status === "live" ? `/simulation/${r.id}` : `/simulation/${r.id}/result`}
               >
-                <Card className="transition-colors hover:border-primary/40">
+                <Card className="transition-colors hover:border-foreground/25">
                   <CardContent className="flex items-center justify-between gap-3 p-4">
                     <div>
                       <p className="text-sm font-medium">

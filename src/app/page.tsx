@@ -2,8 +2,8 @@ import Link from "next/link";
 import {
   ArrowRight,
   BarChart3,
+  BookOpen,
   Brain,
-  Flame,
   Target,
   Users,
 } from "lucide-react";
@@ -70,13 +70,13 @@ export default async function LandingPage() {
         <section className="mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 sm:pt-28">
           <div className="mx-auto max-w-3xl text-center">
             <Badge variant="outline" className="mb-6 gap-1.5 py-1">
-              <Flame className="size-3.5 text-[var(--warning)]" />
+              <BookOpen className="size-3.5 text-muted-foreground" />
               {caseCount}+ cases across {DOMAINS.length} domains
             </Badge>
 
-            <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-6xl">
+            <h1 className="text-balance text-4xl font-medium tracking-tight sm:text-6xl">
               LeetCode, but for{" "}
-              <span className="text-primary">business decisions</span>
+              <span>business decisions</span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted-foreground">
@@ -101,10 +101,10 @@ export default async function LandingPage() {
           {/* Sample evaluation — shows the product rather than describing it. */}
           <Card className="mx-auto mt-20 max-w-3xl overflow-hidden">
             <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-2.5">
-              <div className="flex gap-1.5">
-                <span className="size-2.5 rounded-full bg-destructive/60" />
-                <span className="size-2.5 rounded-full bg-[var(--warning)]/60" />
-                <span className="size-2.5 rounded-full bg-[var(--success)]/60" />
+              <div className="flex gap-1.5" aria-hidden>
+                <span className="size-2.5 rounded-full border border-border" />
+                <span className="size-2.5 rounded-full border border-border" />
+                <span className="size-2.5 rounded-full border border-border" />
               </div>
               <span className="ml-2 font-mono text-xs text-muted-foreground">
                 AI review · SaaS Capital Raise · Medium
@@ -113,7 +113,7 @@ export default async function LandingPage() {
             <CardContent className="space-y-4 p-6">
               <div className="flex items-baseline justify-between">
                 <span className="text-sm text-muted-foreground">Total score</span>
-                <span className="text-3xl font-semibold tabular">
+                <span className="text-3xl font-medium tabular">
                   64<span className="text-lg text-muted-foreground">/80</span>
                 </span>
               </div>
@@ -132,9 +132,9 @@ export default async function LandingPage() {
                         {got}/{max}
                       </span>
                     </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-1.5 overflow-hidden rounded-sm bg-muted">
                       <div
-                        className="h-full rounded-full bg-primary"
+                        className="h-full rounded-sm bg-primary"
                         style={{
                           width: `${((got as number) / (max as number)) * 100}%`,
                         }}
@@ -144,7 +144,7 @@ export default async function LandingPage() {
                 ))}
               </div>
 
-              <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+              <div className="rounded-md border-l-2 border-[var(--warning)] bg-muted/40 p-3 text-sm">
                 <p className="font-medium">Where you lost points</p>
                 <p className="mt-1 text-muted-foreground">
                   You never computed the burn multiple, so the 30% growth against
@@ -157,20 +157,20 @@ export default async function LandingPage() {
         </section>
 
         {/* --------------------------------------------------- features --- */}
-        <section className="border-t border-border bg-muted/20 py-20">
+        <section className="border-t border-border bg-muted/40 py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <h2 className="text-center text-3xl font-semibold tracking-tight">
+            <h2 className="text-center text-3xl font-medium tracking-tight">
               Practice that actually compounds
             </h2>
             <div className="mt-12 grid gap-6 sm:grid-cols-2">
               {FEATURES.map((feature) => (
                 <Card key={feature.title}>
                   <CardContent className="flex gap-4 p-6">
-                    <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <div className="grid size-10 shrink-0 place-items-center rounded-md border border-border text-muted-foreground">
                       <feature.icon className="size-5" />
                     </div>
                     <div>
-                      <h3 className="font-medium">{feature.title}</h3>
+                      <h3 className="font-semibold">{feature.title}</h3>
                       <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                         {feature.body}
                       </p>
@@ -185,7 +185,7 @@ export default async function LandingPage() {
         {/* ---------------------------------------------------- domains --- */}
         <section className="py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <h2 className="text-center text-3xl font-semibold tracking-tight">
+            <h2 className="text-center text-3xl font-medium tracking-tight">
               Six domains
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-center text-muted-foreground">
@@ -196,7 +196,7 @@ export default async function LandingPage() {
             <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {DOMAINS.map((domain) => (
                 <Link key={domain.value} href={`/cases?domain=${domain.value}`}>
-                  <Card className="h-full transition-colors hover:border-primary/50">
+                  <Card className="h-full transition-colors hover:border-foreground/30">
                     <CardContent className="p-5">
                       <div className={`text-sm font-medium ${domain.color}`}>
                         {domain.label}
@@ -215,7 +215,7 @@ export default async function LandingPage() {
         {/* --------------------------------------------------------- cta --- */}
         <section className="border-t border-border py-20">
           <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
-            <h2 className="text-3xl font-semibold tracking-tight">
+            <h2 className="text-3xl font-medium tracking-tight">
               Solve your first case today
             </h2>
             <p className="mt-4 text-muted-foreground">

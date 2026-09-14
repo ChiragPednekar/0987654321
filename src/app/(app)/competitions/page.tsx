@@ -74,7 +74,7 @@ export default async function CompetitionsPage() {
           const isIn = enteredSlugs.has(c.slug);
           return (
             <Link key={c.slug} href={`/competitions/${c.slug}`}>
-              <Card className="transition-colors hover:border-primary/40">
+              <Card className="transition-colors hover:border-foreground/25">
                 <CardContent className="p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">

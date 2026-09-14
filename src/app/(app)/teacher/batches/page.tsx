@@ -53,7 +53,7 @@ export default async function BatchesPage() {
           {batches.map((b) => (
             <li key={b.id}>
               <Link href={`/teacher/batches/${b.id}`} className="block">
-                <Card className="h-full transition-colors hover:border-primary/40">
+                <Card className="h-full transition-colors hover:border-foreground/25">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <h2 className="font-medium">{b.name}</h2>

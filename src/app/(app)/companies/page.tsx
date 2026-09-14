@@ -46,7 +46,7 @@ export default async function CompaniesPage() {
         if (inSector.length === 0) return null;
         return (
           <section key={sector} className="mt-8">
-            <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <h2 className="text-xs font-medium text-muted-foreground">
               {sector}
             </h2>
             <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -55,7 +55,7 @@ export default async function CompaniesPage() {
                 const verified = (c.sources ?? []).length > 0;
                 return (
                   <Link key={c.slug} href={`/companies/${c.slug}`}>
-                    <Card className="h-full transition-colors hover:border-primary/40">
+                    <Card className="h-full transition-colors hover:border-foreground/25">
                       <CardContent className="flex h-full flex-col gap-1.5 p-4">
                         <p className="font-medium">{c.name}</p>
                         <p className="line-clamp-1 text-xs text-muted-foreground">{c.roles.join(" · ")}</p>

@@ -64,7 +64,7 @@ export default async function GdLobbyPage() {
         </CardContent>
       </Card>
 
-      <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+      <h2 className="mt-8 text-sm font-semibold text-foreground">
         Rooms waiting
       </h2>
       {rooms.length === 0 ? (
@@ -94,7 +94,7 @@ export default async function GdLobbyPage() {
                   ) : (
                     <Link
                       href={`/gd/${room.id}`}
-                      className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+                      className="rounded-md bg-action px-3 py-1.5 text-sm font-medium text-action-foreground hover:bg-action-hover"
                     >
                       Join
                     </Link>
@@ -108,7 +108,7 @@ export default async function GdLobbyPage() {
 
       {(mine ?? []).length > 0 && (
         <>
-          <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="mt-8 text-sm font-semibold text-foreground">
             Your discussions
           </h2>
           <div className="mt-3 space-y-2">
@@ -117,7 +117,7 @@ export default async function GdLobbyPage() {
               const t = s && (Array.isArray(s.gd_topics) ? s.gd_topics[0] : s.gd_topics);
               return (
                 <Link key={row.session_id} href={`/gd/${row.session_id}/result`}>
-                  <Card className="transition-colors hover:border-primary/40">
+                  <Card className="transition-colors hover:border-foreground/25">
                     <CardContent className="flex items-center justify-between gap-3 p-4">
                       <div className="min-w-0">
                         <p className="text-sm font-medium">{t?.title ?? "Discussion"}</p>

@@ -95,7 +95,7 @@ export function AssignmentForm({
   return (
     <form onSubmit={(e) => submit(e, true)} className="space-y-8">
       <section className="space-y-4">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+        <h2 className="text-sm font-semibold text-foreground">
           What and who
         </h2>
 
@@ -138,7 +138,7 @@ export function AssignmentForm({
 
               {ownQuestions.length > 0 ? (
                 <div className="mt-3">
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <p className="text-xs font-medium text-muted-foreground">
                     Your questions
                   </p>
                   <ul className="mt-1 space-y-1">
@@ -171,7 +171,7 @@ export function AssignmentForm({
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+        <h2 className="text-sm font-semibold text-foreground">
           Timing and marks
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">

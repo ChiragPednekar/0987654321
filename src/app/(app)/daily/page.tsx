@@ -102,8 +102,8 @@ export default async function DailyPage({
             press releases, every answer sourced.
           </p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm">
-          <Flame className={cn("size-4", streak > 0 ? "text-orange-500" : "text-muted-foreground")} />
+        <div className="flex items-center gap-1.5 rounded-md border px-3 py-1 text-sm">
+          <Flame className={cn("size-4", streak > 0 ? "text-[var(--warning)]" : "text-muted-foreground")} />
           <span className="tabular">{plural(streak, "day")}</span>
         </div>
       </div>
@@ -139,7 +139,7 @@ export default async function DailyPage({
 
       {all.length > 1 && (
         <div className="mt-8">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Recent quizzes
           </p>
           <div className="mt-2 flex flex-wrap gap-2">

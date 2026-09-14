@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, CircleDashed, RotateCcw, Sparkles } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, Clock, CircleDashed, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 /**
@@ -55,7 +55,7 @@ export function StudentAssignmentStatus({
   if (work.status === "ai_graded") {
     return (
       <Badge variant="secondary" className="gap-1">
-        <Sparkles className="size-3" />
+        <ClipboardCheck className="size-3" />
         AI graded — awaiting your teacher
       </Badge>
     );

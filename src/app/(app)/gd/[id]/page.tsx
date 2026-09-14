@@ -53,7 +53,7 @@ export default async function GdRoomPage({
     <div className="mx-auto w-full max-w-4xl">
       <Card>
         <CardContent className="p-5">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Topic
           </p>
           <h1 className="mt-1 text-lg font-semibold">{topic?.title}</h1>

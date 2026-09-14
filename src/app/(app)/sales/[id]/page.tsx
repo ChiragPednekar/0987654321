@@ -53,8 +53,8 @@ export default async function SalesMeetingPage({ params }: { params: Promise<{ i
           <Card>
             <CardContent className="space-y-3 p-4 text-sm">
               <p className="text-muted-foreground">{scenario.shared_brief}</p>
-              <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <div className="rounded-md border border-border bg-muted/40 p-3">
+                <p className="text-xs font-medium text-muted-foreground">
                   Your brief — {scenario.student_role}
                 </p>
                 <p className="mt-1 whitespace-pre-line">{scenario.student_brief}</p>

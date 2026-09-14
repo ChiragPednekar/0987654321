@@ -50,7 +50,7 @@ export default async function PathsPage() {
 
           return (
             <Link key={path.id} href={`/paths/${path.slug}`}>
-              <Card className="h-full transition-colors hover:border-primary/50">
+              <Card className="h-full transition-colors hover:border-foreground/25">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
                     <CardTitle className="text-base">{path.title}</CardTitle>

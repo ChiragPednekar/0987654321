@@ -67,7 +67,7 @@ export default async function PeerLobbyPage() {
           {own.length > 0 && (
             <Card className="mt-6 border-primary/40">
               <CardContent className="p-4">
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   Your rooms
                 </p>
                 <ul className="mt-2 space-y-2">

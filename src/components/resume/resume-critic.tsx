@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Copy, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { Check, Copy, Loader2, ScanText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -87,7 +87,7 @@ function CritiqueView({ critique }: { critique: StoredCritique }) {
           <p className="text-sm">{result.summary}</p>
           {result.top_fixes.length > 0 && (
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 Fix these first
               </p>
               <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-sm">
@@ -264,7 +264,7 @@ export function ResumeCritic({
               onClick={critique}
               disabled={busy || !entitled || bullets.length === 0 || tooMany || tooLong !== -1 || left <= 0}
             >
-              {busy ? <Loader2 className="animate-spin" /> : <Sparkles />}
+              {busy ? <Loader2 className="animate-spin" /> : <ScanText />}
               {busy ? "Reading your bullets…" : "Critique"}
             </Button>
           </div>
@@ -285,7 +285,7 @@ export function ResumeCritic({
 
       {history.length > 0 && (
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Your critiques
           </p>
           <div className="mt-2 space-y-2">

@@ -159,7 +159,7 @@ export function QuestionEditor({
 
       <form onSubmit={(e) => submit(e, true)} className="space-y-8">
       <section className="space-y-4">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+        <h2 className="text-sm font-semibold text-foreground">
           Basics
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -214,7 +214,7 @@ export function QuestionEditor({
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+        <h2 className="text-sm font-semibold text-foreground">
           The case
         </h2>
         <div>
@@ -242,7 +242,7 @@ export function QuestionEditor({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+        <h2 className="text-sm font-semibold text-foreground">
           Hints
         </h2>
         <p className="text-xs text-muted-foreground">
@@ -275,7 +275,7 @@ export function QuestionEditor({
 
       <section className="space-y-3">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="text-sm font-semibold text-foreground">
             Rubric
           </h2>
           <span className={cn(

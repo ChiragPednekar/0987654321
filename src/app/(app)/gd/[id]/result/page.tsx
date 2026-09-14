@@ -124,7 +124,7 @@ export default async function GdResultPage({
                           const got = Number(row.breakdown?.[key] ?? 0);
                           return (
                             <div key={key}>
-                              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                              <p className="text-xs text-muted-foreground">
                                 {key}
                               </p>
                               <p className="text-sm font-medium tabular">

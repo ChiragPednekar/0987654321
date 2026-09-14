@@ -110,7 +110,7 @@ export function SqlWorkbench({
     <div className="space-y-4">
       <Card>
         <CardContent className="p-4">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Schema
           </p>
           <pre className="mt-2 overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-muted-foreground">

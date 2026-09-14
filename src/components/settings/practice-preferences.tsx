@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Check, Clock, Code2, Sparkles, Terminal } from "lucide-react";
+import { Check, Clock, Code2, SkipForward, Terminal } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -115,7 +115,7 @@ export function PracticePreferences() {
         <div className="flex items-center justify-between gap-4 pt-3">
           <div className="space-y-0.5">
             <span className="font-medium text-foreground flex items-center gap-1.5">
-              <Sparkles className="size-3.5 text-muted-foreground" />
+              <SkipForward className="size-3.5 text-muted-foreground" />
               Prompt Next Question on Completion
             </span>
             <p className="text-xs text-muted-foreground">

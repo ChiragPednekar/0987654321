@@ -57,7 +57,7 @@ export default async function PiResultPage({
       <Card className="mt-6">
         <CardContent className="p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <p className="text-4xl font-semibold leading-none tabular">
+            <p className="text-4xl font-medium leading-none tabular">
               {session.total ?? 0}
               <span className="text-2xl text-muted-foreground">/{session.max_score}</span>
             </p>
@@ -69,7 +69,7 @@ export default async function PiResultPage({
               const got = Number(session.breakdown?.[key] ?? 0);
               return (
                 <div key={key}>
-                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {PI_CRITERION_LABEL[key] ?? key}
                   </p>
                   <p className="text-sm font-medium tabular">
@@ -122,14 +122,14 @@ export default async function PiResultPage({
         </div>
       )}
 
-      <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+      <h2 className="mt-8 text-sm font-semibold text-foreground">
         Transcript
       </h2>
       <div className="mt-3 space-y-2">
         {(messages ?? []).map((m, i) => (
           <Card key={i}>
             <CardContent className="p-4">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="text-[11px] font-medium text-muted-foreground">
                 {m.role === "interviewer" ? "Interviewer" : "You"}
               </p>
               <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">

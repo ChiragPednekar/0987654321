@@ -121,11 +121,11 @@ export function NegotiationRoom({
               <Card
                 className={cn(
                   "max-w-[90%]",
-                  t.role === "student" && "border-primary/30 bg-primary/5",
+                  t.role === "student" && "bg-muted/50",
                 )}
               >
                 <CardContent className="p-3.5">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <p className="text-[11px] font-medium text-muted-foreground">
                     {t.role === "student" ? "You" : counterpartyRole}
                   </p>
                   <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">
@@ -208,7 +208,7 @@ export function NegotiationRoom({
       <div className="space-y-3">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               Build an offer
             </p>
             <div className="mt-3 space-y-3">

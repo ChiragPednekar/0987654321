@@ -24,7 +24,7 @@ export function ProctorOverlay({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 p-6 backdrop-blur-md"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-background p-6"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="proctor-title"

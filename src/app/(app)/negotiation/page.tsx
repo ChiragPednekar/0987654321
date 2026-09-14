@@ -74,7 +74,7 @@ export default async function NegotiationLobby() {
 
       {(past ?? []).length > 0 && (
         <>
-          <h2 className="mt-10 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="mt-10 text-sm font-semibold text-foreground">
             Your negotiations
           </h2>
           <div className="mt-3 space-y-2">
@@ -87,7 +87,7 @@ export default async function NegotiationLobby() {
                   key={p.id}
                   href={p.status === "live" ? `/negotiation/${p.id}` : `/negotiation/${p.id}/result`}
                 >
-                  <Card className="transition-colors hover:border-primary/40">
+                  <Card className="transition-colors hover:border-foreground/25">
                     <CardContent className="flex items-center justify-between gap-3 p-4">
                       <div>
                         <p className="text-sm font-medium">{c?.title ?? "Negotiation"}</p>

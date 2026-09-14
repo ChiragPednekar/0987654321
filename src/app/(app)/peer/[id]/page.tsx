@@ -119,7 +119,7 @@ export default async function PeerRoomPage({ params }: PageProps) {
             {Boolean(c.instructions) && (
               <Card>
                 <CardContent className="p-4">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {interviewing ? "What to ask them for" : "Your task"}
                   </p>
                   <div className="mt-2 text-sm">
@@ -135,7 +135,7 @@ export default async function PeerRoomPage({ params }: PageProps) {
             <div className="space-y-4">
               {Boolean(c.expected_framework) && (
                 <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <p className="text-xs font-medium text-muted-foreground">
                     Expected structure
                   </p>
                   <div className="mt-1.5 text-sm">
@@ -145,7 +145,7 @@ export default async function PeerRoomPage({ params }: PageProps) {
               )}
               {Boolean(c.model_answer) && (
                 <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <p className="text-xs font-medium text-muted-foreground">
                     Model answer — do not read aloud
                   </p>
                   <div className="mt-1.5 text-sm">

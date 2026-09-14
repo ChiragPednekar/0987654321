@@ -155,9 +155,9 @@ export function ReviewQueue({
               onClick={() => setFilter(f.value)}
               aria-pressed={filter === f.value}
               className={cn(
-                "rounded-full border px-3 py-1 text-xs transition-colors",
+                "rounded-md border px-3 py-1 text-xs transition-colors",
                 filter === f.value
-                  ? "border-primary bg-primary/10 text-foreground"
+                  ? "border-foreground/40 bg-accent font-medium text-foreground"
                   : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
@@ -257,7 +257,7 @@ export function ReviewQueue({
 
                 {open ? (
                   <div className="border-t border-border p-4">
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">
                       Their answer
                     </p>
                     <div className="max-h-96 overflow-y-auto rounded-md bg-muted/40 p-3 text-sm">
@@ -315,7 +315,7 @@ export function ReviewQueue({
                             ).map(([label, items]) =>
                               items && items.length > 0 ? (
                                 <div key={label}>
-                                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                                  <p className="text-xs font-medium text-muted-foreground">
                                     {label}
                                   </p>
                                   <ul className="mt-1 list-disc space-y-0.5 pl-4 text-muted-foreground">

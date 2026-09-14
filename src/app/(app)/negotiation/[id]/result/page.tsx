@@ -74,12 +74,12 @@ export default async function NegotiationResult({
           <Card className="mt-5">
             <CardContent className="grid gap-4 p-6 sm:grid-cols-3">
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   You claimed
                 </p>
                 <p
                   className={cn(
-                    "mt-1 text-3xl font-semibold tabular",
+                    "mt-1 text-3xl font-medium tabular",
                     session.beat_batna ? "text-[var(--success)]" : "text-destructive",
                   )}
                 >
@@ -91,10 +91,10 @@ export default async function NegotiationResult({
                 </p>
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Value found
                 </p>
-                <p className="mt-1 text-3xl font-semibold tabular">
+                <p className="mt-1 text-3xl font-medium tabular">
                   {session.efficiency_pct}%
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -102,10 +102,10 @@ export default async function NegotiationResult({
                 </p>
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   They got
                 </p>
-                <p className="mt-1 text-3xl font-semibold tabular text-muted-foreground">
+                <p className="mt-1 text-3xl font-medium tabular text-muted-foreground">
                   {session.counterparty_score}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -120,7 +120,7 @@ export default async function NegotiationResult({
             chose, is where the lesson lands: an issue you fought over that was
             cheap to them was value you could have traded for.
           */}
-          <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="mt-8 text-sm font-semibold text-foreground">
             What they actually wanted
           </h2>
           <div className="mt-3 space-y-3">

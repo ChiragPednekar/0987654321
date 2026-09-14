@@ -117,7 +117,7 @@ export default async function SalesResultPage({ params }: { params: Promise<{ id
         <div className="mt-2 space-y-2">
           {(messages ?? []).map((m, i) => (
             <div key={i} className="rounded-md border p-3 text-sm">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="text-[11px] font-medium text-muted-foreground">
                 {m.role === "student" ? "You" : scenario.buyer_role}
                 {m.overridden && " · tried to agree before its concerns were met — held back"}
               </p>

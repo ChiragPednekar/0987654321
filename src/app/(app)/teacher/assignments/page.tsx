@@ -83,7 +83,7 @@ export default async function AssignmentsPage() {
               <li key={a.id}>
                 <Link
                   href={`/teacher/assignments/${a.id}`}
-                  className="group block rounded-md border border-border p-4 transition-colors hover:border-primary/40"
+                  className="group block rounded-md border border-border p-4 transition-colors hover:border-foreground/25"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium group-hover:underline">

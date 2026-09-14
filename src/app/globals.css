@@ -4,89 +4,114 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------- tokens ---
-   Neutral-heavy palette in the Linear/Notion register: near-monochrome
-   surfaces, one confident accent, colour reserved for signal (difficulty,
-   score, streak).
+   A working tool, not a launch page. Surfaces are warm neutrals with almost
+   no chroma — paper and graphite rather than the violet-tinted greys every
+   template ships with. There is one accent, a dark petrol blue, and it is
+   spent on things that act: primary buttons, links, focus, the selected
+   state. Everything else earns hierarchy from type and contrast.
+
+   Semantic colours are deliberately desaturated so a green score or an amber
+   warning reads as information, not decoration, and each clears 4.5:1 as
+   text on its own background.
+
+   Radius scale: 4px controls inside controls, 6px buttons and inputs, 8px
+   cards and panels. Nothing is a pill unless it is a status dot or an avatar.
    -------------------------------------------------------------------------- */
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
 
-  --background: oklch(0.995 0 0);
-  --foreground: oklch(0.16 0.004 285);
+  --background: oklch(0.984 0.002 84);
+  --foreground: oklch(0.215 0.006 60);
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.16 0.004 285);
+  --card: oklch(0.997 0.001 84);
+  --card-foreground: oklch(0.215 0.006 60);
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.16 0.004 285);
+  --popover: oklch(0.997 0.001 84);
+  --popover-foreground: oklch(0.215 0.006 60);
 
-  --primary: oklch(0.52 0.19 264);
-  --primary-foreground: oklch(0.99 0 0);
+  --primary: oklch(0.43 0.07 222);
+  --primary-foreground: oklch(0.985 0.002 84);
 
-  --secondary: oklch(0.968 0.002 285);
-  --secondary-foreground: oklch(0.24 0.006 285);
+  --secondary: oklch(0.952 0.003 84);
+  --secondary-foreground: oklch(0.26 0.006 60);
 
-  --muted: oklch(0.968 0.002 285);
-  --muted-foreground: oklch(0.53 0.011 285);
+  --muted: oklch(0.955 0.003 84);
+  --muted-foreground: oklch(0.49 0.008 70);
 
-  --accent: oklch(0.958 0.003 285);
-  --accent-foreground: oklch(0.24 0.006 285);
+  --accent: oklch(0.945 0.004 84);
+  --accent-foreground: oklch(0.215 0.006 60);
 
-  --destructive: oklch(0.58 0.22 27);
-  --destructive-foreground: oklch(0.99 0 0);
+  --destructive: oklch(0.52 0.15 30);
+  --destructive-foreground: oklch(0.985 0.002 84);
 
-  --success: oklch(0.62 0.17 149);
-  --warning: oklch(0.72 0.17 70);
+  --success: oklch(0.5 0.09 155);
+  --warning: oklch(0.55 0.1 68);
 
-  --border: oklch(0.918 0.004 285);
-  --input: oklch(0.918 0.004 285);
-  --ring: oklch(0.52 0.19 264);
+  --border: oklch(0.9 0.004 80);
+  --input: oklch(0.86 0.005 80);
+  --ring: oklch(0.43 0.07 222);
 
-  --chart-1: oklch(0.62 0.17 149);
-  --chart-2: oklch(0.6 0.16 240);
-  --chart-3: oklch(0.58 0.19 300);
-  --chart-4: oklch(0.72 0.17 70);
-  --chart-5: oklch(0.62 0.2 15);
+  --chart-1: oklch(0.43 0.07 222);
+  --chart-2: oklch(0.52 0.08 160);
+  --chart-3: oklch(0.62 0.1 72);
+  --chart-4: oklch(0.55 0.02 60);
+  --chart-5: oklch(0.54 0.12 32);
+
+  /* Filled actions. In light mode this is simply the accent. */
+  --action: var(--primary);
+  --action-foreground: var(--primary-foreground);
+  --action-hover: oklch(0.38 0.068 222);
+
+  --shadow-color: oklch(0.2 0.01 60 / 0.07);
 }
 
 .dark {
-  --background: oklch(0.145 0.003 285);
-  --foreground: oklch(0.96 0.001 285);
+  --background: oklch(0.172 0.003 70);
+  --foreground: oklch(0.925 0.004 84);
 
-  --card: oklch(0.178 0.004 285);
-  --card-foreground: oklch(0.96 0.001 285);
+  --card: oklch(0.198 0.003 70);
+  --card-foreground: oklch(0.925 0.004 84);
 
-  --popover: oklch(0.19 0.004 285);
-  --popover-foreground: oklch(0.96 0.001 285);
+  --popover: oklch(0.218 0.004 70);
+  --popover-foreground: oklch(0.925 0.004 84);
 
-  --primary: oklch(0.65 0.18 264);
-  --primary-foreground: oklch(0.145 0.003 285);
+  --primary: oklch(0.72 0.052 224);
+  --primary-foreground: oklch(0.17 0.01 230);
 
-  --secondary: oklch(0.24 0.005 285);
-  --secondary-foreground: oklch(0.96 0.001 285);
+  --secondary: oklch(0.245 0.004 70);
+  --secondary-foreground: oklch(0.925 0.004 84);
 
-  --muted: oklch(0.24 0.005 285);
-  --muted-foreground: oklch(0.68 0.008 285);
+  --muted: oklch(0.235 0.004 70);
+  --muted-foreground: oklch(0.7 0.007 80);
 
-  --accent: oklch(0.26 0.006 285);
-  --accent-foreground: oklch(0.96 0.001 285);
+  --accent: oklch(0.255 0.005 70);
+  --accent-foreground: oklch(0.925 0.004 84);
 
-  --destructive: oklch(0.66 0.2 25);
-  --destructive-foreground: oklch(0.145 0.003 285);
+  --destructive: oklch(0.7 0.12 32);
+  --destructive-foreground: oklch(0.172 0.003 70);
 
-  --success: oklch(0.7 0.16 149);
-  --warning: oklch(0.78 0.16 70);
+  --success: oklch(0.74 0.08 155);
+  --warning: oklch(0.8 0.09 78);
 
-  --border: oklch(0.27 0.005 285);
-  --input: oklch(0.29 0.005 285);
-  --ring: oklch(0.65 0.18 264);
+  --border: oklch(0.285 0.004 70);
+  --input: oklch(0.33 0.005 70);
+  --ring: oklch(0.72 0.052 224);
 
-  --chart-1: oklch(0.7 0.16 149);
-  --chart-2: oklch(0.68 0.15 240);
-  --chart-3: oklch(0.68 0.18 300);
-  --chart-4: oklch(0.78 0.16 70);
-  --chart-5: oklch(0.7 0.19 15);
+  --chart-1: oklch(0.72 0.052 224);
+  --chart-2: oklch(0.72 0.08 158);
+  --chart-3: oklch(0.8 0.09 78);
+  --chart-4: oklch(0.66 0.015 70);
+  --chart-5: oklch(0.7 0.11 34);
+
+  /* On charcoal the accent has to be light to read as text, which makes a
+     button filled with it look pastel. Filled actions keep the deep petrol
+     of light mode instead, with light text on it. */
+  --action: oklch(0.49 0.062 224);
+  --action-foreground: oklch(0.975 0.004 84);
+  --action-hover: oklch(0.54 0.064 224);
+
+  --shadow-color: oklch(0 0 0 / 0.35);
 }
 
 @theme inline {
@@ -111,6 +136,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-action: var(--action);
+  --color-action-foreground: var(--action-foreground);
+  --color-action-hover: var(--action-hover);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -118,13 +146,52 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
+  /* 4 / 6 / 8 / 10. `rounded-xl` and above collapse onto the card radius so a
+     stray utility cannot reintroduce the soft, pillowy look. */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 2px);
+  --radius-2xl: calc(var(--radius) + 2px);
+  --radius-3xl: calc(var(--radius) + 2px);
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Plex is drawn with open spacing; the template habit of pulling every
+     heading tight makes it look cramped. Tighten only slightly. */
+  --tracking-tight: -0.011em;
+  --tracking-tighter: -0.02em;
+  --tracking-wide: 0.01em;
+  --tracking-wider: 0.02em;
+
+  /* Neutral, low elevation. Nothing glows, nothing is tinted. */
+  --shadow-xs: 0 1px 0 0 var(--shadow-color);
+  --shadow-sm: 0 1px 2px 0 var(--shadow-color);
+  --shadow-md: 0 2px 6px -1px var(--shadow-color), 0 1px 2px 0 var(--shadow-color);
+  --shadow-lg: 0 8px 20px -6px var(--shadow-color), 0 2px 4px 0 var(--shadow-color);
+  --shadow-xl: 0 12px 28px -8px var(--shadow-color), 0 2px 6px 0 var(--shadow-color);
+  --shadow-2xl: 0 16px 36px -10px var(--shadow-color), 0 2px 6px 0 var(--shadow-color);
+
+  /* The raw Tailwind hues that crept into components, pulled onto the same
+     desaturated semantic scale: emerald reads as success, amber as warning,
+     rose as danger. Violet, sky and orange are not part of the system. */
+  --color-emerald-300: oklch(0.8 0.07 155);
+  --color-emerald-400: oklch(0.74 0.08 155);
+  --color-emerald-500: oklch(0.62 0.085 155);
+  --color-emerald-600: oklch(0.5 0.09 155);
+  --color-emerald-700: oklch(0.44 0.08 155);
+  --color-amber-300: oklch(0.84 0.08 80);
+  --color-amber-400: oklch(0.8 0.09 78);
+  --color-amber-500: oklch(0.68 0.1 72);
+  --color-amber-600: oklch(0.55 0.1 68);
+  --color-amber-700: oklch(0.48 0.09 66);
+  --color-rose-400: oklch(0.7 0.12 32);
+  --color-rose-500: oklch(0.6 0.13 31);
+  --color-rose-600: oklch(0.52 0.15 30);
+  --color-orange-500: oklch(0.68 0.1 72);
+  --color-sky-500: oklch(0.6 0.06 222);
+  --color-violet-500: oklch(0.55 0.02 60);
 }
 
 @layer base {
@@ -135,9 +202,18 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-feature-settings: "cv11", "ss01";
-    font-variation-settings: "opsz" 32;
+    font-feature-settings: "kern", "liga";
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings carry weight through size and contrast, not boldness. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
   }
 
   /* Focus ring: visible for keyboard users, quiet for mouse users. */

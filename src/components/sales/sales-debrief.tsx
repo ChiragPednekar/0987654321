@@ -35,7 +35,7 @@ function DebriefView({ debrief }: { debrief: SalesDebrief }) {
         )}
         {debrief.strengths.length > 0 && (
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">What worked</p>
+            <p className="text-xs font-medium text-muted-foreground">What worked</p>
             <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
               {debrief.strengths.map((s, i) => (
                 <li key={i}>{s}</li>
@@ -45,7 +45,7 @@ function DebriefView({ debrief }: { debrief: SalesDebrief }) {
         )}
         {debrief.improvements.length > 0 && (
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Next time</p>
+            <p className="text-xs font-medium text-muted-foreground">Next time</p>
             <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
               {debrief.improvements.map((s, i) => (
                 <li key={i}>{s}</li>

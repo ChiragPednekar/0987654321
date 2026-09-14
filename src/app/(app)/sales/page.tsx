@@ -73,13 +73,13 @@ export default async function SalesLobby() {
 
       {(past ?? []).length > 0 && (
         <>
-          <h2 className="mt-10 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="mt-10 text-sm font-semibold text-foreground">
             Your meetings
           </h2>
           <div className="mt-3 space-y-2">
             {(past ?? []).map((p) => (
               <Link key={p.id} href={p.status === "live" ? `/sales/${p.id}` : `/sales/${p.id}/result`}>
-                <Card className="transition-colors hover:border-primary/40">
+                <Card className="transition-colors hover:border-foreground/25">
                   <CardContent className="flex items-center justify-between gap-3 p-4">
                     <div>
                       <p className="text-sm font-medium">{titleOf.get(p.scenario_id) ?? "Meeting"}</p>

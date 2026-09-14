@@ -77,7 +77,7 @@ export function PeerFeedbackForm({
   return (
     <Card>
       <CardContent className="p-4">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        <p className="text-xs font-medium text-muted-foreground">
           Mark your partner
         </p>
         <p className="mt-1 text-xs text-muted-foreground">

@@ -13,7 +13,7 @@ export function FacultyResourceCard({ resource }: { resource: FacultyResource })
 
   return (
     <>
-      <Card className="flex flex-col justify-between border-border/80 transition-all hover:border-primary/50 hover:shadow-sm">
+      <Card className="flex flex-col justify-between border-border/80 transition-all hover:border-foreground/25 hover:shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
             <Badge variant="secondary" className="text-xs">
@@ -57,8 +57,8 @@ export function FacultyResourceCard({ resource }: { resource: FacultyResource })
 
       {/* Reader Modal */}
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="relative w-full max-w-2xl max-h-[88vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 overflow-y-auto">
+          <div className="relative w-full max-w-2xl max-h-[88vh] flex flex-col rounded-xl border border-border bg-card shadow-lg overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-border/70 p-5 bg-muted/20">
               <div className="space-y-1 pr-6">
@@ -70,7 +70,7 @@ export function FacultyResourceCard({ resource }: { resource: FacultyResource })
                     {resource.readingTime}
                   </span>
                 </div>
-                <h2 className="text-xl font-bold text-foreground">
+                <h2 className="text-xl font-semibold text-foreground">
                   {resource.title}
                 </h2>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -94,8 +94,8 @@ export function FacultyResourceCard({ resource }: { resource: FacultyResource })
             {/* Modal Scrollable Content */}
             <div className="overflow-y-auto p-6 space-y-6 text-sm">
               {/* Key Takeaways */}
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-primary">
+              <div className="rounded-md border border-border bg-muted/40 p-4 space-y-2">
+                <h3 className="text-xs font-semibold text-foreground">
                   Key Takeaways
                 </h3>
                 <ul className="space-y-1.5">
@@ -116,7 +116,7 @@ export function FacultyResourceCard({ resource }: { resource: FacultyResource })
               {/* Recommended Cases */}
               {resource.recommendedCases.length > 0 ? (
                 <div className="border-t border-border pt-4 space-y-2.5">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <h4 className="text-xs font-medium text-muted-foreground">
                     Apply this framework in practice cases
                   </h4>
                   <div className="flex flex-wrap gap-2">
@@ -125,7 +125,7 @@ export function FacultyResourceCard({ resource }: { resource: FacultyResource })
                         key={c.slug}
                         href={`/cases/${c.slug}`}
                         onClick={() => setOpen(false)}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/60 px-3 py-1.5 text-xs font-medium text-foreground hover:border-primary/50 hover:bg-muted"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/60 px-3 py-1.5 text-xs font-medium text-foreground hover:border-foreground/25 hover:bg-muted"
                       >
                         <span>{c.title}</span>
                         <ExternalLink className="size-3 text-muted-foreground" />

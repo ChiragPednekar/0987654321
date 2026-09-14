@@ -54,9 +54,9 @@ export function UserFilters() {
             onClick={() => setRole(r)}
             aria-pressed={role === r}
             className={cn(
-              "rounded-full border px-3 py-1 text-xs capitalize transition-colors",
+              "rounded-md border px-3 py-1 text-xs capitalize transition-colors",
               role === r
-                ? "border-primary bg-primary/10 text-foreground"
+                ? "border-foreground/40 bg-accent font-medium text-foreground"
                 : "border-border text-muted-foreground hover:text-foreground",
             )}
           >

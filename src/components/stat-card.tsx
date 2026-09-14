@@ -10,13 +10,12 @@ import { cn } from "@/lib/utils";
  * and the eye had nowhere to land. Three changes fix that without adding
  * decoration:
  *
- *   - the label becomes a small uppercase eyebrow, so it reads as a caption
- *     rather than competing with the number;
+ *   - the label becomes a small muted caption, so it does not compete with
+ *     the number;
  *   - the number gets tighter tracking and more size, because it is the only
  *     thing anyone is actually looking for;
- *   - the icon sits in a tinted well instead of floating grey, which gives the
- *     card a fixed visual anchor and lets `tone` carry meaning — amber for
- *     something needing attention, green for something healthy.
+ *   - the icon stays small and quiet, and `tone` colours it only when it
+ *     means something — amber for attention needed, green for healthy.
  */
 export function StatCard({
   label,
@@ -34,18 +33,20 @@ export function StatCard({
   accent?: string;
   tone?: "default" | "positive" | "warning" | "danger";
 }) {
+  // Tone colours the icon only. A tinted well per card turned a row of stats
+  // into a row of coloured badges; the number is what should stand out.
   const wells = {
-    default: "bg-muted text-muted-foreground",
-    positive: "bg-[var(--success)]/10 text-[var(--success)]",
-    warning: "bg-[var(--warning)]/10 text-[var(--warning)]",
-    danger: "bg-destructive/10 text-destructive",
+    default: "text-muted-foreground",
+    positive: "text-[var(--success)]",
+    warning: "text-[var(--warning)]",
+    danger: "text-destructive",
   } as const;
 
   return (
-    <Card className="transition-colors hover:border-border/80">
+    <Card>
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground">
             {label}
           </span>
           <span
@@ -58,7 +59,7 @@ export function StatCard({
           </span>
         </div>
 
-        <div className="mt-3 text-[2rem] font-semibold leading-none tracking-tight tabular">
+        <div className="mt-3 text-[2rem] font-medium leading-none tracking-tight tabular">
           {value}
         </div>
 

@@ -63,20 +63,20 @@ export default async function SimResultPage({
       <Card className="mt-5">
         <CardContent className="grid gap-4 p-6 sm:grid-cols-3">
           <div>
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Final score
             </p>
-            <p className="mt-1 text-3xl font-semibold tabular">
+            <p className="mt-1 text-3xl font-medium tabular">
               {crore(run.final_score ?? 0)}
             </p>
           </div>
           <div>
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Cumulative profit
             </p>
             <p
               className={cn(
-                "mt-1 text-3xl font-semibold tabular",
+                "mt-1 text-3xl font-medium tabular",
                 run.cumulative_profit >= 0 ? "text-[var(--success)]" : "text-destructive",
               )}
             >
@@ -84,10 +84,10 @@ export default async function SimResultPage({
             </p>
           </div>
           <div>
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Quarters played
             </p>
-            <p className="mt-1 text-3xl font-semibold tabular">{history.length}</p>
+            <p className="mt-1 text-3xl font-medium tabular">{history.length}</p>
           </div>
         </CardContent>
       </Card>
@@ -138,7 +138,7 @@ export default async function SimResultPage({
         </div>
       )}
 
-      <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+      <h2 className="mt-8 text-sm font-semibold text-foreground">
         Every quarter
       </h2>
       <div className="mt-3 overflow-x-auto rounded-lg border">

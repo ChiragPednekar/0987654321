@@ -56,7 +56,7 @@ export default async function InterviewPage() {
 
       {(past ?? []).length > 0 && (
         <>
-          <h2 className="mt-10 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="mt-10 text-sm font-semibold text-foreground">
             Past interviews
           </h2>
           <div className="mt-3 space-y-2">
@@ -65,7 +65,7 @@ export default async function InterviewPage() {
                 key={s.id}
                 href={s.status === "completed" ? `/interview/${s.id}/result` : `/interview/${s.id}`}
               >
-                <Card className="transition-colors hover:border-primary/40">
+                <Card className="transition-colors hover:border-foreground/25">
                   <CardContent className="flex items-center justify-between gap-3 p-4">
                     <div className="min-w-0">
                       <p className="text-sm font-medium">

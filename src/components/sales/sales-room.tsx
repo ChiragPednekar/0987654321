@@ -137,9 +137,9 @@ export function SalesRoom({
         )}
         {turns.map((t, i) => (
           <div key={i} className={cn("flex", t.role === "student" ? "justify-end" : "justify-start")}>
-            <Card className={cn("max-w-[90%]", t.role === "student" && "border-primary/30 bg-primary/5")}>
+            <Card className={cn("max-w-[90%]", t.role === "student" && "bg-muted/50")}>
               <CardContent className="p-3.5">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="text-[11px] font-medium text-muted-foreground">
                   {t.role === "student" ? "You" : buyerRole}
                 </p>
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{t.content}</p>

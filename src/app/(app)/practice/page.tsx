@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ArrowRight, Zap } from "lucide-react";
+import { ArrowRight, InfinityIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,7 +48,7 @@ export default async function PracticePage() {
         has run out of case gradings can still practise here every day.
       */}
       <div className="mt-4 flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
-        <Zap className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+        <InfinityIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
         <p className="text-muted-foreground">
           Unlimited. These sets are marked against an answer key rather than by
           the AI, so they never use your grading allowance.
@@ -57,7 +57,7 @@ export default async function PracticePage() {
 
       {groups.map((group) => (
         <section key={group} className="mt-8">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          <h2 className="text-sm font-semibold text-foreground">
             {group}
           </h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -65,7 +65,7 @@ export default async function PracticePage() {
               const stat = summary.get(track.value);
               return (
                 <Link key={track.value} href={`/practice/${track.value}`} className="group">
-                  <Card className="h-full transition-colors hover:border-primary/40">
+                  <Card className="h-full transition-colors hover:border-foreground/25">
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">

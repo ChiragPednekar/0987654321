@@ -159,7 +159,7 @@ export function CaseChat({
               className={cn(
                 "grid size-7 shrink-0 place-items-center rounded-full text-xs font-medium",
                 turn.role === "interviewer"
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-action text-action-foreground"
                   : "bg-muted text-muted-foreground",
               )}
               aria-hidden
@@ -171,7 +171,7 @@ export function CaseChat({
                 "min-w-0 max-w-[46rem] rounded-lg px-4 py-3 text-sm",
                 turn.role === "interviewer"
                   ? "bg-muted/60"
-                  : "bg-primary/10",
+                  : "bg-muted",
               )}
             >
               <p className="sr-only">

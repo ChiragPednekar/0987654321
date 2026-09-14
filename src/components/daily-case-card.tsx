@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, Clock, Flame } from "lucide-react";
+import { ArrowRight, CalendarDays, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,12 +47,12 @@ export function DailyCaseCard({
   }, []);
 
   return (
-    <Card className="overflow-hidden border-primary/30 bg-primary/[0.03]">
+    <Card className="overflow-hidden">
       <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <Flame className="size-4 text-[var(--warning)]" />
-            <p className="text-xs font-medium uppercase tracking-wide text-primary">
+            <CalendarDays className="size-4 text-muted-foreground" />
+            <p className="text-xs font-medium text-muted-foreground">
               Daily case
             </p>
             {solved && (

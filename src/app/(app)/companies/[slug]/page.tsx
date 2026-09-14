@@ -137,7 +137,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
           {company.practice.map((p) => (
             <Link key={p.href} href={p.href}>
-              <Card className="h-full transition-colors hover:border-primary/40">
+              <Card className="h-full transition-colors hover:border-foreground/25">
                 <CardContent className="flex items-start justify-between gap-2 p-3">
                   <div>
                     <p className="text-sm font-medium">{p.label}</p>
@@ -169,7 +169,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
           <div className="mt-3 space-y-4">
             {INTERVIEW_ROUNDS.filter((r) => byRound.has(r)).map((round) => (
               <div key={round}>
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   {ROUND_LABEL[round]}
                 </p>
                 <div className="mt-1.5 space-y-2">

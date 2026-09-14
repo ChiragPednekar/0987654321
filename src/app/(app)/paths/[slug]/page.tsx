@@ -130,7 +130,7 @@ export default async function PathDetailPage({ params }: PageProps) {
                     <Card
                       className={cn(
                         "transition-colors",
-                        locked ? "opacity-60" : "hover:border-primary/50",
+                        locked ? "opacity-60" : "hover:border-foreground/25",
                       )}
                     >
                       <CardContent className="flex items-center gap-4 p-4">
