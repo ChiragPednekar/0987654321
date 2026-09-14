@@ -744,7 +744,10 @@ export type CompanyRow = {
   rounds: import("@/lib/companies").CompanyRound[];
   look_for: string[];
   practice: import("@/lib/companies").PracticeLink[];
+  /** When the profile was written — not a verification date. */
   reviewed_on: string;
+  /** What the profile was checked against (20250101000055). Empty means unverified. */
+  sources: import("@/lib/companies").CompanySource[];
   is_published: boolean;
   created_at: string;
 }

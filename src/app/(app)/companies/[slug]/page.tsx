@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CircleAlert, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { INTERVIEW_ROUNDS, ROUND_LABEL, type InterviewRound } from "@/lib/companies";
+import { INTERVIEW_ROUNDS, ROUND_LABEL, lastChecked, type InterviewRound } from "@/lib/companies";
 import { ReportQuestion } from "@/components/companies/report-question";
 
 export const metadata: Metadata = { title: "Company prep" };
@@ -22,7 +22,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
   const admin = createAdminClient();
   const { data: company } = await admin
     .from("companies")
-    .select("id, slug, name, sector, roles, summary, rounds, look_for, practice, reviewed_on")
+    .select("id, slug, name, sector, roles, summary, rounds, look_for, practice, sources")
     .eq("slug", slug)
     .eq("is_published", true)
     .maybeSingle();
@@ -53,11 +53,19 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
     byRound.set(round, [...(byRound.get(round) ?? []), q]);
   }
 
-  const reviewed = new Date(`${company.reviewed_on}T00:00:00Z`).toLocaleDateString("en-IN", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  // A profile is only presented as checked when it lists what it was checked
+  // against. The date it was written is deliberately not shown: it used to read
+  // as "last reviewed", which claimed a verification nobody had done.
+  const sources = company.sources ?? [];
+  const checkedOn = lastChecked(sources);
+  const checked = checkedOn
+    ? new Date(`${checkedOn}T00:00:00Z`).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      })
+    : null;
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -71,6 +79,29 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
       </div>
       <p className="mt-1 text-sm text-muted-foreground">{company.roles.join(" · ")}</p>
       <p className="mt-3 text-sm">{company.summary}</p>
+
+      {checked ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Checked against{" "}
+          <a href="#sources" className="underline underline-offset-2 hover:text-foreground">
+            {sources.length === 1 ? "one source" : `${sources.length} sources`}
+          </a>
+          , most recently on {checked}.
+        </p>
+      ) : (
+        <div className="mt-4 flex gap-2.5 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+          <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div>
+            <p className="font-medium">Not verified against official sources</p>
+            <p className="mt-0.5 text-muted-foreground">
+              This is general guidance, written from widely reported descriptions of how{" "}
+              {company.name} usually hires. No one has yet checked it against the firm&apos;s own
+              careers page or placement records. Confirm the details with your placement cell
+              before relying on them.
+            </p>
+          </div>
+        </div>
+      )}
 
       <section className="mt-6">
         <h2 className="text-sm font-semibold">How the process usually runs</h2>
@@ -88,8 +119,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
           ))}
         </ol>
         <p className="mt-3 text-xs text-muted-foreground">
-          General guidance, last reviewed {reviewed}. Processes vary by year, campus and role —
-          check the details with your placement cell.
+          Processes vary by year, campus and role — check the details with your placement cell.
         </p>
       </section>
 
@@ -167,6 +197,40 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
           />
         </div>
       </section>
+
+      {sources.length > 0 && (
+        <section id="sources" className="mt-8 scroll-mt-20">
+          <h2 className="text-sm font-semibold">Sources</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            What this profile was checked against. Questions students reported are not covered by
+            these — they come from the students themselves.
+          </p>
+          <ul className="mt-2 space-y-1.5 text-sm">
+            {sources.map((s) => (
+              <li key={s.url} className="flex flex-wrap items-baseline gap-x-2">
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-primary"
+                >
+                  {s.label}
+                  <ExternalLink className="size-3" />
+                </a>
+                <span className="text-xs text-muted-foreground">
+                  checked{" "}
+                  {new Date(`${s.checked_on}T00:00:00Z`).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    timeZone: "UTC",
+                  })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <p className="mt-10 text-xs text-muted-foreground">
         CaseCode is not affiliated with, endorsed by, or connected to {company.name}.

@@ -5,7 +5,8 @@
  *   npm run seed:companies -- --dry-run
  *
  * Refuses to write anything if a profile has a practice link outside this
- * platform's own sections, a duplicate slug, or no rounds, look-fors or links.
+ * platform's own sections, a duplicate slug, no rounds, look-fors or links, or a
+ * source that is not a public https URL with a real, past check date.
  * Idempotent on slug.
  *
  * Seeds profiles only. Reported interview questions are never seeded: they
@@ -15,7 +16,7 @@
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/lib/types/database";
-import { COMPANY_SECTORS, isPracticeHref } from "../src/lib/companies";
+import { COMPANY_SECTORS, isPracticeHref, sourceProblems } from "../src/lib/companies";
 import { COMPANIES } from "./content/companies";
 
 config({ path: ".env.local" });
@@ -24,13 +25,17 @@ config({ path: ".env" });
 /** Pay, cut-offs and percentages. Word-bounded, or "rs" matches inside "years". */
 const STALE_FIGURES = /(₹|\brs\.?\s?\d|\blpa\b|\blakhs?\b|\bcrores?\b|\bcgpa\b|\bcut-?offs?\b|\d+(\.\d+)?\s?%)/i;
 
-/** The date these profiles were last checked. Shown on every page. */
-const REVIEWED_ON = "2026-09-13";
+/**
+ * When the profile text was written. Stored in `reviewed_on`, but it is not a
+ * verification date: a profile counts as checked only through its `sources`.
+ */
+const WRITTEN_ON = "2026-09-13";
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
   const problems: string[] = [];
   const slugs = new Set<string>();
+  const today = new Date().toISOString().slice(0, 10);
 
   for (const c of COMPANIES) {
     const say = (m: string) => problems.push(`${c.slug}: ${m}`);
@@ -44,6 +49,7 @@ async function main() {
     for (const p of c.practice) {
       if (!isPracticeHref(p.href)) say(`practice link ${p.href} is not a section of this platform`);
     }
+    for (const problem of sourceProblems(c.sources ?? [], today)) say(problem);
     // Numbers that go stale: a profile must not state them.
     const text = JSON.stringify([c.summary, c.rounds, c.lookFor]);
     if (STALE_FIGURES.test(text)) {
@@ -57,7 +63,8 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Validated ${COMPANIES.length} company profiles.`);
+  const checked = COMPANIES.filter((c) => (c.sources ?? []).length > 0).length;
+  console.log(`Validated ${COMPANIES.length} company profiles (${checked} checked against sources, ${COMPANIES.length - checked} unverified).`);
   if (dryRun) return;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -80,7 +87,8 @@ async function main() {
       rounds: c.rounds,
       look_for: c.lookFor,
       practice: c.practice,
-      reviewed_on: REVIEWED_ON,
+      reviewed_on: WRITTEN_ON,
+      sources: c.sources ?? [],
       is_published: true,
     })),
     { onConflict: "slug" },

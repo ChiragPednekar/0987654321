@@ -1,4 +1,4 @@
-import type { CompanyRound, CompanySector, PracticeLink } from "../../src/lib/companies";
+import type { CompanyRound, CompanySector, CompanySource, PracticeLink } from "../../src/lib/companies";
 
 /**
  * Company profiles.
@@ -14,6 +14,21 @@ import type { CompanyRound, CompanySector, PracticeLink } from "../../src/lib/co
  *
  * Questions actually asked are not written here. They come only from students,
  * through company_question_reports, and only once approved.
+ *
+ * NONE OF THESE HAS BEEN VERIFIED YET
+ *
+ * The text was written from general knowledge of how these firms hire, not
+ * read off an official source, and every page says so. To verify a profile,
+ * read it against a real source — the firm's careers page, your placement
+ * cell's record of last season's process — correct anything that differs, and
+ * add that source to `sources` with the day you checked it:
+ *
+ *   sources: [
+ *     { label: "Bain India careers — campus hiring", url: "https://…", checked_on: "2026-10-02" },
+ *   ],
+ *
+ * Only list a source you actually read against this profile. The page shows
+ * the profile as checked, with that date, as soon as one is listed.
  */
 
 export interface CompanySeed {
@@ -25,6 +40,8 @@ export interface CompanySeed {
   rounds: CompanyRound[];
   lookFor: string[];
   practice: PracticeLink[];
+  /** What this profile was checked against. Leave out until someone has. */
+  sources?: CompanySource[];
 }
 
 const MBB_CASES: PracticeLink = {

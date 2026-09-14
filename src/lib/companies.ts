@@ -55,6 +55,63 @@ export interface PracticeLink {
 }
 
 /**
+ * Something a profile was checked against: a firm's careers page, a placement
+ * cell's report. A profile with none is unverified and says so.
+ */
+export interface CompanySource {
+  label: string;
+  url: string;
+  /** YYYY-MM-DD, the day someone read the source against the profile. */
+  checked_on: string;
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Everything wrong with a profile's sources, as messages. Empty means valid.
+ *
+ * `today` is passed in rather than read, so a check dated tomorrow is refused
+ * the same way in a test as in the seeder.
+ */
+export function sourceProblems(sources: CompanySource[], today: string): string[] {
+  const problems: string[] = [];
+  const seen = new Set<string>();
+  for (const s of sources) {
+    const label = s.label?.trim() ?? "";
+    if (label.length < 3 || label.length > 120) problems.push(`source label "${label}" must be 3–120 characters`);
+
+    let url: URL | null = null;
+    try {
+      url = new URL(s.url);
+    } catch {
+      problems.push(`source ${s.url} is not a URL`);
+    }
+    if (url) {
+      if (url.protocol !== "https:") problems.push(`source ${s.url} must use https`);
+      if (!url.hostname.includes(".") || /^(localhost|127\.|10\.|192\.168\.)/.test(url.hostname)) {
+        problems.push(`source ${s.url} is not a public address`);
+      }
+      const key = url.href.replace(/\/$/, "");
+      if (seen.has(key)) problems.push(`source ${s.url} is listed twice`);
+      seen.add(key);
+    }
+
+    const date = new Date(`${s.checked_on}T00:00:00Z`);
+    if (!ISO_DATE.test(s.checked_on ?? "") || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== s.checked_on) {
+      problems.push(`source ${s.url} has checked_on "${s.checked_on}", which is not a YYYY-MM-DD date`);
+    } else if (s.checked_on > today) {
+      problems.push(`source ${s.url} is dated ${s.checked_on}, which is in the future`);
+    }
+  }
+  return problems;
+}
+
+/** The most recent check across a profile's sources, or null if it has none. */
+export function lastChecked(sources: CompanySource[]): string | null {
+  return sources.reduce<string | null>((latest, s) => (latest === null || s.checked_on > latest ? s.checked_on : latest), null);
+}
+
+/**
  * Internal paths a profile may link to. Checked by the seeder so a typo cannot
  * ship a dead link, and so a profile can never link off-site.
  */
