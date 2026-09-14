@@ -110,18 +110,8 @@ create index if not exists gd_sessions_host_idx on public.gd_sessions (host_id);
 
 alter table public.gd_sessions enable row level security;
 
--- Open rooms are visible to everyone so they can be joined; a room you are in
--- stays visible once it is live.
-drop policy if exists "gd sessions visible" on public.gd_sessions;
-create policy "gd sessions visible" on public.gd_sessions
-  for select using (
-    status = 'open'
-    or host_id = auth.uid()
-    or exists (
-      select 1 from public.gd_participants p
-      where p.session_id = gd_sessions.id and p.user_id = auth.uid()
-    )
-  );
+-- "gd sessions visible" is created after gd_participants below, because it
+-- reads that table and a policy cannot name a table that does not exist yet.
 
 drop policy if exists "staff read gd sessions" on public.gd_sessions;
 create policy "staff read gd sessions" on public.gd_sessions
@@ -180,6 +170,19 @@ create policy "staff read gd participants" on public.gd_participants
 revoke all on public.gd_participants from anon, authenticated;
 grant select on public.gd_participants to authenticated;
 grant select, insert, update, delete on public.gd_participants to service_role;
+
+-- Open rooms are visible to everyone so they can be joined; a room you are in
+-- stays visible once it is live.
+drop policy if exists "gd sessions visible" on public.gd_sessions;
+create policy "gd sessions visible" on public.gd_sessions
+  for select using (
+    status = 'open'
+    or host_id = auth.uid()
+    or exists (
+      select 1 from public.gd_participants p
+      where p.session_id = gd_sessions.id and p.user_id = auth.uid()
+    )
+  );
 
 -- ----------------------------------------------------------------------------
 -- What was said.
