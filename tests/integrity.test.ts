@@ -263,3 +263,59 @@ describe("an activity with no prose", () => {
     expect(verdict.severity).not.toBe("severe");
   });
 });
+
+/**
+ * A competition entry is prose graded by the same model a case is, so
+ * ai_likelihood genuinely applies here — unlike the quiz and the workbenches.
+ * What must NOT change is the rule that it cannot convict alone.
+ */
+describe("a competition entry", () => {
+  const typedItThemselves = {
+    ...EMPTY_SIGNALS,
+    proctored: true,
+    keystrokes: 4200,
+    blurCount: 1,
+  };
+
+  it("does not penalise a well-written entry the model calls AI-like", () => {
+    const verdict = assessIntegrity({
+      signals: typedItThemselves,
+      answerChars: 4000,
+      elapsedSeconds: null,
+      aiLikelihood: 97,
+    });
+    // Typed, present, nothing pasted: the model's opinion stands alone and so
+    // must cost nothing. This is the ESL false-positive case.
+    expect(verdict.penaltyPct).toBe(0);
+    expect(verdict.severity).toBe("clean");
+  });
+
+  it("does penalise one that was not typed and also reads as AI", () => {
+    const verdict = assessIntegrity({
+      signals: {
+        ...EMPTY_SIGNALS,
+        proctored: true,
+        keystrokes: 20,
+        pastedChars: 3900,
+        largestPaste: 3900,
+        pasteCount: 1,
+      },
+      answerChars: 4000,
+      elapsedSeconds: null,
+      aiLikelihood: 97,
+    });
+    expect(verdict.penaltyPct).toBeGreaterThan(0);
+    expect(verdict.flags.map((f) => f.code)).toContain("ai_style");
+  });
+
+  it("skips the speed check when there is no meaningful clock", () => {
+    // A competition runs for days, so elapsedSeconds is null by design.
+    const verdict = assessIntegrity({
+      signals: typedItThemselves,
+      answerChars: 4000,
+      elapsedSeconds: null,
+      aiLikelihood: null,
+    });
+    expect(verdict.flags.map((f) => f.code)).not.toContain("impossible_speed");
+  });
+});

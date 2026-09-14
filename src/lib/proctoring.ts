@@ -261,6 +261,19 @@ interface RecordActivityArgs {
    * false-positive problem with none of the evidence.
    */
   aiLikelihood?: number | null;
+  /**
+   * For surfaces where the work is REPLACED rather than added to — a
+   * competition entry is upserted, so resubmitting supersedes the previous
+   * version.
+   *
+   * Without this, a team iterating three times would give whoever pressed
+   * submit three separate strikes for one piece of behaviour, because signals
+   * are cumulative across a page session and each submission carries the whole
+   * sitting's counters. Earlier verdicts about the same subject are marked
+   * superseded rather than deleted: the row stays readable, as 000035 intends,
+   * but stops counting towards a suspension for work that no longer exists.
+   */
+  supersedePrevious?: boolean;
 }
 
 /**
@@ -281,6 +294,19 @@ export async function recordActivityIntegrity(
     elapsedSeconds: args.elapsedSeconds ?? null,
     aiLikelihood: args.aiLikelihood ?? null,
   });
+
+  if (args.supersedePrevious) {
+    await admin
+      .from("submission_integrity")
+      .update({
+        cleared_at: new Date().toISOString(),
+        cleared_note: "Superseded by a later version of the same work.",
+      })
+      .eq("user_id", args.userId)
+      .eq("activity", args.activity)
+      .eq("activity_ref", args.activityRef)
+      .is("cleared_at", null);
+  }
 
   const { error } = await admin.from("submission_integrity").insert({
     user_id: args.userId,

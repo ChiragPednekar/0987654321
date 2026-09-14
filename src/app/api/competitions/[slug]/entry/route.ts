@@ -7,22 +7,38 @@ import { evaluateSubmission } from "@/lib/ai/evaluate";
 import { RateLimitError } from "@/lib/ai/errors";
 import { recordUsage } from "@/lib/usage";
 import { MAX_ANSWER_CHARS, MIN_ANSWER_CHARS } from "@/lib/constants";
+import { signalsSchema } from "@/lib/integrity-request";
+import { recordActivityIntegrity } from "@/lib/proctoring";
 
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   answer: z.string().trim().min(MIN_ANSWER_CHARS).max(MAX_ANSWER_CHARS),
+  signals: signalsSchema,
 });
 
 /**
  * Submits or replaces the team's entry.
  *
- * Note what is NOT here: no proctoring signals, no integrity check, no
- * attempt stamping. A case competition is a take-home team effort — splitting
- * the work and pasting each other's sections into one document is the
- * exercise. Running the individual-submission integrity checks over it would
- * flag every well-organised team, which is precisely backwards.
+ * Proctored, unlike the first version of this route. The argument against was
+ * that a competition is a take-home team effort and pasting a teammate's
+ * section is the process working. The argument that won: this is the one
+ * RANKED surface, and leaving it unsupervised meant an entry written by a chat
+ * window arrived with no behavioural evidence whatsoever — leaving only the
+ * grader's read of the prose, which must never dock marks on its own. No
+ * enforcement at all, exactly where the stakes are highest.
+ *
+ * Two things are deliberately different from an individual submission:
+ *
+ *   * There is no server clock. A competition runs for days; "how long did
+ *     this take" has no meaning, so elapsedSeconds stays null and the speed
+ *     check is skipped rather than fed a number that would be nonsense.
+ *   * The verdict lands on whoever pressed submit, not on the team. They are
+ *     the person whose browser produced the evidence, and a strike is a
+ *     statement about a person's conduct, not a team's ranking. The entry's
+ *     mark is untouched by the penalty for the same reason the score is not
+ *     returned: a team should not be able to infer its standing from it.
  *
  * Any member may submit and the entry is replaced, so a team iterates on one
  * document rather than racing to be the one whose version counts.
@@ -156,10 +172,38 @@ export async function POST(
       return NextResponse.json({ error: "Could not save the entry." }, { status: 500 });
     }
 
+    /**
+     * Assessed after the entry is safely stored, as everywhere else — a
+     * verdict that failed to record must never cost a team the entry they
+     * already submitted.
+     *
+     * `activity_ref` is the team id, which is this table's primary key and so
+     * the row a human opens to see the entry being described. ai_likelihood is
+     * passed through because a competition entry IS prose judged by the same
+     * grader a case is; as always it cannot reduce a mark unless behavioural
+     * evidence corroborates it.
+     */
+    const integrity = await recordActivityIntegrity(admin, {
+      userId: user.id,
+      activity: "competition",
+      activityRef: membership.team_id,
+      signals: body.signals,
+      answerChars: body.answer.length,
+      elapsedSeconds: null,
+      aiLikelihood: result.aiLikelihood,
+      // The entry is upserted, so this verdict replaces the last one about it
+      // rather than stacking a second strike for the same sitting.
+      supersedePrevious: true,
+    });
+
     // The score is deliberately not returned. Teams would otherwise resubmit
     // against their own mark until they had reverse-engineered the rubric,
     // which is a different exercise from the one being run.
-    return NextResponse.json({ ok: true, submitted_at: now.toISOString() });
+    return NextResponse.json({
+      ok: true,
+      submitted_at: now.toISOString(),
+      integrity_warning: integrity.warning,
+    });
   } catch (err) {
     console.error("[competition] grading failed", err);
     if (err instanceof RateLimitError) {
