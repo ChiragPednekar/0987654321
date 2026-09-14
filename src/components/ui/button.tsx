@@ -4,20 +4,30 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150 disabled:pointer-events-none disabled:border-border-subtle disabled:bg-muted disabled:text-muted-foreground/60 disabled:shadow-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
   {
     variants: {
+      /**
+       * Five tiers that are told apart by weight, not only by hue: a filled
+       * brand primary, a tinted-neutral secondary that carries a hairline, a
+       * bordered tertiary on card, a borderless ghost, and a filled danger.
+       * Every one has its own hover AND active state, so a press is visible
+       * on a trackpad where hover never lands.
+       */
       variant: {
         default:
-          "bg-action text-action-foreground shadow-xs hover:bg-action-hover",
+          "bg-action text-action-foreground shadow-xs hover:bg-action-hover active:bg-[color-mix(in_oklch,var(--action-hover)_88%,black)]",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90",
+          "bg-danger text-danger-foreground shadow-xs hover:bg-[color-mix(in_oklch,var(--danger)_90%,black)] active:bg-[color-mix(in_oklch,var(--danger)_80%,black)]",
         outline:
-          "border border-input bg-card text-foreground hover:border-[color-mix(in_oklch,var(--input)_70%,var(--foreground))] hover:bg-accent",
+          "border border-input bg-card text-foreground hover:border-brand-border hover:bg-brand-surface hover:text-brand active:bg-[color-mix(in_oklch,var(--brand-surface)_88%,var(--brand))]",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-accent",
-        ghost: "text-foreground/85 hover:bg-accent hover:text-foreground",
-        link: "text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary",
+          // Hairline drawn as an inset shadow, not a border: a real border
+          // would add 2px to the button's width and move everything beside it.
+          "bg-secondary text-secondary-foreground shadow-[inset_0_0_0_1px_var(--border-subtle)] hover:bg-accent hover:shadow-[inset_0_0_0_1px_var(--border)] active:bg-[color-mix(in_oklch,var(--accent)_90%,var(--foreground))]",
+        ghost:
+          "text-muted-foreground hover:bg-brand-surface hover:text-brand active:bg-[color-mix(in_oklch,var(--brand-surface)_88%,var(--brand))]",
+        link: "text-brand underline decoration-brand/30 underline-offset-4 hover:decoration-brand",
       },
       size: {
         default: "h-9 px-4 py-2",

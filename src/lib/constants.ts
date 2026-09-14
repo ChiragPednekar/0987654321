@@ -75,17 +75,17 @@ export const DIFFICULTIES: {
   {
     value: "easy",
     label: "Easy",
-    className: "text-emerald-600 dark:text-emerald-400",
+    className: "text-success",
   },
   {
     value: "medium",
     label: "Medium",
-    className: "text-amber-600 dark:text-amber-400",
+    className: "text-warning",
   },
   {
     value: "hard",
     label: "Hard",
-    className: "text-rose-600 dark:text-rose-400",
+    className: "text-danger",
   },
 ];
 
