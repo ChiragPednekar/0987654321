@@ -5,7 +5,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { markFormula, type Grid } from "@/lib/excel/runner";
 import { signalsSchema } from "@/lib/integrity-request";
-import { recordActivityIntegrity } from "@/lib/proctoring";
+import {
+  consumeActivityElapsed,
+  recordActivityIntegrity,
+} from "@/lib/proctoring";
 
 export const dynamic = "force-dynamic";
 
@@ -98,9 +101,16 @@ export async function POST(request: NextRequest) {
    */
   let warning: string | null = null;
   if (verdict.correct && attempt?.id) {
+    const elapsedSeconds = await consumeActivityElapsed(
+      admin,
+      user.id,
+      "excel",
+      exercise.id,
+    );
     const integrity = await recordActivityIntegrity(admin, {
       userId: user.id,
       activity: "excel",
+      elapsedSeconds,
       activityRef: attempt.id,
       signals: body.signals,
     });

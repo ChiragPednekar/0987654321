@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SqlWorkbench } from "@/components/sql/sql-workbench";
 
@@ -26,7 +25,11 @@ export default async function SqlExercisePage({
   // are not granted to clients and must never reach a page.
   const { data: exercise } = await admin
     .from("sql_exercises")
-    .select("id, title, prompt, topic, difficulty, schema_note, order_matters, hint")
+    // Deliberately not prompt, schema_note, order_matters or hint. Those are
+    // the exercise, and they are handed over by /api/sql/open once the student
+    // has armed exam mode — a prop rendered here would travel in the page
+    // payload and be readable without pressing Start.
+    .select("id, title, topic, difficulty")
     .eq("slug", slug)
     .eq("is_published", true)
     .maybeSingle();
@@ -54,18 +57,9 @@ export default async function SqlExercisePage({
         <Badge variant="outline">{exercise.difficulty}</Badge>
       </div>
 
-      <Card className="mt-4">
-        <CardContent className="p-5">
-          <p className="text-sm">{exercise.prompt}</p>
-        </CardContent>
-      </Card>
-
       <div className="mt-5">
         <SqlWorkbench
           slug={slug}
-          schemaNote={exercise.schema_note}
-          orderMatters={exercise.order_matters}
-          hint={exercise.hint}
           initialQuery={last?.query ?? ""}
           alreadySolved={Boolean(last?.correct)}
         />

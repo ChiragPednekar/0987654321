@@ -5,7 +5,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { compareResults, runQuery } from "@/lib/sql/runner";
 import { signalsSchema } from "@/lib/integrity-request";
-import { recordActivityIntegrity } from "@/lib/proctoring";
+import {
+  consumeActivityElapsed,
+  recordActivityIntegrity,
+} from "@/lib/proctoring";
 
 export const maxDuration = 30;
 export const dynamic = "force-dynamic";
@@ -85,9 +88,18 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (correct && attempt?.id) {
+      // Stamped by /api/sql/open when the gate was passed, so the time
+      // taken cannot be reported by the client that is being assessed.
+      const elapsedSeconds = await consumeActivityElapsed(
+        admin,
+        user.id,
+        "sql",
+        exercise.id,
+      );
       const integrity = await recordActivityIntegrity(admin, {
         userId: user.id,
         activity: "sql",
+        elapsedSeconds,
         activityRef: attempt.id,
         signals: body.signals,
       });

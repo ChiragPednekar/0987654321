@@ -30,16 +30,10 @@ interface ResultSet {
  */
 export function SqlWorkbench({
   slug,
-  schemaNote,
-  orderMatters,
-  hint,
   initialQuery,
   alreadySolved,
 }: {
   slug: string;
-  schemaNote: string;
-  orderMatters: boolean;
-  hint: string | null;
   initialQuery: string;
   alreadySolved: boolean;
 }) {
@@ -60,6 +54,46 @@ export function SqlWorkbench({
    * did. Refusing the paste is what makes them type it.
    */
   const proctor = useProctor(true);
+
+  /**
+   * The exercise itself, fetched only once exam mode is armed.
+   *
+   * Rendering it from the server and hiding it behind the gate was not the
+   * same as withholding it: props for a client component travel in the page
+   * payload, so the prompt and schema were readable from View Source without
+   * ever pressing Start.
+   */
+  const [exercise, setExercise] = React.useState<{
+    prompt: string;
+    schema_note: string;
+    order_matters: boolean;
+    hint: string | null;
+  } | null>(null);
+  const [opening, setOpening] = React.useState(false);
+
+  async function beginAttempt() {
+    setOpening(true);
+    // Before the await: fullscreen is only granted inside the click's own
+    // activation, which a network round trip outlives.
+    void proctor.start();
+    try {
+      const response = await fetch("/api/sql/open", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        toast.error(payload.error ?? "Could not open the exercise.");
+        return;
+      }
+      setExercise(payload);
+    } catch {
+      toast.error("Network error.");
+    } finally {
+      setOpening(false);
+    }
+  }
 
   async function run() {
     setBusy(true);
@@ -127,11 +161,11 @@ export function SqlWorkbench({
    * same reason the quiz hides its questions: being able to read the exercise
    * before starting is most of what an unsupervised window is worth.
    */
-  if (!proctor.examMode) {
+  if (!proctor.examMode || !exercise) {
     return (
       <ProctorGate
-        starting={proctor.starting}
-        onStart={proctor.start}
+        starting={proctor.starting || opening}
+        onStart={beginAttempt}
         title="This exercise is worked under exam conditions"
         rules={WORKBENCH_RULES}
       />
@@ -147,12 +181,18 @@ export function SqlWorkbench({
         />
       )}
       <Card>
+        <CardContent className="p-5">
+          <p className="text-sm">{exercise.prompt}</p>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardContent className="p-4">
           <p className="text-xs font-medium text-muted-foreground">
             Schema
           </p>
           <pre className="mt-2 overflow-x-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-muted-foreground">
-            {schemaNote}
+            {exercise.schema_note}
           </pre>
         </CardContent>
       </Card>
@@ -176,12 +216,12 @@ export function SqlWorkbench({
         />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
-            {orderMatters
+            {exercise.order_matters
               ? "Row order matters for this one — write an ORDER BY."
               : "Row order does not matter. Column names do not either."}
           </p>
           <div className="flex gap-2">
-            {hint && (
+            {exercise.hint && (
               <Button size="sm" variant="ghost" onClick={() => setShowHint((v) => !v)}>
                 {showHint ? "Hide hint" : "Hint"}
               </Button>
@@ -196,9 +236,9 @@ export function SqlWorkbench({
             </Button>
           </div>
         </div>
-        {showHint && hint && (
+        {showHint && exercise.hint && (
           <p className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-            {hint}
+            {exercise.hint}
           </p>
         )}
       </div>

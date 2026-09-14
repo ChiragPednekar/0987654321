@@ -51,18 +51,13 @@ function display(value: ExcelCell): string {
  */
 export function ExcelWorkbench({
   slug,
-  grid,
-  answerLabel,
   functions,
-  hint,
   initialFormula,
   alreadySolved,
 }: {
   slug: string;
-  grid: ExcelCell[][];
-  answerLabel: string;
+  /** The allow-list. Not part of the exercise, so it may be sent up front. */
   functions: string[];
-  hint: string | null;
   initialFormula: string;
   alreadySolved: boolean;
 }) {
@@ -83,7 +78,45 @@ export function ExcelWorkbench({
    */
   const proctor = useProctor(true);
 
-  const width = grid.reduce((widest, row) => Math.max(widest, row.length), 0);
+  /**
+   * The grid, fetched only once exam mode is armed.
+   *
+   * It used to be a prop, which meant the entire dataset travelled in the page
+   * payload — readable from View Source, so the answer could be worked out in
+   * a real spreadsheet before Start was ever pressed. Hiding it behind the
+   * gate was not the same as withholding it.
+   */
+  const [exercise, setExercise] = React.useState<{
+    prompt: string;
+    grid: ExcelCell[][];
+    answer_label: string;
+    hint: string | null;
+  } | null>(null);
+  const [opening, setOpening] = React.useState(false);
+
+  async function beginAttempt() {
+    setOpening(true);
+    // Before the await, for the transient-activation reason.
+    void proctor.start();
+    try {
+      const response = await fetch("/api/excel/open", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        toast.error(payload.error ?? "Could not open the exercise.");
+        return;
+      }
+      setExercise(payload);
+    } catch {
+      toast.error("Network error.");
+    } finally {
+      setOpening(false);
+    }
+  }
+
   const empty = !formula.replace(/^=/, "").trim();
 
   async function run() {
@@ -149,16 +182,21 @@ export function ExcelWorkbench({
    * a student read the data, work the answer out elsewhere and then press
    * Start with nothing recorded.
    */
-  if (!proctor.examMode) {
+  if (!proctor.examMode || !exercise) {
     return (
       <ProctorGate
-        starting={proctor.starting}
-        onStart={proctor.start}
+        starting={proctor.starting || opening}
+        onStart={beginAttempt}
         title="This exercise is worked under exam conditions"
         rules={WORKBENCH_RULES}
       />
     );
   }
+
+  const width = exercise.grid.reduce(
+    (widest, row) => Math.max(widest, row.length),
+    0,
+  );
 
   return (
     <div className="space-y-4">
@@ -184,7 +222,7 @@ export function ExcelWorkbench({
             </tr>
           </thead>
           <tbody>
-            {grid.map((row, r) => (
+            {exercise.grid.map((row, r) => (
               <tr key={r}>
                 <td className="sticky left-0 border-b border-r bg-muted px-2 py-1 text-center text-xs text-muted-foreground">
                   {r + 1}
@@ -214,7 +252,7 @@ export function ExcelWorkbench({
       <div className="space-y-2">
         <label className="flex items-center gap-2">
           <span className="shrink-0 font-mono text-xs text-muted-foreground">
-            {answerLabel} <span className="italic">fx</span>
+            {exercise.answer_label} <span className="italic">fx</span>
           </span>
           <Input
             value={formula}
@@ -242,7 +280,7 @@ export function ExcelWorkbench({
             <Button size="sm" variant="ghost" onClick={() => setShowFunctions((v) => !v)}>
               {showFunctions ? "Hide functions" : "Functions"}
             </Button>
-            {hint && (
+            {exercise.hint && (
               <Button size="sm" variant="ghost" onClick={() => setShowHint((v) => !v)}>
                 {showHint ? "Hide hint" : "Hint"}
               </Button>
@@ -262,9 +300,9 @@ export function ExcelWorkbench({
             {functions.join(", ")}
           </p>
         )}
-        {showHint && hint && (
+        {showHint && exercise.hint && (
           <p className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-            {hint}
+            {exercise.hint}
           </p>
         )}
       </div>
@@ -275,7 +313,7 @@ export function ExcelWorkbench({
 
       {value && !error && (
         <p className="font-mono text-sm">
-          <span className="text-muted-foreground">{answerLabel} = </span>
+          <span className="text-muted-foreground">{exercise.answer_label} = </span>
           {value.value === null ? (
             <span className="text-muted-foreground">(blank)</span>
           ) : (
