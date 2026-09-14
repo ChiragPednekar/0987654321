@@ -20,8 +20,14 @@ import type { Database } from "../src/lib/types/database";
 import { WRITTEN_SEEDS } from "./content/written-formats";
 import { WRITTEN_SEEDS_MORE } from "./content/written-formats-more";
 import { WRITTEN_SEEDS_ROLES } from "./content/written-formats-roles";
+import { WRITTEN_SEEDS_EXPANSION } from "./content/written-formats-expansion";
 
-const ALL_SEEDS = [...WRITTEN_SEEDS, ...WRITTEN_SEEDS_MORE, ...WRITTEN_SEEDS_ROLES];
+const ALL_SEEDS = [
+  ...WRITTEN_SEEDS,
+  ...WRITTEN_SEEDS_MORE,
+  ...WRITTEN_SEEDS_ROLES,
+  ...WRITTEN_SEEDS_EXPANSION,
+];
 
 config({ path: ".env.local" });
 config({ path: ".env" });
