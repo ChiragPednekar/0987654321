@@ -42,6 +42,17 @@ import {
   LOGICAL_REASONING_FILL,
   VERBAL_FILL,
 } from "./content/objective-aptitude-fill";
+import {
+  ACCOUNTING_EXPANSION,
+  DATA_INTERPRETATION_EXPANSION,
+  FINANCE_EXPANSION,
+  LOGICAL_REASONING_EXPANSION,
+  MARKETING_EXPANSION,
+  OPERATIONS_EXPANSION,
+  QUANT_EXPANSION,
+  STATISTICS_EXPANSION,
+  VERBAL_EXPANSION,
+} from "./content/objective-expansion";
 
 config({ path: ".env.local" });
 config({ path: ".env" });
@@ -49,15 +60,15 @@ config({ path: ".env" });
 type Track = Database["public"]["Tables"]["objective_questions"]["Row"]["track"];
 
 const BANKS: [Track, ObjectiveSeed[]][] = [
-  ["quant", [...QUANT, ...QUANT_MORE]],
-  ["data_interpretation", [...DATA_INTERPRETATION, ...DATA_INTERPRETATION_MORE, ...DATA_INTERPRETATION_FILL]],
-  ["logical_reasoning", [...LOGICAL_REASONING, ...LOGICAL_REASONING_MORE, ...LOGICAL_REASONING_FILL]],
-  ["verbal", [...VERBAL, ...VERBAL_MORE, ...VERBAL_FILL]],
-  ["finance_concepts", [...FINANCE_CONCEPTS, ...FINANCE_CONCEPTS_MORE]],
-  ["accounting", [...ACCOUNTING, ...ACCOUNTING_MORE]],
-  ["marketing_concepts", [...MARKETING_CONCEPTS, ...MARKETING_CONCEPTS_MORE]],
-  ["operations_concepts", OPERATIONS_CONCEPTS],
-  ["statistics", STATISTICS],
+  ["quant", [...QUANT, ...QUANT_MORE, ...QUANT_EXPANSION]],
+  ["data_interpretation", [...DATA_INTERPRETATION, ...DATA_INTERPRETATION_MORE, ...DATA_INTERPRETATION_FILL, ...DATA_INTERPRETATION_EXPANSION]],
+  ["logical_reasoning", [...LOGICAL_REASONING, ...LOGICAL_REASONING_MORE, ...LOGICAL_REASONING_FILL, ...LOGICAL_REASONING_EXPANSION]],
+  ["verbal", [...VERBAL, ...VERBAL_MORE, ...VERBAL_FILL, ...VERBAL_EXPANSION]],
+  ["finance_concepts", [...FINANCE_CONCEPTS, ...FINANCE_CONCEPTS_MORE, ...FINANCE_EXPANSION]],
+  ["accounting", [...ACCOUNTING, ...ACCOUNTING_MORE, ...ACCOUNTING_EXPANSION]],
+  ["marketing_concepts", [...MARKETING_CONCEPTS, ...MARKETING_CONCEPTS_MORE, ...MARKETING_EXPANSION]],
+  ["operations_concepts", [...OPERATIONS_CONCEPTS, ...OPERATIONS_EXPANSION]],
+  ["statistics", [...STATISTICS, ...STATISTICS_EXPANSION]],
   ["current_affairs", [...CURRENT_AFFAIRS, ...CURRENT_AFFAIRS_MORE]],
 ];
 

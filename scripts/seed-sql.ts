@@ -152,6 +152,101 @@ type Exercise = {
 
 const EXERCISES: Exercise[] = [
   {
+    slug: "sql-total-shipped-revenue",
+    title: "Total revenue from shipped orders",
+    topic: "aggregation",
+    difficulty: "easy",
+    prompt:
+      "Return a single row with the total revenue across all shipped orders. Revenue is quantity x unit_price.",
+    solution_sql:
+      "select sum(o.quantity * p.unit_price) as revenue from orders o join products p on p.id = o.product_id where o.status = 'shipped'",
+    order_matters: false,
+    hint: "Join orders to products, filter to shipped, then SUM the product of the two columns.",
+    hardcoded: "select 678000 as revenue",
+  },
+  {
+    slug: "sql-revenue-by-category",
+    title: "Revenue by product category",
+    topic: "aggregation",
+    difficulty: "medium",
+    prompt:
+      "For each product category, return the category and its total shipped revenue.",
+    solution_sql:
+      "select p.category, sum(o.quantity * p.unit_price) as revenue from orders o join products p on p.id = o.product_id where o.status = 'shipped' group by p.category",
+    order_matters: false,
+    hint: "GROUP BY the category once the join and the filter are in place.",
+    hardcoded:
+      "select 'software' as category, 498000 as revenue union all select 'services', 36000 union all select 'infrastructure', 144000",
+  },
+  {
+    slug: "sql-top-spending-customer",
+    title: "The customer who spent the most",
+    topic: "ranking",
+    difficulty: "medium",
+    prompt:
+      "Return the name and total shipped spend of the single customer who has spent the most.",
+    solution_sql:
+      "select c.name, sum(o.quantity * p.unit_price) as spend from orders o join products p on p.id = o.product_id join customers c on c.id = o.customer_id where o.status = 'shipped' group by c.id, c.name order by spend desc limit 1",
+    order_matters: false,
+    hint: "Three tables joined, grouped per customer, ordered by the total and cut to one row.",
+    hardcoded: "select 'Sneha Kulkarni' as name, 144000 as spend",
+  },
+  {
+    slug: "sql-repeat-customers",
+    title: "Customers who ordered more than once",
+    topic: "aggregation",
+    difficulty: "easy",
+    prompt:
+      "Return the name of every customer who has placed at least two orders, of any status.",
+    solution_sql:
+      "select c.name from customers c join orders o on o.customer_id = c.id group by c.id, c.name having count(*) >= 2",
+    order_matters: false,
+    hint: "HAVING filters groups after they are formed, the way WHERE filters rows before.",
+    hardcoded:
+      "select 'Aarav Menon' as name union all select 'Priya Raghavan' union all select 'Rohan Das' union all select 'Sneha Kulkarni' union all select 'Imran Qureshi' union all select 'Meera Iyer' union all select 'Vikram Shah'",
+  },
+  {
+    slug: "sql-never-cancelled",
+    title: "Customers who never cancelled",
+    topic: "subqueries",
+    difficulty: "medium",
+    prompt:
+      "Return the name of every customer who has never had an order with status 'cancelled'.",
+    solution_sql:
+      "select name from customers where id not in (select customer_id from orders where status = 'cancelled')",
+    order_matters: false,
+    hint: "NOT IN against a subquery listing the customers who did cancel.",
+    hardcoded:
+      "select 'Aarav Menon' as name union all select 'Priya Raghavan' union all select 'Sneha Kulkarni' union all select 'Imran Qureshi' union all select 'Meera Iyer' union all select 'Ananya Bose'",
+  },
+  {
+    slug: "sql-above-average-order",
+    title: "Orders worth more than average",
+    topic: "subqueries",
+    difficulty: "hard",
+    prompt:
+      "Return the id and value of every shipped order worth more than the average shipped order.",
+    solution_sql:
+      "select o.id, o.quantity * p.unit_price as value from orders o join products p on p.id = o.product_id where o.status = 'shipped' and o.quantity * p.unit_price > (select avg(o2.quantity * p2.unit_price) from orders o2 join products p2 on p2.id = o2.product_id where o2.status = 'shipped')",
+    order_matters: false,
+    hint: "The average has to be computed over the same filtered set, which is what the subquery is for.",
+    hardcoded:
+      "select 1 as id, 96000 as value union all select 3, 72000 union all select 6, 144000 union all select 11, 90000",
+  },
+  {
+    slug: "sql-best-month",
+    title: "The strongest month",
+    topic: "dates",
+    difficulty: "hard",
+    prompt:
+      "Return the year-month (as YYYY-MM) with the highest shipped revenue, and that revenue. One row.",
+    solution_sql:
+      "select substr(o.ordered_on, 1, 7) as month, sum(o.quantity * p.unit_price) as revenue from orders o join products p on p.id = o.product_id where o.status = 'shipped' group by month order by revenue desc limit 1",
+    order_matters: false,
+    hint: "SUBSTR cuts the first seven characters of the date, which is the year and month.",
+    hardcoded: "select '2024-05' as month, 144000 as revenue",
+  },
+  {
     slug: "sql-customers-in-city",
     title: "Customers in one city",
     topic: "filtering",
