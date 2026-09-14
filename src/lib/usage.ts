@@ -21,8 +21,9 @@ import type { Database } from "@/lib/types/database";
 type Admin = SupabaseClient<Database>;
 
 export interface UsageEvent {
-  userId: string;
-  operation: "grading" | "interview";
+  /** Null for platform work no student caused, such as writing the daily quiz. */
+  userId: string | null;
+  operation: "grading" | "interview" | "content";
   model: string | null;
   inputTokens: number;
   outputTokens: number;
@@ -80,11 +81,13 @@ export async function recordUsage(admin: Admin, event: UsageEvent): Promise<void
 
     // Denormalised at write time: a student can leave an institution later, and
     // the cost their usage caused still belongs to that contract.
-    const { data: membership } = await admin
-      .from("institution_members")
-      .select("institution_id")
-      .eq("user_id", event.userId)
-      .maybeSingle();
+    const { data: membership } = event.userId
+      ? await admin
+          .from("institution_members")
+          .select("institution_id")
+          .eq("user_id", event.userId)
+          .maybeSingle()
+      : { data: null };
 
     const { error } = await admin.from("usage_events").insert({
       user_id: event.userId,

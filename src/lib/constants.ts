@@ -243,6 +243,13 @@ export const CASE_FORMATS: { value: CaseFormat; label: string; hint: string }[] 
   { value: "memo", label: "Memo", hint: "One page to a decision-maker" },
   { value: "wat", label: "Written Ability", hint: "An argued essay against the clock" },
   { value: "behavioural", label: "Behavioural", hint: "The HR answer, structured" },
+  { value: "product_sense", label: "Product Sense", hint: "Pick a user, find the need, design and prioritise" },
+  { value: "metrics", label: "Metrics", hint: "A north star, its inputs and the guardrails" },
+  { value: "prioritisation", label: "Prioritisation", hint: "Rank against a goal and say what you will not do" },
+  { value: "research_note", label: "Research Note", hint: "Rating, target and thesis, with the valuation shown" },
+  { value: "gtm_plan", label: "Go-to-Market", hint: "Beachhead, proposition, channels, milestones" },
+  { value: "marketing_mix", label: "Marketing Mix", hint: "Find the lever that is actually broken" },
+  { value: "campaign_critique", label: "Campaign Critique", hint: "Read the results, then say why" },
 ];
 
 export const CASE_FORMAT_LABEL: Record<CaseFormat, string> = Object.fromEntries(

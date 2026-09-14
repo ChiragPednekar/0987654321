@@ -29,7 +29,15 @@ export type CaseFormat =
   | "rca"
   | "wat"
   | "memo"
-  | "behavioural";
+  | "behavioural"
+  /** Role-specific formats added in 20250101000051. Same engine. */
+  | "product_sense"
+  | "metrics"
+  | "prioritisation"
+  | "research_note"
+  | "gtm_plan"
+  | "marketing_mix"
+  | "campaign_critique";
 export type UserRole = "student" | "teacher" | "admin" | "recruiter";
 export type SubmissionStatus =
   | "draft"
@@ -333,6 +341,8 @@ export type ObjectiveTrack =
   | "marketing_concepts"
   /** 20250101000039. */
   | "operations_concepts"
+  /** 20250101000050. */
+  | "statistics"
   | "current_affairs";
 
 export type ObjectiveQuestionRow = {
@@ -653,6 +663,166 @@ export type SqlAttemptRow = {
   correct: boolean;
   /** 'hidden' means it only worked on the data they could see. */
   failed_on: "visible" | "hidden" | "error" | null;
+  created_at: string;
+}
+
+// ---- Deck reviews (20250101000053) ----------------------------------------
+
+export type DeckReviewRow = {
+  id: string;
+  user_id: string;
+  file_name: string | null;
+  context: string | null;
+  input_hash: string | null;
+  result: import("@/lib/deck").DeckCritiqueResult | null;
+  model: string | null;
+  erased_at: string | null;
+  created_at: string;
+}
+
+// ---- Sales role-play (20250101000052) -------------------------------------
+
+export type SalesScenarioRow = {
+  id: string;
+  slug: string;
+  title: string;
+  sector: string;
+  difficulty: Difficulty;
+  shared_brief: string;
+  student_role: string;
+  buyer_role: string;
+  student_brief: string;
+  max_turns: number;
+  /** buyer_brief, needs, objections and buy_rule are withheld by grant. */
+  buyer_brief: string;
+  needs: import("@/lib/sales/engine").SalesNeed[];
+  objections: import("@/lib/sales/engine").SalesObjection[];
+  buy_rule: import("@/lib/sales/engine").BuyRule;
+  is_published: boolean;
+  created_at: string;
+}
+
+export interface SalesDebrief {
+  scores: Record<string, number>;
+  strengths: string[];
+  improvements: string[];
+  verdict: string;
+}
+
+export type SalesSessionRow = {
+  id: string;
+  user_id: string;
+  scenario_id: string;
+  status: "live" | "won" | "lost";
+  uncovered: import("@/lib/sales/engine").SalesState["uncovered"];
+  resolved: import("@/lib/sales/engine").SalesState["resolved"];
+  turns: number;
+  outcome_reason: string | null;
+  debrief: SalesDebrief | Record<string, never>;
+  started_at: string;
+  ended_at: string | null;
+}
+
+export type SalesMessageRow = {
+  id: string;
+  session_id: string;
+  role: "student" | "buyer";
+  content: string;
+  overridden: boolean;
+  created_at: string;
+}
+
+// ---- Company prep (20250101000049) ----------------------------------------
+
+export type CompanyRow = {
+  id: string;
+  slug: string;
+  name: string;
+  sector: import("@/lib/companies").CompanySector;
+  roles: string[];
+  summary: string;
+  rounds: import("@/lib/companies").CompanyRound[];
+  look_for: string[];
+  practice: import("@/lib/companies").PracticeLink[];
+  reviewed_on: string;
+  is_published: boolean;
+  created_at: string;
+}
+
+export type CompanyQuestionReportRow = {
+  id: string;
+  company_id: string;
+  /** Withheld from clients by column grant. Never shown. */
+  user_id: string | null;
+  role: string;
+  round: import("@/lib/companies").InterviewRound;
+  year: number;
+  question: string;
+  status: "pending" | "approved" | "rejected";
+  review_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+// ---- Daily current affairs (20250101000048) -------------------------------
+
+export type CaSourceItemRow = {
+  id: string;
+  source: "rbi";
+  url: string;
+  title: string;
+  published_at: string;
+  /** Not granted to clients. */
+  body: string;
+  first_seen_at: string;
+}
+
+export type CaQuizRow = {
+  id: string;
+  quiz_date: string;
+  model: string | null;
+  created_at: string;
+}
+
+export type CaQuestionRow = {
+  id: string;
+  quiz_id: string;
+  position: number;
+  stem: string;
+  options: string[];
+  /** correct_index, explanation, evidence and source_item_id are withheld by grant. */
+  correct_index: number;
+  explanation: string;
+  evidence: string;
+  source_item_id: string;
+  is_pulled: boolean;
+  pulled_at: string | null;
+  pulled_by: string | null;
+}
+
+export type CaAttemptRow = {
+  id: string;
+  user_id: string;
+  quiz_id: string;
+  /** By position; -1 for unanswered. */
+  answers: number[];
+  on_the_day: boolean;
+  submitted_at: string;
+}
+
+// ---- Resume critiques (20250101000047) ------------------------------------
+
+export type ResumeCritiqueRow = {
+  id: string;
+  user_id: string;
+  target_role: string | null;
+  bullets: string[] | null;
+  input_hash: string | null;
+  /** A ResumeCritiqueResult from src/lib/resume.ts. Null once erased. */
+  result: import("@/lib/resume").ResumeCritiqueResult | null;
+  model: string | null;
+  erased_at: string | null;
   created_at: string;
 }
 
@@ -1266,6 +1436,72 @@ export interface Database {
         Row: ExcelExerciseRow;
         Insert: Partial<ExcelExerciseRow>;
         Update: Partial<ExcelExerciseRow>;
+        Relationships: [];
+      };
+      deck_reviews: {
+        Row: DeckReviewRow;
+        Insert: Partial<DeckReviewRow>;
+        Update: Partial<DeckReviewRow>;
+        Relationships: [];
+      };
+      sales_scenarios: {
+        Row: SalesScenarioRow;
+        Insert: Partial<SalesScenarioRow>;
+        Update: Partial<SalesScenarioRow>;
+        Relationships: [];
+      };
+      sales_sessions: {
+        Row: SalesSessionRow;
+        Insert: Partial<SalesSessionRow>;
+        Update: Partial<SalesSessionRow>;
+        Relationships: [];
+      };
+      sales_messages: {
+        Row: SalesMessageRow;
+        Insert: Partial<SalesMessageRow>;
+        Update: Partial<SalesMessageRow>;
+        Relationships: [];
+      };
+      companies: {
+        Row: CompanyRow;
+        Insert: Partial<CompanyRow>;
+        Update: Partial<CompanyRow>;
+        Relationships: [];
+      };
+      company_question_reports: {
+        Row: CompanyQuestionReportRow;
+        Insert: Partial<CompanyQuestionReportRow>;
+        Update: Partial<CompanyQuestionReportRow>;
+        Relationships: [];
+      };
+      ca_source_items: {
+        Row: CaSourceItemRow;
+        Insert: Partial<CaSourceItemRow>;
+        Update: Partial<CaSourceItemRow>;
+        Relationships: [];
+      };
+      ca_quizzes: {
+        Row: CaQuizRow;
+        Insert: Partial<CaQuizRow>;
+        Update: Partial<CaQuizRow>;
+        Relationships: [];
+      };
+      ca_questions: {
+        Row: CaQuestionRow;
+        Insert: Partial<CaQuestionRow>;
+        Update: Partial<CaQuestionRow>;
+        Relationships: [];
+      };
+      ca_attempts: {
+        Row: CaAttemptRow;
+        Insert: Partial<CaAttemptRow>;
+        Update: Partial<CaAttemptRow>;
+        Relationships: [];
+      };
+      resume_critiques: {
+        Row: ResumeCritiqueRow;
+        Insert: Partial<ResumeCritiqueRow>;
+        Update: Partial<ResumeCritiqueRow>;
         Relationships: [];
       };
       excel_attempts: {
@@ -1966,7 +2202,8 @@ export type InstitutionCommercialsRow = {
 
 // ------------------------------------------------------ usage and audit --
 
-export type UsageOperation = "grading" | "interview";
+/** "content" is platform work no student caused, e.g. writing the daily quiz (20250101000048). */
+export type UsageOperation = "grading" | "interview" | "content";
 
 export type UsageEventRow = {
   id: string;

@@ -1,0 +1,11 @@
+-- Statistics as an objective track: the third leg of the analytics round,
+-- beside SQL (20250101000045) and Excel (20250101000046).
+--
+-- It belongs in the objective bank rather than behind a model because what a
+-- business interviewer tests in statistics — reading an A/B test, a p-value, a
+-- confidence interval, a spurious correlation — has one right answer and a
+-- worked explanation, and costs nothing to mark.
+--
+-- Its own migration: ALTER TYPE ... ADD VALUE cannot run in the same
+-- transaction that uses the new value.
+alter type public.objective_track add value if not exists 'statistics';

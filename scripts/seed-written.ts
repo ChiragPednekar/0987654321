@@ -1,6 +1,7 @@
 /**
  * Seeds the written practice formats — guesstimate, RCA, stock pitch, brand
- * teardown, memo, WAT, behavioural.
+ * teardown, memo, WAT, behavioural, and the role-specific product, research
+ * and marketing formats.
  *
  *   npm run seed:written
  *   npm run seed:written -- --dry-run
@@ -18,8 +19,9 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/lib/types/database";
 import { WRITTEN_SEEDS } from "./content/written-formats";
 import { WRITTEN_SEEDS_MORE } from "./content/written-formats-more";
+import { WRITTEN_SEEDS_ROLES } from "./content/written-formats-roles";
 
-const ALL_SEEDS = [...WRITTEN_SEEDS, ...WRITTEN_SEEDS_MORE];
+const ALL_SEEDS = [...WRITTEN_SEEDS, ...WRITTEN_SEEDS_MORE, ...WRITTEN_SEEDS_ROLES];
 
 config({ path: ".env.local" });
 config({ path: ".env" });

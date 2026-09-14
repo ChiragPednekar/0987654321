@@ -39,6 +39,12 @@ export interface ProviderArgs {
    * serve only as the fallback.
    */
   jsonSchema?: Record<string, unknown>;
+  /**
+   * A PDF sent alongside the user message, read natively by the model — pages,
+   * charts and layout, not just extracted text. Used by the deck critique.
+   * Absent for every other caller, whose requests are unchanged.
+   */
+  pdf?: { name: string; base64: string };
 }
 
 /**
@@ -50,6 +56,7 @@ async function callOpenAI({
   user,
   criteria,
   jsonSchema,
+  pdf,
 }: ProviderArgs): Promise<ProviderResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
@@ -73,7 +80,18 @@ async function callOpenAI({
     temperature: 0.2,
     messages: [
       { role: "system", content: system },
-      { role: "user", content: user },
+      {
+        role: "user",
+        content: pdf
+          ? [
+              {
+                type: "file" as const,
+                file: { filename: pdf.name, file_data: `data:application/pdf;base64,${pdf.base64}` },
+              },
+              { type: "text" as const, text: user },
+            ]
+          : user,
+      },
     ],
     response_format: strictSchema
       ? {
@@ -115,6 +133,7 @@ async function callAnthropic({
   user,
   criteria,
   jsonSchema,
+  pdf,
 }: ProviderArgs): Promise<ProviderResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
@@ -133,7 +152,17 @@ async function callAnthropic({
       max_tokens: 4096,
       temperature: 0.2,
       system,
-      messages: [{ role: "user", content: user }],
+      messages: [
+        {
+          role: "user",
+          content: pdf
+            ? [
+                { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdf.base64 } },
+                { type: "text", text: user },
+              ]
+            : user,
+        },
+      ],
       tools: [
         {
           name: "submit_evaluation",
@@ -179,6 +208,7 @@ async function callGemini({
   user,
   criteria,
   jsonSchema,
+  pdf,
 }: ProviderArgs): Promise<ProviderResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
@@ -202,7 +232,14 @@ async function callGemini({
       },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: "user", parts: [{ text: user }] }],
+        contents: [
+          {
+            role: "user",
+            parts: pdf
+              ? [{ inlineData: { mimeType: "application/pdf", data: pdf.base64 } }, { text: user }]
+              : [{ text: user }],
+          },
+        ],
         generationConfig: {
           temperature: 0.2,
           responseMimeType: "application/json",

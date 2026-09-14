@@ -17,7 +17,14 @@ export interface WrittenSeed {
     | "rca"
     | "wat"
     | "memo"
-    | "behavioural";
+    | "behavioural"
+    | "product_sense"
+    | "metrics"
+    | "prioritisation"
+    | "research_note"
+    | "gtm_plan"
+    | "marketing_mix"
+    | "campaign_critique";
   domain: "finance" | "consulting" | "product_management" | "marketing" | "strategy" | "operations";
   difficulty: "easy" | "medium" | "hard";
   minutes: number;

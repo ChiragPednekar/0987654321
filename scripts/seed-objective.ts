@@ -36,6 +36,7 @@ import {
   CURRENT_AFFAIRS_MORE,
   OPERATIONS_CONCEPTS,
 } from "./content/objective-domain-more";
+import { STATISTICS } from "./content/objective-statistics";
 import {
   DATA_INTERPRETATION_FILL,
   LOGICAL_REASONING_FILL,
@@ -56,6 +57,7 @@ const BANKS: [Track, ObjectiveSeed[]][] = [
   ["accounting", [...ACCOUNTING, ...ACCOUNTING_MORE]],
   ["marketing_concepts", [...MARKETING_CONCEPTS, ...MARKETING_CONCEPTS_MORE]],
   ["operations_concepts", OPERATIONS_CONCEPTS],
+  ["statistics", STATISTICS],
   ["current_affairs", [...CURRENT_AFFAIRS, ...CURRENT_AFFAIRS_MORE]],
 ];
 

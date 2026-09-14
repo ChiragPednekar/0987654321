@@ -17,6 +17,7 @@ export const OBJECTIVE_TRACK_VALUES = [
   "accounting",
   "marketing_concepts",
   "operations_concepts",
+  "statistics",
   "current_affairs",
 ] as const;
 
@@ -92,6 +93,13 @@ export const OBJECTIVE_TRACKS: ObjectiveTrackMeta[] = [
     short: "Ops",
     group: "Domain",
     description: "Inventory, lead time, capacity, quality, cost-to-serve.",
+  },
+  {
+    value: "statistics",
+    label: "Statistics",
+    short: "Stats",
+    group: "Domain",
+    description: "A/B tests, p-values, confidence intervals, regression.",
   },
   {
     value: "current_affairs",

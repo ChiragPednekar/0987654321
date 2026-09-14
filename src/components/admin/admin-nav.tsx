@@ -13,6 +13,8 @@ const TABS = [
   { href: "/admin/access", label: "Access" },
   { href: "/admin/integrity", label: "Integrity" },
   { href: "/admin/cases", label: "Case library" },
+  { href: "/admin/current-affairs", label: "Daily quiz" },
+  { href: "/admin/company-reports", label: "Reported questions" },
 ];
 
 /** Section navigation for the platform owner. */

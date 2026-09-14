@@ -23,11 +23,17 @@ on:
   schedule:
     # Rankings, daily at 03:00 UTC — matching vercel.json.
     - cron: "0 3 * * *"
+    # The daily current-affairs quiz, at 00:30 UTC — 06:00 in India, so it is
+    # there before anyone's morning and draws on the previous day's releases.
+    - cron: "30 0 * * *"
   # So it can be run by hand after a deploy.
   workflow_dispatch:
 
 jobs:
   run:
+    # Two schedules share this workflow, so each job runs only on its own. A
+    # manual dispatch runs both; each endpoint is idempotent.
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 3 * * *'
     runs-on: ubuntu-latest
     steps:
       - name: Refresh leaderboards
@@ -45,3 +51,23 @@ jobs:
             "$SITE_URL/api/cron/refresh-leaderboards"
           echo
 
+  daily-quiz:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '30 0 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write the daily current-affairs quiz
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ secrets.SITE_URL || 'https://mableetcode.vercel.app' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET is not set. Add it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          # 200 covers "published", "already published" and "too little news";
+          # only a real failure is a 500 and turns the run red. The report is
+          # printed so a quiet day can be told apart from a skipped one.
+          curl --fail-with-body --silent --show-error --max-time 150 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/cron/current-affairs"
+          echo
