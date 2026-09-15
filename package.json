@@ -2,7 +2,7 @@
   "name": "casecode",
   "version": "0.1.0",
   "private": true,
-  "description": "CaseCode — LeetCode for business cases. AI-evaluated business case practice platform.",
+  "description": "CaseCode \u2014 LeetCode for business cases. AI-evaluated business case practice platform.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -28,7 +28,8 @@
     "seed:sales": "tsx scripts/seed-sales.ts",
     "test": "vitest run",
     "check:schema": "tsx scripts/check-schema-refs.ts",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "compare:providers": "tsx --conditions=react-server scripts/compare-providers.ts"
   },
   "dependencies": {
     "@formulajs/formulajs": "^4.6.1",
