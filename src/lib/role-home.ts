@@ -9,13 +9,19 @@ import type { UserRole } from "@/lib/types/database";
  * usage. None of them can reach another's dashboard, and no navigation offers
  * the trip.
  *
- * That strictness is deliberate and was arrived at the hard way. An earlier
- * version let privilege flow downward — the owner could open /teacher and
- * /dashboard "to inspect" — which meant a teacher or the owner clicking the
- * wrong link silently landed in the student product with somebody else's
- * numbers on screen. Inspecting another dashboard is what the other account is
- * for; there are three logins precisely so that no single session has to
- * straddle two roles.
+ * ONE EXCEPTION: the platform owner may open all three.
+ *
+ * This was tried once before and reverted, and the reason it failed is worth
+ * keeping in view — the owner could open /teacher and /dashboard "to inspect",
+ * and clicking the wrong link SILENTLY landed them in the student product. The
+ * defect was the silence, not the access: nothing on screen said which surface
+ * you were standing on, so an empty student dashboard looked like a bug in the
+ * product rather than the owner being in the wrong place.
+ *
+ * So the access is back and the silence is not. An owner outside /admin gets a
+ * banner saying so, with a way back. Every other role stays walled: a teacher
+ * opening /admin is a privilege question, not a convenience one, and the
+ * answer to it is still no.
  *
  * Deeper paths are a different question. /cases and /classrooms are shared
  * *features* rather than dashboards — a teacher has to browse the library to
@@ -51,7 +57,27 @@ export function canOpenHome(pathname: string, role: UserRole | null): boolean {
   // turn into a redirect, which is how the login/dashboard loop happened.
   if (!role) return true;
 
+  // The owner may stand anywhere. Nothing is exposed by this that admin did
+  // not already have — is_admin() already reads every row in the database —
+  // so this is a navigation decision, not a privilege one.
+  if (role === "admin") return true;
+
   return pathname === roleHome(role);
+}
+
+/**
+ * True when this role is standing on a dashboard that is not its own.
+ *
+ * Only the owner can be in this state, and the interface has to say so. The
+ * last version of this feature was withdrawn precisely because it did not.
+ */
+export function isVisitingAnotherHome(
+  pathname: string,
+  role: UserRole | null,
+): boolean {
+  if (!role) return false;
+  if (!(ROLE_HOMES as readonly string[]).includes(pathname)) return false;
+  return pathname !== roleHome(role);
 }
 
 /**

@@ -150,6 +150,22 @@ const ADMIN_GROUPS: { heading: string; items: Item[] }[] = [
       { href: "/admin/usage", label: "AI usage", icon: Gauge },
     ],
   },
+  {
+    /*
+      The owner can now open the other two products, so the navigation has to
+      offer the trip — otherwise the access exists only for someone who knows
+      to type the URL.
+
+      Grouped and labelled separately rather than mixed into the platform
+      links, because leaving here is a different kind of action from opening
+      another admin page, and a banner appears once you arrive.
+    */
+    heading: "View as",
+    items: [
+      { href: "/dashboard", label: "Student product", icon: GraduationCap },
+      { href: "/teacher", label: "Teaching product", icon: ClipboardCheck },
+    ],
+  },
 ];
 
 const RECRUITER_GROUPS: { heading: string; items: Item[] }[] = [

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ROLE_HOMES, canOpenHome, mustRedirectFromHome, roleHome } from "@/lib/role-home";
+import {
+  ROLE_HOMES,
+  canOpenHome,
+  isVisitingAnotherHome,
+  mustRedirectFromHome,
+  roleHome,
+} from "@/lib/role-home";
 
 /**
  * The three dashboards are separate entities.
@@ -52,7 +58,8 @@ describe("each role is walled into its own dashboard", () => {
     for (const role of ["student", "teacher", "admin", "recruiter"] as const) {
       const home = roleHome(role);
       for (const path of ROLE_HOMES) {
-        expect(canOpenHome(path, role)).toBe(path === home);
+        // The owner is the documented exception and is checked separately.
+        expect(canOpenHome(path, role)).toBe(role === "admin" || path === home);
       }
     }
   });
@@ -64,13 +71,39 @@ describe("each role is walled into its own dashboard", () => {
     expect(mustRedirectFromHome("/dashboard", "teacher")).toBe(true);
   });
 
-  it("bounces the platform owner off both other dashboards", () => {
-    // Deliberate, and a reversal: an earlier version let the owner "inspect"
-    // /teacher and /dashboard. Three separate logins exist so no session has to
-    // straddle two roles — inspecting the teacher product means signing in as
-    // the teacher.
-    expect(canOpenHome("/teacher", "admin")).toBe(false);
-    expect(canOpenHome("/dashboard", "admin")).toBe(false);
+  it("lets the platform owner open every dashboard", () => {
+    // Reversed deliberately, at the owner's request. Nothing is exposed that
+    // admin did not already have — is_admin() reads every row in the database
+    // — so this is navigation, not privilege.
+    for (const path of ROLE_HOMES) {
+      expect(canOpenHome(path, "admin")).toBe(true);
+      expect(mustRedirectFromHome(path, "admin")).toBe(false);
+    }
+  });
+
+  it("tells the owner when they are standing somewhere that is not theirs", () => {
+    // The reason the previous attempt at this was withdrawn: it was SILENT, so
+    // an empty student dashboard read as a broken product rather than as the
+    // owner being in the wrong place.
+    expect(isVisitingAnotherHome("/dashboard", "admin")).toBe(true);
+    expect(isVisitingAnotherHome("/teacher", "admin")).toBe(true);
+    expect(isVisitingAnotherHome("/admin", "admin")).toBe(false);
+  });
+
+  it("says nothing about a role standing on its own home, or off a home", () => {
+    expect(isVisitingAnotherHome("/dashboard", "student")).toBe(false);
+    expect(isVisitingAnotherHome("/cases", "admin")).toBe(false);
+    expect(isVisitingAnotherHome("/dashboard", null)).toBe(false);
+  });
+
+  it("does NOT widen the wall for anyone else", () => {
+    // Widening this for admin must not leak into the roles it protects. A
+    // teacher opening /admin is a privilege question and the answer is no.
+    expect(canOpenHome("/admin", "teacher")).toBe(false);
+    expect(canOpenHome("/admin", "student")).toBe(false);
+    expect(canOpenHome("/admin", "recruiter")).toBe(false);
+    expect(canOpenHome("/teacher", "student")).toBe(false);
+    expect(canOpenHome("/dashboard", "teacher")).toBe(false);
   });
 
   it("keeps a student out of the teaching and admin dashboards", () => {

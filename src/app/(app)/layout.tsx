@@ -4,6 +4,7 @@ import type { NotificationRow } from "@/lib/types/database";
 import { SiteNav } from "@/components/site-nav";
 import { CommandPalette } from "@/components/command-palette";
 import { AppSidebar } from "@/components/app-sidebar";
+import { OwnerViewingBanner } from "@/components/owner-viewing-banner";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
 
 export default async function AppLayout({
@@ -59,6 +60,12 @@ export default async function AppLayout({
         unreadCount={unreadCount}
       />
       <CommandPalette role={profile?.role ?? null} />
+      {/*
+        Only ever renders for the platform owner, and only when they are
+        standing on a dashboard that is not theirs. See role-home.ts for why
+        this is a condition of that access existing at all.
+      */}
+      <OwnerViewingBanner role={profile?.role ?? null} />
       {profile ? (
         <div className="flex flex-1">
           <AppSidebar
