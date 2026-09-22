@@ -467,7 +467,9 @@ export const COMPANIES: CompanySeed[] = [
       "Hires management trainees largely through the Unilever Future Leaders Programme (UFLP), a stint-based rotation across a chosen function. The process leans heavily on leadership, ownership and consumer understanding.",
     rounds: [
       { name: "Shortlist", detail: "CV, and in some years an application or online assessment." },
-      { name: "Assessments", detail: "Unilever's published UFLP process runs an online application into motivation, personality and cognitive assessments, then a digital interview." },
+      { name: "Case competitions", detail: "HUL runs its own campus competitions as genuine entry routes, and publishes them: L.I.M.E (Lessons in Marketing Excellence), FinAce for finance, and TechTonic for tech campuses. Placing well in one is a recognised way in, not a side activity." },
+      { name: "Foundation School", detail: "A short immersive programme at the Mumbai head office covering Sales & Marketing, Supply Chain, Finance and HR, which HUL says carries early access to L.I.M.E and FinAce." },
+      { name: "Assessments", detail: "Unilever's published early-careers process runs an online application into assessments, then interviews." },
       { name: "Group round", detail: "A group discussion or group business exercise is common." },
       { name: "Discovery day", detail: "Unilever describes a final in-person day combining business challenges, a team exercise with Unilever colleagues, and an interview." },
     ],
@@ -477,12 +479,20 @@ export const COMPANIES: CompanySeed[] = [
       "Comfort with sales and on-ground execution",
     ],
     practice: [GD, MARKETING, GTM, BRAND_TEARDOWN, HR_INTERVIEW, RESUME],
-    officialDomain: "hul.co.in",
+    sources: [
+      { label: "Unilever India — early careers", url: "https://careers.unilever.com/en/early-careers-india-2026", checked_on: "2026-09-22" },
+    ],
+    officialDomain: "unilever.com",
     officialLinks: [
       {
-        label: "Unilever Future Leaders Programme (UFLP)",
-        url: "https://www.hul.co.in/careers/student-opportunities/uflp/",
-        note: "HUL's own page for the programme most campus hiring runs through, including how to apply.",
+        label: "Unilever India — early careers",
+        url: "https://careers.unilever.com/en/early-careers-india-2026",
+        note: "Where HUL's campus routes actually live. The hul.co.in UFLP address now redirects to a landing page with no process on it.",
+      },
+      {
+        label: "Students and graduates at Unilever",
+        url: "https://careers.unilever.com/en/early-careers",
+        note: "The global early-careers hub, including how UFLP applications and assessments run.",
       },
     ],
   },
@@ -695,12 +705,15 @@ export const COMPANIES: CompanySeed[] = [
       "Customer orientation and sales aptitude",
     ],
     practice: [DAILY, FINANCE_CONCEPTS, GD, HR_INTERVIEW],
+    sources: [
+      { label: "HDFC Bank — careers", url: "https://www.hdfcbank.com/personal/about-us/careers", checked_on: "2026-09-22" },
+    ],
     officialDomain: "hdfcbank.com",
     officialLinks: [
       {
         label: "Careers at HDFC Bank",
         url: "https://www.hdfcbank.com/personal/about-us/careers",
-        note: "The bank's own careers page. It also states plainly that it never charges candidates a fee — worth knowing, given how many banking recruitment scams use its name.",
+        note: "Names its entry programmes — HeadStart for sales careers, Udaan, and Back2Work for people returning after a break. It also warns plainly that it never asks candidates for payment, which matters because its name is used in job scams.",
       },
     ],
   },
@@ -833,12 +846,15 @@ export const COMPANIES: CompanySeed[] = [
       "Comfort with data",
     ],
     practice: [RCA, METRICS, PRODUCT_SENSE, GUESSTIMATES, SQL, EXCEL],
+    sources: [
+      { label: "Flipkart Careers — campus", url: "https://www.flipkartcareers.com/students", checked_on: "2026-09-22" },
+    ],
     officialDomain: "flipkartcareers.com",
     officialLinks: [
       {
         label: "Campus at Flipkart",
         url: "https://www.flipkartcareers.com/students",
-        note: "Flipkart's own campus and internship pages.",
+        note: "Its campus programmes, named: GRiD, Flipkart's technovation challenge, alongside Girls Who Code and Women in Research, Engineering & Design. GRiD is a recognised route in, not just a competition.",
       },
       {
         label: "Data Scientist interview guide",
@@ -939,6 +955,9 @@ export const COMPANIES: CompanySeed[] = [
       "Leadership examples",
     ],
     practice: [GD, STRATEGY, OPERATIONS, HR_INTERVIEW],
+    sources: [
+      { label: "Mahindra — Leaders Program", url: "https://www.mahindra.com/mahindra-leaders-program", checked_on: "2026-09-22" },
+    ],
     officialDomain: "mahindra.com",
     officialLinks: [
       {
@@ -947,9 +966,9 @@ export const COMPANIES: CompanySeed[] = [
         note: "The group's campus programmes, including the Group Management Cadre.",
       },
       {
-        label: "Mahindra Leaders Programme",
+        label: "Mahindra Leaders Program (MLP)",
         url: "https://www.mahindra.com/mahindra-leaders-program",
-        note: "The B-school entry route, described by Mahindra.",
+        note: "MLP is the named B-school entry route. Mahindra also runs Future Shapers, a Leadership University and an Accelerated Leadership Track, all listed here.",
       },
     ],
   },
