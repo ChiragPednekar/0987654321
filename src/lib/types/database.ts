@@ -789,6 +789,8 @@ export type CompanyRow = {
   official_links: import("@/lib/companies").OfficialLink[];
   /** The firm's own domain. Every official_links host must match it. */
   official_domain: string | null;
+  /** What the link checker last saw per URL (20250101000059). */
+  link_health: import("@/lib/companies").LinkHealth[];
   is_published: boolean;
   created_at: string;
 }

@@ -119,6 +119,49 @@ export function validateOfficialLinks(
   return problems;
 }
 
+/** What the link checker last saw for one URL (20250101000059). */
+export interface LinkHealth {
+  url: string;
+  /** HTTP status, or null when the request could not be made at all. */
+  status: number | null;
+  checked_at: string;
+  /** CONSECUTIVE failures. Reset to zero the moment the link answers again. */
+  failures: number;
+}
+
+/**
+ * Whether a status means the page is gone, as opposed to unavailable to us.
+ *
+ * Deliberately narrow, and the narrowness is the whole point. 403, 429 and
+ * every 5xx are what a live, healthy site returns to an automated fetcher it
+ * does not like — kearney.com answers 403 to every programmatic request and
+ * serves the same page perfectly in a browser. Treating those as dead would
+ * have hidden three good links on the day this was written.
+ *
+ * So: only a page that is definitively gone (404, 410) or a host that cannot
+ * be reached at all counts. Everything else is "we could not see it", which is
+ * a statement about us rather than about the link.
+ */
+export function isBrokenStatus(status: number | null): boolean {
+  // Unreachable is NOT broken, and this was corrected after running the
+  // checker for real. All seven mckinsey.com links came back unreachable —
+  // every one of them had been opened by hand in a browser the same day. The
+  // request times out for an automated fetcher and the page serves fine to a
+  // person, and "unreachable" cannot tell that apart from a dead domain.
+  // Hiding on it would have removed McKinsey's four published sample cases,
+  // which are the most valuable links on this surface.
+  if (status === null) return false;
+  return status === 404 || status === 410;
+}
+
+/** Links a student should not be shown, because they are confirmed gone. */
+export const BROKEN_AFTER_FAILURES = 2;
+
+export function isConfirmedDead(health: LinkHealth | undefined): boolean {
+  if (!health) return false;
+  return health.failures >= BROKEN_AFTER_FAILURES && isBrokenStatus(health.status);
+}
+
 /**
  * Something a profile was checked against: a firm's careers page, a placement
  * cell's report. A profile with none is unverified and says so.

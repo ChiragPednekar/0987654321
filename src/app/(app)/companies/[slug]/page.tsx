@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { ArrowRight, ExternalLink, Info } from "lucide-react";
+import { isConfirmedDead } from "@/lib/companies";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,7 +23,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
   const admin = createAdminClient();
   const { data: company } = await admin
     .from("companies")
-    .select("id, slug, name, sector, roles, summary, rounds, look_for, practice, sources, official_links")
+    .select("id, slug, name, sector, roles, summary, rounds, look_for, practice, sources, official_links, link_health")
     .eq("slug", slug)
     .eq("is_published", true)
     .maybeSingle();
@@ -57,7 +58,18 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
   // against. The date it was written is deliberately not shown: it used to read
   // as "last reviewed", which claimed a verification nobody had done.
   const sources = company.sources ?? [];
-  const officialLinks = company.official_links ?? [];
+  /**
+   * Confirmed-dead links are dropped rather than shown. A 404 under a heading
+   * that says "straight from the firm" costs more credibility than the link
+   * ever earned, and the checker is deliberately cautious about what it calls
+   * dead — a site merely refusing our fetcher stays visible.
+   */
+  const health = new Map(
+    (company.link_health ?? []).map((h) => [h.url, h]),
+  );
+  const officialLinks = (company.official_links ?? []).filter(
+    (link) => !isConfirmedDead(health.get(link.url)),
+  );
   const checkedOn = lastChecked(sources);
   const checked = checkedOn
     ? new Date(`${checkedOn}T00:00:00Z`).toLocaleDateString("en-IN", {
