@@ -447,8 +447,9 @@ export const COMPANIES: CompanySeed[] = [
     summary:
       "Known for structured assessments and behavioural interviews that ask for detailed past examples of leading, solving problems and working with others.",
     rounds: [
-      { name: "Online assessment", detail: "Reasoning and work-style assessments are commonly used before interviews." },
-      { name: "Behavioural interviews", detail: "Typically more than one, each asking for specific situations you handled and what you did." },
+      { name: "Online assessment", detail: "P&G's own hiring pages say assessments are mandatory, and that for most roles the assessment result alone decides whether an application moves forward — the rest of your application is not weighed against it. Treat it as the gate, not a formality." },
+      { name: "PEAK Performance Assessment", detail: "P&G describes it as roughly 20 minutes across four sections, with no right or wrong answers, and no going back once a section is submitted." },
+      { name: "Behavioural interviews", detail: "P&G says there can be up to three, one-on-one or panel, each asking for specific situations you handled and what you did." },
       { name: "Functional discussion", detail: "Depending on the role, a business or brand problem." },
     ],
     lookFor: [
@@ -457,6 +458,24 @@ export const COMPANIES: CompanySeed[] = [
       "Analytical reasoning about consumers and brands",
     ],
     practice: [APTITUDE, HR_INTERVIEW, BRAND_TEARDOWN, CAMPAIGN, MARKETING, RESUME],
+    officialDomain: "pgcareers.com",
+    officialLinks: [
+      {
+        label: "P&G hiring process",
+        url: "https://www.pgcareers.com/global/en/hiring-process",
+        note: "P&G's own stage-by-stage account, including that up to three interviews follow the assessment.",
+      },
+      {
+        label: "PEAK Performance Assessment",
+        url: "https://www.pgcareers.com/global/en/peak-performance-assessment",
+        note: "The assessment itself: four sections, no going back once a section is submitted, and no right answers.",
+      },
+      {
+        label: "Assessment overviews",
+        url: "https://www.pgcareers.com/global/en/assesment-overviews",
+        note: "P&G walks through each assessment it uses, which is rare and worth reading before you sit one.",
+      },
+    ],
   },
   {
     slug: "itc",
@@ -464,7 +483,7 @@ export const COMPANIES: CompanySeed[] = [
     sector: "FMCG",
     roles: ["Management Trainee"],
     summary:
-      "A diversified company spanning FMCG, hotels, agri-business and more, hiring trainees across functions. Processes commonly include group and personal rounds.",
+      "A diversified company spanning FMCG, hotels, agri-business and more. Management trainees enter as Assistants Under Training (AUTs), and its KITES summer internship carries pre-placement offers. Processes commonly include group and personal rounds.",
     rounds: [
       { name: "Shortlist", detail: "CV-based." },
       { name: "Group discussion", detail: "Common in campus processes." },
@@ -476,6 +495,19 @@ export const COMPANIES: CompanySeed[] = [
       "Clear thinking in group settings",
     ],
     practice: [GD, MARKETING, OPERATIONS, HR_INTERVIEW],
+    officialDomain: "itcportal.com",
+    officialLinks: [
+      {
+        label: "Careers at ITC",
+        url: "https://www.itcportal.com/careers.html",
+        note: "ITC's own careers pages, including how Management Trainees enter as Assistants Under Training.",
+      },
+      {
+        label: "KITES — ITC's summer internship",
+        url: "https://www.itcportal.com/careers/kites.aspx",
+        note: "The internship that carries pre-placement offers, described by ITC.",
+      },
+    ],
   },
   {
     slug: "nestle-india",
@@ -485,9 +517,9 @@ export const COMPANIES: CompanySeed[] = [
     summary:
       "Hires trainees for sales, marketing and other functions. Campus processes commonly include group and personal interview rounds with a sales and distribution grounding.",
     rounds: [
-      { name: "Shortlist", detail: "CV-based." },
-      { name: "Group round", detail: "A group discussion is common." },
-      { name: "Interviews", detail: "Personal and functional interviews." },
+      { name: "Campus case competition", detail: "Nestlé describes its campus route as beginning with a live case competition or a real-time business project, rather than a CV screen alone." },
+      { name: "Summer internship", detail: "A two-month internship follows, and performance in it decides who is absorbed." },
+      { name: "Interviews", detail: "Personal and functional interviews, including with HR and the line manager." },
     ],
     lookFor: [
       "Understanding of distribution and retail in India",
@@ -495,6 +527,19 @@ export const COMPANIES: CompanySeed[] = [
       "Structured answers to marketing problems",
     ],
     practice: [GD, MARKETING, HR_INTERVIEW, RESUME],
+    officialDomain: "nestle.in",
+    officialLinks: [
+      {
+        label: "Students and graduates",
+        url: "https://www.nestle.in/jobs/students-graduates",
+        note: "Nestlé India's own page for campus entry routes.",
+      },
+      {
+        label: "Start your Nestlé journey",
+        url: "https://www.nestle.in/jobs/recruitment-journey",
+        note: "The recruitment journey as Nestlé describes it, stage by stage.",
+      },
+    ],
   },
 
   // ---- Banking & finance --------------------------------------------------
@@ -516,6 +561,24 @@ export const COMPANIES: CompanySeed[] = [
       "Precision and composure under questioning",
     ],
     practice: [VALUATION_MODELS, IB_CASES, FINANCE_CONCEPTS, ACCOUNTING, STOCK_PITCH, RESEARCH_NOTE],
+    officialDomain: "goldmansachs.com",
+    officialLinks: [
+      {
+        label: "Process for students — India",
+        url: "https://www.goldmansachs.com/worldwide/india/careers/process-for-students",
+        note: "The India-specific process, which is the one that applies on an Indian campus.",
+      },
+      {
+        label: "Prepare",
+        url: "https://www.goldmansachs.com/careers/students/prepare",
+        note: "Goldman's own preparation material for students.",
+      },
+      {
+        label: "Virtual interview preparation",
+        url: "https://www.goldmansachs.com/careers/discover/virtual-interview-prep.pdf",
+        note: "A PDF Goldman publishes on its recorded video interview, which comes before the final rounds.",
+      },
+    ],
   },
   {
     slug: "jp-morgan",
@@ -535,6 +598,19 @@ export const COMPANIES: CompanySeed[] = [
       "Specific, well-structured behavioural examples",
     ],
     practice: [FINANCE_CONCEPTS, VALUATION_MODELS, ACCOUNTING, RESEARCH_NOTE, DAILY, HR_INTERVIEW],
+    officialDomain: "jpmorganchase.com",
+    officialLinks: [
+      {
+        label: "How we hire",
+        url: "https://www.jpmorganchase.com/careers/how-we-hire",
+        note: "The firm's own account of its stages, including the recorded video interview.",
+      },
+      {
+        label: "How we hire — FAQ",
+        url: "https://www.jpmorganchase.com/careers/how-we-hire/faqs",
+        note: "Answers to the process questions candidates actually ask.",
+      },
+    ],
   },
   {
     slug: "hdfc-bank",
@@ -553,6 +629,14 @@ export const COMPANIES: CompanySeed[] = [
       "Customer orientation and sales aptitude",
     ],
     practice: [DAILY, FINANCE_CONCEPTS, GD, HR_INTERVIEW],
+    officialDomain: "hdfcbank.com",
+    officialLinks: [
+      {
+        label: "Careers at HDFC Bank",
+        url: "https://www.hdfcbank.com/personal/about-us/careers",
+        note: "The bank's own careers page. It also states plainly that it never charges candidates a fee — worth knowing, given how many banking recruitment scams use its name.",
+      },
+    ],
   },
 
   // ---- Technology ---------------------------------------------------------
@@ -565,7 +649,8 @@ export const COMPANIES: CompanySeed[] = [
       "Its interviews are organised around its published Leadership Principles: most questions ask for specific past examples, alongside role-specific product or business problems.",
     rounds: [
       { name: "Screen", detail: "CV shortlist, and for some roles an online assessment." },
-      { name: "Behavioural interviews", detail: "Detailed examples mapped to the Leadership Principles, with deep follow-up on your decisions and data." },
+      { name: "Interview loop", detail: "Amazon's own term: several interviewers in sequence, each assessing a different dimension. Expect two or three behavioural questions from each." },
+      { name: "Behavioural interviews", detail: "Examples mapped to the Leadership Principles, answered in STAR shape. Amazon asks specifically for metrics in the answers — it describes itself as data-driven and marks accordingly." },
       { name: "Role-specific rounds", detail: "Product sense, metrics, estimation or a business case, depending on the role." },
     ],
     lookFor: [
@@ -574,6 +659,24 @@ export const COMPANIES: CompanySeed[] = [
       "Metric-driven thinking about products",
     ],
     practice: [HR_INTERVIEW, PRODUCT_SENSE, METRICS, RCA, GUESSTIMATES, SQL],
+    officialDomain: "amazon.jobs",
+    officialLinks: [
+      {
+        label: "The interview loop",
+        url: "https://www.amazon.jobs/content/en/how-we-hire/interview-loop",
+        note: "Amazon's own description of the loop: several interviewers, each assessing a different dimension.",
+      },
+      {
+        label: "Leadership Principles",
+        url: "https://www.amazon.jobs/content/en/our-workplace/leadership-principles",
+        note: "The list your behavioural answers are scored against. Read it before writing a single story.",
+      },
+      {
+        label: "Interview prep FAQ",
+        url: "https://www.amazon.jobs/content/en/faq/interview-prep",
+        note: "Amazon asks for STAR-shaped answers with real metrics in them, and says so itself.",
+      },
+    ],
   },
   {
     slug: "google",
@@ -593,6 +696,19 @@ export const COMPANIES: CompanySeed[] = [
       "Clear prioritisation and trade-offs",
     ],
     practice: [PRODUCT_SENSE, PM_CASES, METRICS, GUESSTIMATES, RCA, HR_INTERVIEW],
+    officialDomain: "google.com",
+    officialLinks: [
+      {
+        label: "Our hiring process",
+        url: "https://www.google.com/about/careers/applications/how-we-hire",
+        note: "Google's own account of its stages.",
+      },
+      {
+        label: "Interviewing at Google",
+        url: "https://www.google.com/about/careers/applications/interview-tips",
+        note: "Google's published interview advice, written for candidates.",
+      },
+    ],
   },
   {
     slug: "microsoft",
@@ -612,6 +728,19 @@ export const COMPANIES: CompanySeed[] = [
       "Examples of influencing without authority",
     ],
     practice: [PRODUCT_SENSE, PM_CASES, GUESSTIMATES, HR_INTERVIEW, RESUME],
+    officialDomain: "microsoft.com",
+    officialLinks: [
+      {
+        label: "Student interviewing",
+        url: "https://careers.microsoft.com/v2/global/en/hiring-tips/student-interviewing",
+        note: "Microsoft's guidance written specifically for students.",
+      },
+      {
+        label: "Interview tips",
+        url: "https://careers.microsoft.com/v2/global/en/hiring-tips/interview-tips.html",
+        note: "What Microsoft says it asks and how it wants problems talked through.",
+      },
+    ],
   },
   {
     slug: "flipkart",
@@ -631,6 +760,19 @@ export const COMPANIES: CompanySeed[] = [
       "Comfort with data",
     ],
     practice: [RCA, METRICS, PRODUCT_SENSE, GUESSTIMATES, SQL, EXCEL],
+    officialDomain: "flipkartcareers.com",
+    officialLinks: [
+      {
+        label: "Campus at Flipkart",
+        url: "https://www.flipkartcareers.com/students",
+        note: "Flipkart's own campus and internship pages.",
+      },
+      {
+        label: "Data Scientist interview guide",
+        url: "https://www.flipkartcareers.com/flipkart/assets/flipkart_pdf/Data_Scientist.pdf",
+        note: "A preparation guide Flipkart publishes for one of its analytics tracks.",
+      },
+    ],
   },
 
   // ---- Conglomerates ------------------------------------------------------
@@ -642,9 +784,11 @@ export const COMPANIES: CompanySeed[] = [
     summary:
       "The Tata group's general-management leadership programme. Its selection is known for being multi-stage, with strong weight on leadership and values.",
     rounds: [
-      { name: "Application and screen", detail: "An application and, in many years, a test or assessment." },
-      { name: "Group round", detail: "A group discussion or group exercise is common." },
-      { name: "Interviews", detail: "Several rounds, commonly ending with a panel of senior leaders." },
+      { name: "Application form", detail: "The TAS application form itself, which the group treats as a substantive stage rather than a formality." },
+      { name: "Gamified assessment", detail: "Tata describes a gamified assessment for the finals track." },
+      { name: "Leadership group discussion", detail: "Known as the Chairman's GD." },
+      { name: "Presentation round", detail: "Shortlisted candidates present their SUMMER INTERNSHIP PROJECT. Worth knowing well before finals season: the work you do in your summer internship becomes the material for this round." },
+      { name: "Final interview", detail: "With senior Tata leaders. The first year after joining is three business stints and one community stint." },
     ],
     lookFor: [
       "General-management breadth over narrow specialism",
@@ -652,6 +796,19 @@ export const COMPANIES: CompanySeed[] = [
       "A considered view of business in India",
     ],
     practice: [GD, STRATEGY, SIMULATION, HR_INTERVIEW, DAILY],
+    officialDomain: "tata.com",
+    officialLinks: [
+      {
+        label: "TAS leadership programme",
+        url: "https://www.tata.com/careers/programs/tas",
+        note: "What TAS is, from the group itself.",
+      },
+      {
+        label: "TAS campus hiring",
+        url: "https://www.tata.com/careers/programs/tas/tas-campus-tata-group",
+        note: "The campus process: application form, gamified assessment, the leadership group discussion known as the Chairman's GD, a presentation round on your summer project, then final interviews.",
+      },
+    ],
   },
   {
     slug: "aditya-birla-group",
@@ -671,6 +828,19 @@ export const COMPANIES: CompanySeed[] = [
       "Clear career motivation",
     ],
     practice: [GD, STRATEGY, OPERATIONS, HR_INTERVIEW],
+    officialDomain: "adityabirla.com",
+    officialLinks: [
+      {
+        label: "Aditya Birla Group Leadership Programme",
+        url: "https://www.abglp.adityabirla.com/",
+        note: "ABGLP is the route most B-school hiring runs through.",
+      },
+      {
+        label: "LEAP — the general management track",
+        url: "https://www.abglp.adityabirla.com/programs/leadership_associate_program",
+        note: "The programme itself: a year of training across three four-month stints in different functions and businesses.",
+      },
+    ],
   },
   {
     slug: "mahindra-group",
@@ -690,5 +860,18 @@ export const COMPANIES: CompanySeed[] = [
       "Leadership examples",
     ],
     practice: [GD, STRATEGY, OPERATIONS, HR_INTERVIEW],
+    officialDomain: "mahindra.com",
+    officialLinks: [
+      {
+        label: "Mahindra recruitment programmes",
+        url: "https://www.mahindra.com/careers/mahindra-recruitment-programmes",
+        note: "The group's campus programmes, including the Group Management Cadre.",
+      },
+      {
+        label: "Mahindra Leaders Programme",
+        url: "https://www.mahindra.com/mahindra-leaders-program",
+        note: "The B-school entry route, described by Mahindra.",
+      },
+    ],
   },
 ];
