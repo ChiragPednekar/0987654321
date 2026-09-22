@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowRight, CircleAlert, ExternalLink } from "lucide-react";
+import { ArrowRight, ExternalLink, Info } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
@@ -90,22 +90,47 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
           , most recently on {checked}.
         </p>
       ) : (
-        <div className="mt-4 flex gap-2.5 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
-          <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+        /*
+          A statement of provenance, not a warning about absence.
+
+          This banner used to be amber and headed "Not verified against
+          official sources". Every word of it was true and the effect was
+          wrong: it read as a defect notice on a page that had been carefully
+          written, it gave a student nothing to do about it, and it did not
+          change when the firm's own pages were linked directly beneath it.
+
+          Saying where a page came from is what a careful publication does.
+          Saying it is unverified is what a disclaimer does, and a disclaimer
+          invites doubt about everything on the page rather than calibrating
+          it. The claim underneath is unchanged — this is guidance, the firm is
+          the authority — but it now reads as editorial care rather than a
+          fault, and it points at something actionable.
+        */
+        <div className="mt-4 flex gap-2.5 rounded-md border border-info-border bg-info-surface p-3 text-sm">
+          <Info className="mt-0.5 size-4 shrink-0 text-info" />
           <div>
-            <p className="font-medium">Not verified against official sources</p>
+            <p className="font-medium">
+              {officialLinks.length > 0
+                ? `How this page is written, and where ${company.name}'s own material is`
+                : "How this page is written"}
+            </p>
             <p className="mt-0.5 text-muted-foreground">
-              This is general guidance, written from widely reported descriptions of how{" "}
-              {company.name} usually hires. No one has yet checked it against the firm&apos;s own
-              careers page or placement records. Confirm the details with your placement cell
-              before relying on them.
+              A guide to how {company.name} usually hires on Indian campuses, written from
+              widely reported accounts of its process rather than issued by the firm.
               {officialLinks.length > 0 ? (
                 <>
                   {" "}
-                  What {company.name} publishes itself is linked below — that is the
-                  authority, and this page is not.
+                  What {company.name} publishes for candidates is linked below — where the
+                  two disagree, the firm is right. Processes also vary by campus and year,
+                  so confirm specifics with your placement cell.
                 </>
-              ) : null}
+              ) : (
+                <>
+                  {" "}
+                  Processes vary by campus and year, so confirm specifics with your
+                  placement cell.
+                </>
+              )}
             </p>
           </div>
         </div>

@@ -20,7 +20,7 @@ export default async function CompaniesPage() {
   const [{ data: companies }, { data: approved }] = await Promise.all([
     admin
       .from("companies")
-      .select("id, slug, name, sector, roles, summary, sources")
+      .select("id, slug, name, sector, roles, summary, sources, official_links")
       .eq("is_published", true)
       .order("name"),
     admin.from("company_question_reports").select("company_id").eq("status", "approved"),
@@ -53,6 +53,7 @@ export default async function CompaniesPage() {
               {inSector.map((c) => {
                 const n = questionsOf.get(c.id) ?? 0;
                 const verified = (c.sources ?? []).length > 0;
+                const officialCount = (c.official_links ?? []).length;
                 return (
                   <Link key={c.slug} href={`/companies/${c.slug}`}>
                     <Card className="h-full transition-colors hover:border-foreground/25">
@@ -64,14 +65,28 @@ export default async function CompaniesPage() {
                           <span className="min-w-0 truncate">
                             {n > 0 ? `${plural(n, "reported question")}` : "No reported questions yet"}
                           </span>
+                          {/*
+                            Says what the card HAS rather than what it lacks.
+                            "Not verified" was accurate and useless: it read as
+                            a defect on every card, told a student nothing they
+                            could act on, and did not change when the firm's own
+                            pages were added beneath it. The link count is the
+                            thing worth scanning for.
+                          */}
                           <span
                             className={
                               verified
-                                ? "shrink-0 text-emerald-600 dark:text-emerald-400"
-                                : "shrink-0 text-amber-600 dark:text-amber-400"
+                                ? "shrink-0 text-success"
+                                : officialCount > 0
+                                  ? "shrink-0 text-brand"
+                                  : "shrink-0 text-muted-foreground"
                             }
                           >
-                            {verified ? "Sources checked" : "Not verified"}
+                            {verified
+                              ? "Sources checked"
+                              : officialCount > 0
+                                ? plural(officialCount, "official link")
+                                : "Guidance only"}
                           </span>
                         </div>
                       </CardContent>
