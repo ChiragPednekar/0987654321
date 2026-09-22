@@ -16,7 +16,7 @@
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/lib/types/database";
-import { COMPANY_SECTORS, isPracticeHref, sourceProblems } from "../src/lib/companies";
+import { COMPANY_SECTORS, isPracticeHref, sourceProblems, validateOfficialLinks } from "../src/lib/companies";
 import { COMPANIES } from "./content/companies";
 
 config({ path: ".env.local" });
@@ -50,6 +50,16 @@ async function main() {
       if (!isPracticeHref(p.href)) say(`practice link ${p.href} is not a section of this platform`);
     }
     for (const problem of sourceProblems(c.sources ?? [], today)) say(problem);
+
+    /**
+     * The host check that keeps this column first-party. Without it,
+     * official_links is just a place for prep-vendor links to accumulate,
+     * and the entire value of the feature is that the material is the
+     * firm's own.
+     */
+    for (const problem of validateOfficialLinks(c.officialLinks ?? [], c.officialDomain ?? null)) {
+      say(problem);
+    }
     // Numbers that go stale: a profile must not state them.
     const text = JSON.stringify([c.summary, c.rounds, c.lookFor]);
     if (STALE_FIGURES.test(text)) {
@@ -64,7 +74,10 @@ async function main() {
   }
 
   const checked = COMPANIES.filter((c) => (c.sources ?? []).length > 0).length;
+  const linked = COMPANIES.filter((c) => (c.officialLinks ?? []).length > 0).length;
+  const linkCount = COMPANIES.reduce((n, c) => n + (c.officialLinks ?? []).length, 0);
   console.log(`Validated ${COMPANIES.length} company profiles (${checked} checked against sources, ${COMPANIES.length - checked} unverified).`);
+  console.log(`${linked} carry official first-party links (${linkCount} links), every host checked against the firm's own domain.`);
   if (dryRun) return;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -89,6 +102,8 @@ async function main() {
       practice: c.practice,
       reviewed_on: WRITTEN_ON,
       sources: c.sources ?? [],
+      official_links: c.officialLinks ?? [],
+      official_domain: c.officialDomain ?? null,
       is_published: true,
     })),
     { onConflict: "slug" },

@@ -1,4 +1,10 @@
-import type { CompanyRound, CompanySector, CompanySource, PracticeLink } from "../../src/lib/companies";
+import type {
+  CompanyRound,
+  CompanySector,
+  CompanySource,
+  OfficialLink,
+  PracticeLink,
+} from "../../src/lib/companies";
 
 /**
  * Company profiles.
@@ -42,6 +48,17 @@ export interface CompanySeed {
   practice: PracticeLink[];
   /** What this profile was checked against. Leave out until someone has. */
   sources?: CompanySource[];
+  /** The firm's own domain. Every officialLinks entry must sit on it. */
+  officialDomain?: string;
+  /**
+   * What the firm publishes itself for candidates.
+   *
+   * Not the same claim as `sources`. A source is something a human read
+   * against this profile; a link is a pointer at first-party material that is
+   * usually better than anything a third party recollects, and was simply
+   * never surfaced here.
+   */
+  officialLinks?: OfficialLink[];
 }
 
 const MBB_CASES: PracticeLink = {
@@ -192,9 +209,9 @@ export const COMPANIES: CompanySeed[] = [
       "Hires generalist consultants through a CV shortlist and several rounds of case interviews. Each interview usually pairs a case with questions about your own experiences.",
     rounds: [
       { name: "CV shortlist", detail: "Academic record, work experience and evidence of leadership and impact." },
-      { name: "Problem-solving assessment", detail: "In some years and offices, a digital assessment before interviews." },
-      { name: "Case interviews", detail: "Typically several rounds. Cases are often interviewer-led: you are taken through a sequence of questions on structure, data and a recommendation." },
-      { name: "Experience questions", detail: "Inside the same interviews, detailed probing of a few stories — leading others, having an impact, pushing something through." },
+      { name: "Solve", detail: "McKinsey's own assessment game, used in many offices before interviews. The firm says it tests intrinsic problem-solving and that no preparation is required or expected for it." },
+      { name: "Personal experience interview", detail: "McKinsey describes this as its own interview, not a segment of the case. Its guidance is to bring two personal examples and talk through them at length — the challenge, the goal, what you did." },
+      { name: "Problem-solving interview", detail: "The case. McKinsey says it is looking at how you structure an ambiguous problem, work with facts and data, and reach a recommendation you can articulate." },
     ],
     lookFor: [
       "A clear, hypothesis-driven structure you can adapt as data arrives",
@@ -203,6 +220,19 @@ export const COMPANIES: CompanySeed[] = [
       "Stories where your personal role and the outcome are specific",
     ],
     practice: [MBB_CASES, DRILLS, GUESSTIMATES, HR_INTERVIEW, RESUME],
+    officialDomain: "mckinsey.com",
+    officialLinks: [
+      {
+        label: "Interviewing at McKinsey",
+        url: "https://www.mckinsey.com/careers/interviewing",
+        note: "The firm's own description of the personal experience and problem-solving interviews.",
+      },
+      {
+        label: "Solve, McKinsey's assessment game",
+        url: "https://www.mckinsey.com/careers/mckinsey-digital-assessment",
+        note: "What Solve is and what McKinsey says about preparing for it, which is that you do not need to.",
+      },
+    ],
   },
   {
     slug: "bcg",
@@ -224,6 +254,19 @@ export const COMPANIES: CompanySeed[] = [
       "A convincing reason for consulting",
     ],
     practice: [MBB_CASES, GUESSTIMATES, DRILLS, HR_INTERVIEW, RESUME],
+    officialDomain: "bcg.com",
+    officialLinks: [
+      {
+        label: "Interview process",
+        url: "https://careers.bcg.com/interview-process",
+        note: "BCG's own account of the rounds and what a case interview is testing.",
+      },
+      {
+        label: "Case interview preparation",
+        url: "https://careers.bcg.com/case-interview-preparation",
+        note: "BCG's published prep material, including Casey, its case interview chatbot.",
+      },
+    ],
   },
   {
     slug: "bain",
@@ -234,6 +277,7 @@ export const COMPANIES: CompanySeed[] = [
       "Case interviews with a strong emphasis on practical, results-oriented recommendations, and a well-known focus on fit — whether the team would want to work with you.",
     rounds: [
       { name: "CV shortlist", detail: "Academic record and leadership outside the classroom." },
+      { name: "Digital assessment", detail: "Bain describes its process as a digital assessment and then case interview(s). Worth knowing it comes before the cases — it is easy to prepare only for the case." },
       { name: "Case interviews", detail: "Typically several rounds. Market sizing and profitability problems are common." },
       { name: "Written or presentation case", detail: "Some offices use one in later rounds." },
       { name: "Fit", detail: "Conversational questions about you, your teams and why Bain." },
@@ -244,6 +288,29 @@ export const COMPANIES: CompanySeed[] = [
       "Warmth and collaboration in how you work through the problem",
     ],
     practice: [MBB_CASES, GUESSTIMATES, HR_INTERVIEW, RESUME],
+    officialDomain: "bain.com",
+    officialLinks: [
+      {
+        label: "Our hiring process",
+        url: "https://www.bain.com/careers/hiring-process/",
+        note: "Bain sets out a digital assessment followed by case interviews.",
+      },
+      {
+        label: "Case interview preparation",
+        url: "https://www.bain.com/careers/hiring-process/case-interview/",
+        note: "Bain's own guidance on opening a case and working through it.",
+      },
+      {
+        label: "FashionCo. — a Bain practice case",
+        url: "https://www.bain.com/careers/hiring-process/interviewing/fashion-case-study/",
+        note: "A full case Bain wrote and published: a fashion player with declining revenues.",
+      },
+      {
+        label: "Associate Consultant mock interview",
+        url: "https://www.bain.com/careers/hiring-process/interviewing/associate-consultant-practice-case-interview",
+        note: "Video of a Bain interviewer running a case end to end.",
+      },
+    ],
   },
   {
     slug: "kearney",
@@ -263,6 +330,24 @@ export const COMPANIES: CompanySeed[] = [
       "Industry experience you can explain crisply",
     ],
     practice: [MBB_CASES, OPERATIONS, DRILLS, HR_INTERVIEW],
+    officialDomain: "kearney.com",
+    officialLinks: [
+      {
+        label: "Interviewing at Kearney",
+        url: "https://www.kearney.com/careers/interviewing",
+        note: "Kearney's own pages on its recruiting process and what it assesses.",
+      },
+      {
+        label: "Crack the case",
+        url: "https://www.kearney.com/careers/interviewing/crack-the-case",
+        note: "Kearney's case guidance, including its case flowchart.",
+      },
+      {
+        label: "Case example: promotional planning",
+        url: "https://www.kearney.com/careers/interviewing/crack-the-case/case-example-promotion-planning",
+        note: "A worked case Kearney published, in the operations and pricing flavour it is known for.",
+      },
+    ],
   },
   {
     slug: "accenture-strategy",
@@ -273,6 +358,7 @@ export const COMPANIES: CompanySeed[] = [
       "Recruits in volume on Indian campuses. Processes vary by campus but commonly combine a screen, a case or business discussion, and interviews that probe your specialisation.",
     rounds: [
       { name: "Screen", detail: "A CV shortlist, and on some campuses an online test or a group discussion." },
+      { name: "Assessment", detail: "Accenture India describes a mandatory assessment covering technical, coding, behavioural and communication sections, each cleared on its own rather than on a combined total. Its own pages also state that you may hold only one active application in India at a time, and that a failed assessment cannot be reattempted for 90 days." },
       { name: "Case or business discussion", detail: "A business problem, often tied to technology or transformation." },
       { name: "Personal and domain interview", detail: "Your prior work, your MBA specialisation and why consulting." },
     ],
@@ -282,6 +368,14 @@ export const COMPANIES: CompanySeed[] = [
       "Depth in your own specialisation and past role",
     ],
     practice: [GD, MBB_CASES, GUESSTIMATES, HR_INTERVIEW, APTITUDE],
+    officialDomain: "accenture.com",
+    officialLinks: [
+      {
+        label: "Your journey to Accenture",
+        url: "https://www.accenture.com/in-en/careers/explore-careers/area-of-interest/journey-to-accenture",
+        note: "Accenture India's own description of the assessment and interview stages, including its retake and single-application rules.",
+      },
+    ],
   },
   {
     slug: "deloitte-consulting",
@@ -301,6 +395,19 @@ export const COMPANIES: CompanySeed[] = [
       "Specific examples from past work",
     ],
     practice: [MBB_CASES, GUESSTIMATES, GD, HR_INTERVIEW, APTITUDE],
+    officialDomain: "deloitte.com",
+    officialLinks: [
+      {
+        label: "Preparing for the case and scenario interview",
+        url: "https://www.deloitte.com/us/en/careers/join-deloitte/recruiting-tips/case-and-scenario-interview-tips.html",
+        note: "Deloitte's own case guidance. Note it calls the round a case AND scenario interview.",
+      },
+      {
+        label: "Preparing for an interview — Deloitte India",
+        url: "https://www2.deloitte.com/in/en/pages/careers/articles/preparing-for-an-interview.html",
+        note: "The India careers team's own interview advice.",
+      },
+    ],
   },
 
   // ---- FMCG ---------------------------------------------------------------
@@ -310,11 +417,12 @@ export const COMPANIES: CompanySeed[] = [
     sector: "FMCG",
     roles: ["Management Trainee"],
     summary:
-      "Its management trainee programme is among the most sought-after on Indian campuses. The process leans heavily on leadership, ownership and consumer understanding.",
+      "Hires management trainees largely through the Unilever Future Leaders Programme (UFLP), a stint-based rotation across a chosen function. The process leans heavily on leadership, ownership and consumer understanding.",
     rounds: [
       { name: "Shortlist", detail: "CV, and in some years an application or online assessment." },
+      { name: "Assessments", detail: "Unilever's published UFLP process runs an online application into motivation, personality and cognitive assessments, then a digital interview." },
       { name: "Group round", detail: "A group discussion or group business exercise is common." },
-      { name: "Interviews", detail: "Typically several, including with senior leaders, built around your experiences and business judgement." },
+      { name: "Discovery day", detail: "Unilever describes a final in-person day combining business challenges, a team exercise with Unilever colleagues, and an interview." },
     ],
     lookFor: [
       "Leadership and ownership shown through specific stories",
@@ -322,6 +430,14 @@ export const COMPANIES: CompanySeed[] = [
       "Comfort with sales and on-ground execution",
     ],
     practice: [GD, MARKETING, GTM, BRAND_TEARDOWN, HR_INTERVIEW, RESUME],
+    officialDomain: "hul.co.in",
+    officialLinks: [
+      {
+        label: "Unilever Future Leaders Programme (UFLP)",
+        url: "https://www.hul.co.in/careers/student-opportunities/uflp/",
+        note: "HUL's own page for the programme most campus hiring runs through, including how to apply.",
+      },
+    ],
   },
   {
     slug: "procter-and-gamble",

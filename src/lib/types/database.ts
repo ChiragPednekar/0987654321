@@ -782,6 +782,13 @@ export type CompanyRow = {
   reviewed_on: string;
   /** What the profile was checked against (20250101000055). Empty means unverified. */
   sources: import("@/lib/companies").CompanySource[];
+  /**
+   * What the firm publishes itself for candidates (20250101000058). A pointer,
+   * not a verification claim — see `sources` for that.
+   */
+  official_links: import("@/lib/companies").OfficialLink[];
+  /** The firm's own domain. Every official_links host must match it. */
+  official_domain: string | null;
   is_published: boolean;
   created_at: string;
 }

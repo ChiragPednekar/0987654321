@@ -22,7 +22,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
   const admin = createAdminClient();
   const { data: company } = await admin
     .from("companies")
-    .select("id, slug, name, sector, roles, summary, rounds, look_for, practice, sources")
+    .select("id, slug, name, sector, roles, summary, rounds, look_for, practice, sources, official_links")
     .eq("slug", slug)
     .eq("is_published", true)
     .maybeSingle();
@@ -57,6 +57,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
   // against. The date it was written is deliberately not shown: it used to read
   // as "last reviewed", which claimed a verification nobody had done.
   const sources = company.sources ?? [];
+  const officialLinks = company.official_links ?? [];
   const checkedOn = lastChecked(sources);
   const checked = checkedOn
     ? new Date(`${checkedOn}T00:00:00Z`).toLocaleDateString("en-IN", {
@@ -98,6 +99,13 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
               {company.name} usually hires. No one has yet checked it against the firm&apos;s own
               careers page or placement records. Confirm the details with your placement cell
               before relying on them.
+              {officialLinks.length > 0 ? (
+                <>
+                  {" "}
+                  What {company.name} publishes itself is linked below — that is the
+                  authority, and this page is not.
+                </>
+              ) : null}
             </p>
           </div>
         </div>
@@ -189,6 +197,41 @@ export default async function CompanyPage({ params }: { params: Promise<{ slug: 
           </div>
         )}
 
+      </section>
+
+      {officialLinks.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg font-medium">Straight from {company.name}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Published by the firm for candidates. Where anything here disagrees with
+            the summary above, believe the firm.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {officialLinks.map((link) => (
+              <li key={link.url}>
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-start gap-2 rounded-md border border-border p-3 transition-colors hover:border-brand-border hover:bg-brand-surface"
+                >
+                  <ExternalLink className="mt-0.5 size-4 shrink-0 text-brand" />
+                  <span>
+                    <span className="text-sm font-medium group-hover:text-brand">
+                      {link.label}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {link.note}
+                    </span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="mt-8">
         <div className="mt-4">
           <ReportQuestion
             slug={company.slug}

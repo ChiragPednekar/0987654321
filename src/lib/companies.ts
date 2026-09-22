@@ -55,6 +55,71 @@ export interface PracticeLink {
 }
 
 /**
+ * Something the firm publishes itself for candidates — its interview page, a
+ * practice case it wrote, its own assessment FAQ.
+ *
+ * Distinct from CompanySource on purpose. A source is something a human READ
+ * against this profile, which is what lets the page claim to be checked.
+ * An official link is just a pointer: the best available material on how a
+ * firm hires is usually the firm's own, and it was never linked.
+ */
+export interface OfficialLink {
+  label: string;
+  /** Must be https and on the company's own domain. Enforced by the seeder. */
+  url: string;
+  /** Why a student should open it. */
+  note: string;
+}
+
+/**
+ * Everything wrong with a company's official links, as messages.
+ *
+ * The host check is the load-bearing one. Without it this column becomes a
+ * place for prep-vendor links to accumulate, which is the opposite of the
+ * point: the value here is precisely that the material is first-party.
+ */
+export function validateOfficialLinks(
+  links: OfficialLink[],
+  officialDomain: string | null,
+): string[] {
+  const problems: string[] = [];
+
+  if (links.length > 0 && !officialDomain) {
+    problems.push("has official links but no official_domain to check them against");
+    return problems;
+  }
+
+  for (const link of links) {
+    if (!link.label?.trim()) problems.push("a link has no label");
+    if (!link.note?.trim()) problems.push(`"${link.label}" has no note`);
+
+    let url: URL;
+    try {
+      url = new URL(link.url);
+    } catch {
+      problems.push(`"${link.label}" has an unparseable url: ${link.url}`);
+      continue;
+    }
+
+    if (url.protocol !== "https:") {
+      problems.push(`"${link.label}" is not https`);
+    }
+
+    const host = url.hostname.toLowerCase();
+    const domain = officialDomain!.toLowerCase();
+    // The firm's own domain or a subdomain of it — careers.bcg.com counts for
+    // bcg.com, evilbcg.com does not.
+    if (host !== domain && !host.endsWith(`.${domain}`)) {
+      problems.push(
+        `"${link.label}" points at ${host}, which is not ${domain} or a subdomain of it`,
+      );
+    }
+  }
+
+  return problems;
+}
+
+/**
  * Something a profile was checked against: a firm's careers page, a placement
  * cell's report. A profile with none is unverified and says so.
  */
