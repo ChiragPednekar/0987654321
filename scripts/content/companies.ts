@@ -495,7 +495,8 @@ export const COMPANIES: CompanySeed[] = [
       "Known for structured assessments and behavioural interviews that ask for detailed past examples of leading, solving problems and working with others.",
     rounds: [
       { name: "Online assessment", detail: "P&G's own hiring pages say assessments are mandatory, and that for most roles the assessment result alone decides whether an application moves forward — the rest of your application is not weighed against it. Treat it as the gate, not a formality." },
-      { name: "PEAK Performance Assessment", detail: "P&G describes it as roughly 20 minutes across four sections, with no right or wrong answers, and no going back once a section is submitted." },
+      { name: "PEAK Performance Assessment", detail: "P&G describes it as roughly 20 minutes across four sections, with no right or wrong answers, and no going back once a section is submitted. A separate Interactive Assessment measures cognitive ability on some roles." },
+      { name: "If you do not pass", detail: "P&G says results come within 30 days, and that a failed assessment can only be retried after TWELVE MONTHS. It also states assessments and interviews must be completed without real-time help from anyone or from AI, and that violating this is grounds for rejection." },
       { name: "Behavioural interviews", detail: "P&G says there can be up to three, one-on-one or panel, each asking for specific situations you handled and what you did." },
       { name: "Functional discussion", detail: "Depending on the role, a business or brand problem." },
     ],
@@ -505,6 +506,9 @@ export const COMPANIES: CompanySeed[] = [
       "Analytical reasoning about consumers and brands",
     ],
     practice: [APTITUDE, HR_INTERVIEW, BRAND_TEARDOWN, CAMPAIGN, MARKETING, RESUME],
+    sources: [
+      { label: "P&G Careers — how do we hire?", url: "https://www.pgcareers.com/global/en/hiring-process", checked_on: "2026-09-22" },
+    ],
     officialDomain: "pgcareers.com",
     officialLinks: [
       {
@@ -542,6 +546,9 @@ export const COMPANIES: CompanySeed[] = [
       "Clear thinking in group settings",
     ],
     practice: [GD, MARKETING, OPERATIONS, HR_INTERVIEW],
+    sources: [
+      { label: "ITC — KITES summer internship", url: "https://www.itcportal.com/careers/kites.aspx", checked_on: "2026-09-22" },
+    ],
     officialDomain: "itcportal.com",
     officialLinks: [
       {
@@ -564,9 +571,11 @@ export const COMPANIES: CompanySeed[] = [
     summary:
       "Hires trainees for sales, marketing and other functions. Campus processes commonly include group and personal interview rounds with a sales and distribution grounding.",
     rounds: [
-      { name: "Campus case competition", detail: "Nestlé describes its campus route as beginning with a live case competition or a real-time business project, rather than a CV screen alone." },
-      { name: "Summer internship", detail: "A two-month internship follows, and performance in it decides who is absorbed." },
-      { name: "Interviews", detail: "Personal and functional interviews, including with HR and the line manager." },
+      { name: "CV screening", detail: "Nestlé's published journey starts with an application and a CV screen." },
+      { name: "Initial interview", detail: "A conversation with a recruiter about interests, experience and motivation." },
+      { name: "Hiring manager interview", detail: "Online or in person, with the manager hiring for the role." },
+      { name: "Evaluation", detail: "For some roles: numeric or logical reasoning, a learning-preferences assessment, or a case study or practical test. Nestlé says the timing varies by role and is explained in advance." },
+      { name: "Final interview", detail: "Several stakeholders together, often including the team you would join." },
     ],
     lookFor: [
       "Understanding of distribution and retail in India",
@@ -574,6 +583,9 @@ export const COMPANIES: CompanySeed[] = [
       "Structured answers to marketing problems",
     ],
     practice: [GD, MARKETING, HR_INTERVIEW, RESUME],
+    sources: [
+      { label: "Nestlé India — start your Nestlé journey", url: "https://www.nestle.in/jobs/recruitment-journey", checked_on: "2026-09-22" },
+    ],
     officialDomain: "nestle.in",
     officialLinks: [
       {
@@ -598,6 +610,7 @@ export const COMPANIES: CompanySeed[] = [
     summary:
       "Hires across divisions with processes that test technical finance knowledge and fit. What is asked depends heavily on the division.",
     rounds: [
+      { name: "Written test or group discussion", detail: "Goldman's India student page describes the interview process as starting with a written or online test and/or group discussions, with shortlisted students then invited to final round interviews. This differs from the recorded video interview used in some other regions." },
       { name: "Screen", detail: "CV shortlist, and in some processes an online test or recorded interview." },
       { name: "Technical interviews", detail: "Valuation, accounting and markets, weighted by division." },
       { name: "Fit interviews", detail: "Why the division, why the firm, and your experiences." },
@@ -608,6 +621,9 @@ export const COMPANIES: CompanySeed[] = [
       "Precision and composure under questioning",
     ],
     practice: [VALUATION_MODELS, IB_CASES, FINANCE_CONCEPTS, ACCOUNTING, STOCK_PITCH, RESEARCH_NOTE],
+    sources: [
+      { label: "Goldman Sachs India — process for students", url: "https://www.goldmansachs.com/worldwide/india/careers/process-for-students", checked_on: "2026-09-22" },
+    ],
     officialDomain: "goldmansachs.com",
     officialLinks: [
       {
@@ -645,6 +661,9 @@ export const COMPANIES: CompanySeed[] = [
       "Specific, well-structured behavioural examples",
     ],
     practice: [FINANCE_CONCEPTS, VALUATION_MODELS, ACCOUNTING, RESEARCH_NOTE, DAILY, HR_INTERVIEW],
+    sources: [
+      { label: "JPMorganChase — how we hire", url: "https://www.jpmorganchase.com/careers/how-we-hire", checked_on: "2026-09-22" },
+    ],
     officialDomain: "jpmorganchase.com",
     officialLinks: [
       {
@@ -706,6 +725,9 @@ export const COMPANIES: CompanySeed[] = [
       "Metric-driven thinking about products",
     ],
     practice: [HR_INTERVIEW, PRODUCT_SENSE, METRICS, RCA, GUESSTIMATES, SQL],
+    sources: [
+      { label: "Amazon Jobs — the interview loop", url: "https://www.amazon.jobs/content/en/how-we-hire/interview-loop", checked_on: "2026-09-22" },
+    ],
     officialDomain: "amazon.jobs",
     officialLinks: [
       {
@@ -765,6 +787,7 @@ export const COMPANIES: CompanySeed[] = [
     summary:
       "Product manager interviews commonly cover product design, customer empathy, estimation and behavioural questions.",
     rounds: [
+      { name: "Two interviews", detail: "Microsoft describes an initial interview and, if selected, a second and final one. ALL interviews are virtual, run as a Virtual Interview Day of one-to-one meetings with a break built in between." },
       { name: "Screen", detail: "CV shortlist, and for some roles an initial interview." },
       { name: "Product and design interviews", detail: "Designing for a user, improving a product, estimation." },
       { name: "Behavioural", detail: "Teamwork, influence without authority and learning from failure." },
@@ -775,6 +798,9 @@ export const COMPANIES: CompanySeed[] = [
       "Examples of influencing without authority",
     ],
     practice: [PRODUCT_SENSE, PM_CASES, GUESSTIMATES, HR_INTERVIEW, RESUME],
+    sources: [
+      { label: "Microsoft Careers — student interviewing", url: "https://careers.microsoft.com/v2/global/en/hiring-tips/student-interviewing", checked_on: "2026-09-22" },
+    ],
     officialDomain: "microsoft.com",
     officialLinks: [
       {
@@ -843,6 +869,9 @@ export const COMPANIES: CompanySeed[] = [
       "A considered view of business in India",
     ],
     practice: [GD, STRATEGY, SIMULATION, HR_INTERVIEW, DAILY],
+    sources: [
+      { label: "Tata group — TAS campus hiring", url: "https://www.tata.com/careers/programs/tas/tas-campus-tata-group", checked_on: "2026-09-22" },
+    ],
     officialDomain: "tata.com",
     officialLinks: [
       {
@@ -875,6 +904,9 @@ export const COMPANIES: CompanySeed[] = [
       "Clear career motivation",
     ],
     practice: [GD, STRATEGY, OPERATIONS, HR_INTERVIEW],
+    sources: [
+      { label: "ABGLP — Leadership Associate Program", url: "https://www.abglp.adityabirla.com/programs/leadership_associate_program", checked_on: "2026-09-22" },
+    ],
     officialDomain: "adityabirla.com",
     officialLinks: [
       {
@@ -885,7 +917,7 @@ export const COMPANIES: CompanySeed[] = [
       {
         label: "LEAP — the general management track",
         url: "https://www.abglp.adityabirla.com/programs/leadership_associate_program",
-        note: "The programme itself: a year of training across three four-month stints in different functions and businesses.",
+        note: "LEAP itself: three cross-functional four-month stints in year one, a two-week CSR immersion in rural India, and a confirmation review by group leadership that decides whether you are confirmed. It also recruits outside its core campus list through campus competitions and wildcard rounds.",
       },
     ],
   },
