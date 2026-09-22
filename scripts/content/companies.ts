@@ -210,8 +210,9 @@ export const COMPANIES: CompanySeed[] = [
     rounds: [
       { name: "CV shortlist", detail: "Academic record, work experience and evidence of leadership and impact." },
       { name: "Solve", detail: "McKinsey's own assessment game, used in many offices before interviews. The firm says it tests intrinsic problem-solving and that no preparation is required or expected for it." },
-      { name: "Personal experience interview", detail: "McKinsey describes this as its own interview, not a segment of the case. Its guidance is to bring two personal examples and talk through them at length — the challenge, the goal, what you did." },
-      { name: "Problem-solving interview", detail: "The case. McKinsey says it is looking at how you structure an ambiguous problem, work with facts and data, and reach a recommendation you can articulate." },
+      { name: "Personal experience interview (PEI)", detail: "McKinsey describes this as its own interview, not a segment of the case. Its guidance is to bring TWO personal examples for EACH of four themes it names, focusing on your specific role and the actions that were critical to the outcome." },
+      { name: "Problem-solving interview", detail: "The case — McKinsey notes it is sometimes called that. It presents a business case to evaluate analytical thinking. It publishes four full sample cases with suggested answers: Beautify, Diconsa, Electro-Light and Talbot Trucks." },
+      { name: "Expertise interview", detail: "For some roles only. For technical roles this becomes a tailored assessment, which may include coding challenges." },
     ],
     lookFor: [
       "A clear, hypothesis-driven structure you can adapt as data arrives",
@@ -220,12 +221,40 @@ export const COMPANIES: CompanySeed[] = [
       "Stories where your personal role and the outcome are specific",
     ],
     practice: [MBB_CASES, DRILLS, GUESSTIMATES, HR_INTERVIEW, RESUME],
+    sources: [
+      { label: "McKinsey & Company — interviewing at McKinsey", url: "https://www.mckinsey.com/careers/interviewing", checked_on: "2026-09-22" },
+    ],
     officialDomain: "mckinsey.com",
     officialLinks: [
       {
         label: "Interviewing at McKinsey",
         url: "https://www.mckinsey.com/careers/interviewing",
-        note: "The firm's own description of the personal experience and problem-solving interviews.",
+        note: "The firm's own description of the PEI, the problem-solving interview and the expertise interview.",
+      },
+      {
+        label: "Beautify — a McKinsey sample case",
+        url: "https://www.mckinsey.com/careers/interviewing/beautify",
+        note: "Whether a beauty company should train in-store consultants to use virtual channels. Published with suggested answers.",
+      },
+      {
+        label: "Diconsa — a McKinsey sample case",
+        url: "https://www.mckinsey.com/careers/interviewing/diconsa",
+        note: "Using Mexico's Diconsa network to bring basic financial services to the rural poor, for the Gates Foundation.",
+      },
+      {
+        label: "Electro-Light — a McKinsey sample case",
+        url: "https://www.mckinsey.com/careers/interviewing/electrolight",
+        note: "Launching a reduced-sugar electrolyte sports drink for a major beverage company.",
+      },
+      {
+        label: "Talbot Trucks — a McKinsey sample case",
+        url: "https://www.mckinsey.com/careers/interviewing/talbot-trucks",
+        note: "Whether a European truck maker should invest in producing electric trucks.",
+      },
+      {
+        label: "Assessment integrity expectations",
+        url: "https://www.mckinsey.com/careers/assessment-integrity-expectations",
+        note: "READ THIS ONE. McKinsey sets out where AI is welcome in your preparation and where it is not: practising questions and having concepts explained are encouraged, generating answers during an interview or using AI in an assessment is not.",
       },
       {
         label: "Solve, McKinsey's assessment game",
@@ -328,8 +357,10 @@ export const COMPANIES: CompanySeed[] = [
       "A strategy and operations consulting firm. Its cases often have an operations, supply chain or cost flavour alongside classic strategy problems.",
     rounds: [
       { name: "CV shortlist", detail: "Academic and work record." },
-      { name: "Case interviews", detail: "Typically two or more rounds; operations and cost problems appear often." },
-      { name: "Fit", detail: "Experience-based questions and motivation for consulting." },
+      { name: "Four to five interviews", detail: "Kearney states its general consulting process is typically FOUR TO FIVE interviews, blending behavioural and case rounds. They are conducted by consultants rather than recruiters, so you meet the people you would work with from the first round." },
+      { name: "Behavioural interview", detail: "Kearney describes it as a get-to-know-you conversation about the setting, people and influences that shaped your decisions." },
+      { name: "Case interview", detail: "Operations and cost problems appear often. Kearney says plainly it wants the solution you genuinely believe is best, not the one you think it wants to hear." },
+      { name: "Competency assessment", detail: "Depending on the role, Kearney says you may also be asked to complete an additional competency assessment." },
     ],
     lookFor: [
       "Operational common sense: where cost and capacity actually sit",
@@ -337,6 +368,9 @@ export const COMPANIES: CompanySeed[] = [
       "Industry experience you can explain crisply",
     ],
     practice: [MBB_CASES, OPERATIONS, DRILLS, HR_INTERVIEW],
+    sources: [
+      { label: "Kearney — our recruiting process", url: "https://www.kearney.com/careers/interviewing/recruiting-process", checked_on: "2026-09-22" },
+    ],
     officialDomain: "kearney.com",
     officialLinks: [
       {
