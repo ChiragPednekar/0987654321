@@ -243,9 +243,9 @@ export const COMPANIES: CompanySeed[] = [
       "Recruits through a CV shortlist and multiple case interview rounds. Cases are often more open and conversational, expecting you to drive the structure.",
     rounds: [
       { name: "CV shortlist", detail: "Academic and professional record, with weight on distinctive achievements." },
-      { name: "Online case or test", detail: "In some processes, an online case-style assessment before the interviews." },
-      { name: "Case interviews", detail: "Typically several rounds, often candidate-led, with room for creative ideas alongside the analysis." },
-      { name: "Fit questions", detail: "Why consulting, why this firm, and examples from your past." },
+      { name: "Skills interview", detail: "BCG's own name for it: a conversation about your experience, skills and motivation." },
+      { name: "Case interview", detail: "BCG says this assesses problem-solving and analytical skills for client-facing roles. Often candidate-led, with room for creative ideas alongside the analysis." },
+      { name: "Team interview", detail: "BCG names this as a distinct round, assessing problem-solving, analytical AND communication skills." },
     ],
     lookFor: [
       "Driving the case yourself rather than waiting for prompts",
@@ -254,6 +254,9 @@ export const COMPANIES: CompanySeed[] = [
       "A convincing reason for consulting",
     ],
     practice: [MBB_CASES, GUESSTIMATES, DRILLS, HR_INTERVIEW, RESUME],
+    sources: [
+      { label: "BCG Careers — interview process", url: "https://careers.bcg.com/global/en/interview-process", checked_on: "2026-09-22" },
+    ],
     officialDomain: "bcg.com",
     officialLinks: [
       {
@@ -264,7 +267,7 @@ export const COMPANIES: CompanySeed[] = [
       {
         label: "Case interview preparation",
         url: "https://careers.bcg.com/case-interview-preparation",
-        note: "BCG's published prep material, including Casey, its case interview chatbot.",
+        note: "BCG's published case preparation material.",
       },
     ],
   },
@@ -277,8 +280,9 @@ export const COMPANIES: CompanySeed[] = [
       "Case interviews with a strong emphasis on practical, results-oriented recommendations, and a well-known focus on fit — whether the team would want to work with you.",
     rounds: [
       { name: "CV shortlist", detail: "Academic record and leadership outside the classroom." },
-      { name: "Digital assessment", detail: "Bain describes its process as a digital assessment and then case interview(s). Worth knowing it comes before the cases — it is easy to prepare only for the case." },
-      { name: "Case interviews", detail: "Typically several rounds. Market sizing and profitability problems are common." },
+      { name: "Recruiter call", detail: "Bain says you MIGHT have a call with a recruiter after the application review — it is described as possible, not guaranteed." },
+      { name: "Interview rounds", detail: "Bain describes several rounds of interviews, which it says might include a questionnaire among other components." },
+      { name: "Case interview", detail: "Bain scopes this to role: for a role such as consultant you MAY also have a case interview where you work through a problem. Market sizing and profitability problems are common." },
       { name: "Written or presentation case", detail: "Some offices use one in later rounds." },
       { name: "Fit", detail: "Conversational questions about you, your teams and why Bain." },
     ],
@@ -288,6 +292,9 @@ export const COMPANIES: CompanySeed[] = [
       "Warmth and collaboration in how you work through the problem",
     ],
     practice: [MBB_CASES, GUESSTIMATES, HR_INTERVIEW, RESUME],
+    sources: [
+      { label: "Bain & Company — our hiring process", url: "https://www.bain.com/careers/hiring-process/", checked_on: "2026-09-22" },
+    ],
     officialDomain: "bain.com",
     officialLinks: [
       {
@@ -358,7 +365,7 @@ export const COMPANIES: CompanySeed[] = [
       "Recruits in volume on Indian campuses. Processes vary by campus but commonly combine a screen, a case or business discussion, and interviews that probe your specialisation.",
     rounds: [
       { name: "Screen", detail: "A CV shortlist, and on some campuses an online test or a group discussion." },
-      { name: "Assessment", detail: "Accenture India describes a mandatory assessment covering technical, coding, behavioural and communication sections, each cleared on its own rather than on a combined total. Its own pages also state that you may hold only one active application in India at a time, and that a failed assessment cannot be reattempted for 90 days." },
+      { name: "Assessment", detail: "Accenture describes online activities assessing problem-solving, logical reasoning and applied technical knowledge, built to simulate real work. Two rules from its own India page are worth knowing before you apply: you may hold only ONE ACTIVE APPLICATION in India at a time, and a failed assessment cannot be retaken for 90 DAYS — that wait attaches to the assessment itself, so it blocks other roles using the same one." },
       { name: "Case or business discussion", detail: "A business problem, often tied to technology or transformation." },
       { name: "Personal and domain interview", detail: "Your prior work, your MBA specialisation and why consulting." },
     ],
@@ -368,6 +375,9 @@ export const COMPANIES: CompanySeed[] = [
       "Depth in your own specialisation and past role",
     ],
     practice: [GD, MBB_CASES, GUESSTIMATES, HR_INTERVIEW, APTITUDE],
+    sources: [
+      { label: "Accenture India — your journey to Accenture", url: "https://www.accenture.com/in-en/careers/explore-careers/area-of-interest/journey-to-accenture", checked_on: "2026-09-22" },
+    ],
     officialDomain: "accenture.com",
     officialLinks: [
       {
@@ -386,7 +396,7 @@ export const COMPANIES: CompanySeed[] = [
       "Consulting roles across strategy, operations and technology. Campus processes commonly mix a screen, case-style questions and personal interviews.",
     rounds: [
       { name: "Screen", detail: "A CV shortlist, and on some campuses an aptitude test or group discussion." },
-      { name: "Case interview", detail: "A business case or a guesstimate." },
+      { name: "Case and scenario interview", detail: "Deloitte's own name for the round. It publishes a five-step approach it wants to see: clarify the issue, identify the assumptions, summarise the issues and findings, state a recommendation, then outline next steps and expected results. It says explicitly you are not expected to produce the 'right' answer — the logic is what is marked. Separate prep tools exist for Consultative Offerings and for Audit & Assurance." },
       { name: "Personal and HR interview", detail: "Past experience, motivation and fit." },
     ],
     lookFor: [
@@ -395,6 +405,9 @@ export const COMPANIES: CompanySeed[] = [
       "Specific examples from past work",
     ],
     practice: [MBB_CASES, GUESSTIMATES, GD, HR_INTERVIEW, APTITUDE],
+    sources: [
+      { label: "Deloitte — preparing for the case and scenario interview", url: "https://www.deloitte.com/us/en/careers/join-deloitte/recruiting-tips/case-and-scenario-interview-tips.html", checked_on: "2026-09-22" },
+    ],
     officialDomain: "deloitte.com",
     officialLinks: [
       {
