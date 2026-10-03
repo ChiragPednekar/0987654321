@@ -78,33 +78,58 @@ purpose — do not collapse them.
 
 ## Still needs a human
 
-### 1. Create the Vercel project
+### 1. Paste four environment variables into Vercel, then redeploy
 
-The Vercel integration available to the agent is installation-scoped and
-returns `403 forbidden / action: create / resource: project` on both
-`create_project` and `create_git_project`. It can read and manage projects but
-cannot create one. Import `ChiragPednekar/0987654321` from the dashboard.
+The project is live at **https://casecode-ebon.vercel.app**, built from the
+right commit, and deployed to **bom1** — `vercel.json` carried the region
+through, so that did not need setting by hand.
 
-Two gotchas: name it something other than the repo name, because Vercel
-rejects an all-digits project name; and set the function region to **bom1**,
-or the region fix is silently lost.
+It is not finished, though. `/sql`, `/excel`, `/companies` and `/competitions`
+all return HTTP 200 but render the `loading.tsx` skeleton and nothing else.
+The RSC payload carries a server error (`9:E{"digest":...}`) while the
+surrounding layout renders fine, including the signed-in profile read from the
+database. That split is the whole diagnosis: the layout uses the ordinary SSR
+client, those four pages call `createAdminClient()`, and it throws by design
+when `SUPABASE_SERVICE_ROLE_KEY` is missing.
 
-Environment variables to set — `NEXT_PUBLIC_*` are already committed in
-`.env.production` because they must be inlined at build time, the rest are
-secrets and must not be:
+So the URL and anon key are correct and the database is reachable. The service
+role key is simply absent from the deployment. Verified by elimination, not by
+guesswork: the same commit against the same database, run locally with the key
+present, renders those pages at 231KB / 210KB / 273KB of real content instead
+of 42KB of skeleton.
 
-| Key | Where it is |
-| --- | --- |
-| `SUPABASE_SERVICE_ROLE_KEY` | `.env.local` (gitignored) |
-| `GEMINI_API_KEY`, `GEMINI_MODEL`, `AI_PROVIDER` | `.env.local` |
-| `CRON_SECRET` | `.env.local` |
-| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | still unset — payments stay dark until these exist |
-| `NEXT_PUBLIC_TURN_*` | still unset — only affects GD audio relay |
+The agent could not set these. The Vercel integration available to it is
+read-only beyond project metadata — `403 forbidden` on
+`create projectEnvVars`, on `list projectEnvVars`, on `list deployment`, and
+on project creation. Only the reads of project and deployment metadata work.
+
+Set these four in Vercel → Settings → Environment Variables, for Production,
+Preview and Development. Print the exact values without pasting secrets into a
+chat window:
+
+```bash
+grep -E '^(SUPABASE_SERVICE_ROLE_KEY|GEMINI_API_KEY|GEMINI_MODEL|AI_PROVIDER|CRON_SECRET)=' .env.local
+```
+
+| Key | Mark as | Without it |
+| --- | --- | --- |
+| `SUPABASE_SERVICE_ROLE_KEY` | Sensitive | the four pages above stay blank |
+| `GEMINI_API_KEY` | Sensitive | grading errors on submit |
+| `GEMINI_MODEL`, `AI_PROVIDER` | Plain | provider falls back wrongly |
+| `CRON_SECRET` | Sensitive | the leaderboard and dead-link crons reject themselves |
+
+Then redeploy. Environment variables are read at build time for
+`NEXT_PUBLIC_*` and at runtime for the rest, but a redeploy is the only way to
+be sure the running lambdas pick them up.
+
+Still unset and still only affecting their own features: `RAZORPAY_KEY_ID`,
+`RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (payments stay dark) and
+`NEXT_PUBLIC_TURN_*` (GD audio relay).
 
 ### 2. Re-point the Google OAuth client
 
 The Google OAuth *client* lives in Google Cloud Console, so it survived the
-deletion. What died was the Supabase side of it. Two steps:
+deletion. What died was the Supabase half. Two steps:
 
 1. In Google Cloud Console → Credentials → that OAuth client, add this to
    **Authorized redirect URIs**:
@@ -118,21 +143,13 @@ deletion. What died was the Supabase side of it. Two steps:
    almost certainly what "the Google sign-in is broken" means.
 
 2. Paste that client's ID and secret into Supabase → Authentication →
-   Providers → Google, and enable it. `external_google_enabled` is currently
-   `false`, and the sign-in button follows that flag, so the button is hidden
-   until it flips.
+   Providers → Google, and enable it. `external_google_enabled` is still
+   `false`, and the sign-in button asks the auth server what is enabled, so
+   the button stays hidden until it flips.
 
-Then set `site_url` and add the production callback to the allow-list:
-
-```bash
-TOKEN=$(security find-generic-password -s "Supabase CLI" -w)
-curl -X PATCH "https://api.supabase.com/v1/projects/hhjxvnrjnyugepnsuafi/config/auth" \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"site_url":"https://YOUR-DOMAIN","uri_allow_list":"https://YOUR-DOMAIN/**,http://localhost:3000/**"}'
-```
-
-The allow-list currently holds localhost only, which is why local dev works
-and production will not until this runs.
+`site_url` and the redirect allow-list are already set to
+`https://casecode-ebon.vercel.app` (plus the preview wildcard and localhost),
+so nothing further is needed there.
 
 ## Carried-over issues, not caused by the outage
 
