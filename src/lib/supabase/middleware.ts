@@ -72,8 +72,22 @@ export async function updateSession(request: NextRequest) {
 
   const isProtected = !isPublic(pathname);
 
+  /**
+   * API routes answer for themselves and must never be redirected.
+   *
+   * Closing the platform initially bounced every non-public path to /login,
+   * which included /api. That broke the cron endpoints outright: Vercel Cron
+   * carries no session cookie, so both a correct and a forged CRON_SECRET got
+   * a 307 to /login and the route that checks the secret was never reached.
+   * The leaderboard refresh and the daily quiz would have stopped silently.
+   *
+   * It also changed the contract for every other route — an HTML redirect
+   * where a caller expects JSON, and a 200 where it expects 401.
+   */
+  const isApi = pathname.startsWith("/api/");
+
   // Unauthenticated user trying to reach a protected area -> bounce to /login
-  if (!user && isProtected) {
+  if (!user && isProtected && !isApi) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
@@ -102,6 +116,16 @@ export async function updateSession(request: NextRequest) {
     });
 
     if (allowed === false) {
+      // An API caller gets a status it can act on, not a login page. This is
+      // the gate that matters for the routes reading through the service-role
+      // client, where RLS withholds nothing.
+      if (isApi) {
+        return NextResponse.json(
+          { error: "This account does not have access." },
+          { status: 403 },
+        );
+      }
+
       const url = request.nextUrl.clone();
       url.pathname = "/no-access";
       url.search = "";
