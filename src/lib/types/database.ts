@@ -1870,6 +1870,12 @@ export interface Database {
       has_pro: { Args: { p_user: string }; Returns: boolean };
       /** Entitlement to practise, not merely browse (20250101000032). */
       can_solve: { Args: { p_user: string }; Returns: boolean };
+      /**
+       * Whether the address is on access_allowlist — invite-only entry
+       * (20250101000060). Independent of has_pro/can_solve: this is "may you
+       * see anything", not "may you spend AI budget".
+       */
+      has_access: { Args: { p_user: string }; Returns: boolean };
       /** Uncleared severe integrity findings in the last year (20250101000035). */
       integrity_strikes: { Args: { p_user: string }; Returns: number };
       /** Per-track objective accuracy for one account (20250101000037). */

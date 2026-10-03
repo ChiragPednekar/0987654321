@@ -4,28 +4,34 @@ import type { Database } from "@/lib/types/database";
 import { ROLE_HOMES, mustRedirectFromHome, roleHome } from "@/lib/role-home";
 
 /**
- * Only personal and administrative surfaces require a session.
+ * The platform is invite-only: everything is closed except the way in.
  *
- * Browsing the library, paths, contests and the leaderboard is deliberately
- * public — it is the top of the funnel, and RLS already limits anonymous reads
- * to published rows. Submitting an answer requires auth, enforced in the API
- * route and by RLS, not here.
+ * This used to be the other way round — a short PROTECTED_PREFIXES list, with
+ * the library, paths, contests and leaderboard left public as the top of the
+ * funnel. 20250101000060 ended that, so the list below is now the complete set
+ * of paths that may be seen without an account.
+ *
+ * Anything not listed here needs a session AND an address on access_allowlist.
  */
-const PROTECTED_PREFIXES = [
-  "/dashboard",
-  "/profile",
-  "/settings",
-  "/bookmarks",
-  "/notifications",
-  "/progress",
-  "/groups",
-  "/classrooms",
-  "/institution",
-  "/teacher",
-  "/teach",
-  "/admin",
-  "/recruiter",
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/no-access",
+  "/auth",
+  "/terms",
+  "/privacy",
+  "/pricing",
+  "/how-grading-works",
 ];
+
+function isPublic(pathname: string): boolean {
+  return PUBLIC_PATHS.some(
+    (p) => pathname === p || (p !== "/" && pathname.startsWith(`${p}/`)),
+  );
+}
 
 /**
  * Refreshes the auth cookie on every request and gates protected routes.
@@ -64,9 +70,7 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  const isProtected = PROTECTED_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
+  const isProtected = !isPublic(pathname);
 
   // Unauthenticated user trying to reach a protected area -> bounce to /login
   if (!user && isProtected) {
@@ -78,6 +82,37 @@ export async function updateSession(request: NextRequest) {
       redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
     });
     return redirectResponse;
+  }
+
+  /**
+   * Invite-only gate.
+   *
+   * RLS already returns nothing to an account that is not on the list, but
+   * almost every page under (app) renders through the service-role client,
+   * which bypasses RLS by design. So for those pages this check is the only
+   * thing standing between a de-listed account and the questions.
+   *
+   * Costs one RPC on non-public paths. That is the price of the service-role
+   * rendering; shrinking it by trusting the JWT would mean trusting a token
+   * issued before the address was removed.
+   */
+  if (user && isProtected) {
+    const { data: allowed } = await supabase.rpc("has_access", {
+      p_user: user.id,
+    });
+
+    if (allowed === false) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/no-access";
+      url.search = "";
+      const redirectResponse = NextResponse.redirect(url);
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+      });
+      return redirectResponse;
+    }
+    // A null/errored result deliberately does NOT redirect: a failed lookup
+    // must not lock out the whole platform. RLS still withholds the rows.
   }
 
   /**
