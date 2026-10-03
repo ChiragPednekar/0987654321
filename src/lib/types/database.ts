@@ -1166,6 +1166,12 @@ export interface Database {
         Update: Partial<RoleGrantRow>;
         Relationships: [];
       };
+      access_allowlist: {
+        Row: AccessAllowlistRow;
+        Insert: Partial<AccessAllowlistRow>;
+        Update: Partial<AccessAllowlistRow>;
+        Relationships: [];
+      };
       audit_log: {
         Row: AuditLogRow;
         Insert: Partial<AuditLogRow>;
@@ -2327,6 +2333,17 @@ export type RoleGrantRow = {
   granted_by: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/**
+ * An address permitted to hold an account and read content
+ * (public.access_allowlist, 20250101000060).
+ */
+export type AccessAllowlistRow = {
+  email: string;
+  note: string | null;
+  granted_by: string | null;
+  created_at: string;
 };
 
 /** Platform-wide operational totals (public.platform_overview). */
