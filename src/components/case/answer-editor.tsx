@@ -18,6 +18,7 @@ import { cn, formatDuration } from "@/lib/utils";
 import type { AnswerSections } from "@/lib/types/database";
 import { useProctor } from "@/hooks/use-proctor";
 import { ProctorGate, ProctorOverlay } from "./proctor-overlay";
+import { CameraPreview } from "@/components/proctor/camera-preview";
 
 interface AnswerEditorProps {
   caseId: string;
@@ -233,7 +234,7 @@ export function AnswerEditor({
    * what produces the user gesture fullscreen requires.
    */
   if (!proctor.examMode) {
-    return <ProctorGate starting={proctor.starting} onStart={proctor.start} />;
+    return <ProctorGate camera={proctor.camera} starting={proctor.starting} onStart={proctor.start} />;
   }
 
   return (
@@ -243,6 +244,7 @@ export function AnswerEditor({
         student alt-tabs to their calculator would teach them to resent the
         feature rather than to stay put.
       */}
+      {proctor.examMode && <CameraPreview camera={proctor.camera} />}
       {proctor.examMode && proctor.needsAcknowledgement && (
         <ProctorOverlay
           count={proctor.signals.blurCount}

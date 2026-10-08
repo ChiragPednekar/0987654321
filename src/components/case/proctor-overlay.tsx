@@ -1,7 +1,8 @@
 "use client";
 
-import { Eye, Loader2, Lock, ShieldAlert } from "lucide-react";
+import { Camera, Eye, Loader2, Lock, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { CameraApi } from "@/hooks/use-camera-proctor";
 
 /**
  * What a student sees when they leave the page mid-answer in exam mode.
@@ -108,13 +109,27 @@ export function ProctorGate({
   resumed = false,
   title,
   rules = CASE_RULES,
+  camera,
 }: {
   starting: boolean;
   onStart: () => void | Promise<void>;
   resumed?: boolean;
   title?: string;
   rules?: readonly string[];
+  /**
+   * When given, the camera is asked for as its own step before Start.
+   *
+   * Its own button rather than folded into Start, because of the same rule
+   * that makes Start a button at all: fullscreen is only granted inside a
+   * fresh user gesture, and that gesture expires within seconds. Waiting on a
+   * permission prompt inside Start would hand fullscreen a stale gesture
+   * whenever a student took a moment to read the prompt — and lose it.
+   */
+  camera?: CameraApi;
 }) {
+  const cameraFirst = camera !== undefined && camera.status === "idle";
+  const waitingForCamera = camera !== undefined && !cameraFirst && !cameraReady(camera);
+
   return (
     <div className="rounded-xl border bg-card p-6 text-center">
       <Lock className="mx-auto size-7 text-muted-foreground" />
@@ -128,10 +143,128 @@ export function ProctorGate({
           <li key={rule}>· {rule}</li>
         ))}
       </ul>
-      <Button className="mt-5" onClick={() => void onStart()} disabled={starting}>
-        {starting ? <Loader2 className="animate-spin" /> : <Lock />}
-        {starting ? "Starting…" : resumed ? "Resume" : "Start"}
-      </Button>
+      {camera && <CameraConsent camera={camera} />}
+
+      {cameraFirst ? (
+        <Button className="mt-5" onClick={() => void camera.request()}>
+          <Camera />
+          Turn on camera
+        </Button>
+      ) : waitingForCamera ? (
+        <Button className="mt-5" disabled>
+          <Loader2 className="animate-spin" />
+          Allow the camera in your browser…
+        </Button>
+      ) : (
+        <Button className="mt-5" onClick={() => void onStart()} disabled={starting}>
+          {starting ? <Loader2 className="animate-spin" /> : <Lock />}
+          {starting ? "Starting…" : resumed ? "Resume" : "Start"}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Whether a surface may start the attempt as far as the camera is concerned.
+ *
+ * Ready once the camera question has an answer — on, refused or unavailable —
+ * or once the prompt has gone unanswered long enough that waiting longer would
+ * be the camera stopping someone sitting the paper. Not ready while it has not
+ * been asked at all, which is the point: the camera must be settled before the
+ * start click goes fullscreen, because some browsers leave fullscreen to show a
+ * permission prompt, and that exit is a penalised flag the student did nothing
+ * to earn.
+ */
+export function cameraReady(camera: CameraApi): boolean {
+  if (camera.status === "idle") return false;
+  if (camera.status === "requesting") return camera.waitedTooLong;
+  return true;
+}
+
+/**
+ * The camera step for surfaces that start from their own button rather than
+ * through ProctorGate — the contest timer and the aptitude paper, whose start
+ * click also has to fire a network request in the same gesture.
+ *
+ * Render it above the start button and disable the button with
+ * `!cameraReady(camera)`. Renders nothing once the camera is on, so the start
+ * screen goes back to looking as it did.
+ */
+export function CameraStep({ camera }: { camera: CameraApi }) {
+  if (camera.status === "on") return null;
+  return (
+    <div className="text-center">
+      <CameraConsent camera={camera} />
+      {camera.status === "idle" && (
+        <Button className="mt-3" variant="outline" onClick={() => void camera.request()}>
+          <Camera />
+          Turn on camera
+        </Button>
+      )}
+      {camera.status === "requesting" && !camera.waitedTooLong && (
+        <Button className="mt-3" variant="outline" disabled>
+          <Loader2 className="animate-spin" />
+          Allow the camera in your browser…
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * What the camera does, said before it is switched on.
+ *
+ * This is the notice the student consents against, so it says the three
+ * things that matter for that: what is checked, that the checking happens on
+ * their own laptop, and exactly what — if anything — is kept and for how long.
+ * Anything vaguer would not be consent to anything in particular.
+ */
+function CameraConsent({ camera }: { camera: CameraApi }) {
+  const state =
+    camera.status === "on"
+      ? { tone: "text-success", text: "Camera is on." }
+      : camera.status === "denied"
+        ? {
+            tone: "text-warning",
+            text: "Camera access was refused. You can still start, but the attempt will be marked as taken with the camera off.",
+          }
+        : camera.status === "unavailable"
+          ? {
+              tone: "text-warning",
+              text: "No camera could be used — it may be missing or open in another app. You can still start; this will be noted with the attempt.",
+            }
+          : camera.status === "requesting" && camera.waitedTooLong
+            ? {
+                tone: "text-warning",
+                text: "Still waiting for camera permission. You can start without it; the attempt will be noted as taken with the camera off.",
+              }
+            : null;
+
+  const canRetry = camera.status === "denied" || camera.status === "unavailable";
+
+  return (
+    <div className="mx-auto mt-4 max-w-sm rounded-md border bg-muted/40 p-3 text-left text-xs text-muted-foreground">
+      <p className="flex items-center gap-1.5 font-medium text-foreground">
+        <Camera className="size-3.5" aria-hidden />
+        Camera
+      </p>
+      <p className="mt-1.5">
+        Your camera checks that you are on your own and that no phone is in
+        view. The checks run on this laptop and no video is uploaded. If
+        something is detected, one small photo is saved for a reviewer and
+        deleted after 30 days.
+      </p>
+      {state && <p className={`mt-1.5 ${state.tone}`}>{state.text}</p>}
+      {canRetry && (
+        <button
+          type="button"
+          className="mt-1.5 underline underline-offset-2 hover:text-foreground"
+          onClick={() => void camera.request()}
+        >
+          Try the camera again
+        </button>
+      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   ProctorGate,
   ProctorOverlay,
 } from "@/components/case/proctor-overlay";
+import { CameraPreview } from "@/components/proctor/camera-preview";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -133,6 +134,7 @@ export function NegotiationRoom({
   if (!proctor.examMode) {
     return (
       <ProctorGate
+        camera={proctor.camera}
         starting={proctor.starting}
         onStart={proctor.start}
         title="This negotiation is conducted under exam conditions"
@@ -143,6 +145,7 @@ export function NegotiationRoom({
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+      {proctor.examMode && <CameraPreview camera={proctor.camera} />}
       {proctor.needsAcknowledgement && (
         <ProctorOverlay
           count={proctor.signals.blurCount}

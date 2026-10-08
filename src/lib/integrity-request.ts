@@ -29,5 +29,21 @@ export const signalsSchema = z
     blurMs: z.number().int().min(0).max(86_400_000).default(0),
     fullscreenExits: z.number().int().min(0).max(10_000).default(0),
     proctored: z.boolean().default(false),
+    // Camera. Defaulted like the rest: a client from before the camera shipped
+    // sends none of these, and cameraRequested=false is what tells
+    // assessIntegrity not to read their absence as a refusal.
+    cameraRequested: z.boolean().default(false),
+    cameraGranted: z.boolean().default(false),
+    cameraDenied: z.boolean().default(false),
+    cameraUnavailable: z.boolean().default(false),
+    cameraLostCount: z.number().int().min(0).max(10_000).default(0),
+    detectorFailed: z.boolean().default(false),
+    cameraSamples: z.number().int().min(0).max(1_000_000).default(0),
+    noFaceMs: z.number().int().min(0).max(86_400_000).default(0),
+    noFaceEvents: z.number().int().min(0).max(10_000).default(0),
+    multiFaceEvents: z.number().int().min(0).max(10_000).default(0),
+    phoneEvents: z.number().int().min(0).max(10_000).default(0),
+    bookEvents: z.number().int().min(0).max(10_000).default(0),
+    coveredMs: z.number().int().min(0).max(86_400_000).default(0),
   })
   .default(EMPTY_SIGNALS);

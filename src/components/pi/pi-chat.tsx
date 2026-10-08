@@ -10,6 +10,7 @@ import {
   ProctorGate,
   ProctorOverlay,
 } from "@/components/case/proctor-overlay";
+import { CameraPreview } from "@/components/proctor/camera-preview";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -118,6 +119,7 @@ export function PiChat({
   if (!proctor.examMode) {
     return (
       <ProctorGate
+        camera={proctor.camera}
         starting={proctor.starting}
         onStart={proctor.start}
         title="This interview is answered under exam conditions"
@@ -128,6 +130,7 @@ export function PiChat({
 
   return (
     <div className="space-y-4">
+      {proctor.examMode && <CameraPreview camera={proctor.camera} />}
       {proctor.needsAcknowledgement && (
         <ProctorOverlay
           count={proctor.signals.blurCount}

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { EMPTY_SIGNALS, type ProctorSignals } from "@/lib/integrity";
+import { useCameraProctor, type CameraApi } from "@/hooks/use-camera-proctor";
 
 /**
  * Watches how an answer is being written.
@@ -59,6 +60,12 @@ export interface ProctorState {
 }
 
 export interface ProctorApi extends ProctorState {
+  /**
+   * The webcam. Its counters are already merged into `signals`, so a surface
+   * that submits `signals` reports the camera without knowing it exists; this
+   * is exposed for the gate's camera step and the corner preview.
+   */
+  camera: CameraApi;
   /** Attach to each answer field. */
   handlers: {
     onKeyDown: (e: React.KeyboardEvent) => void;
@@ -82,6 +89,9 @@ export function useProctor(enabled: boolean): ProctorApi {
   const [examMode, setExamMode] = React.useState(false);
   const [starting, setStarting] = React.useState(false);
   const [fullscreen, setFullscreen] = React.useState(false);
+
+  // Counts only while the attempt is running; see useCameraProctor.
+  const camera = useCameraProctor(enabled, examMode);
 
   const leftAt = React.useRef<number | null>(null);
   const stopped = React.useRef(false);
@@ -276,16 +286,29 @@ export function useProctor(enabled: boolean): ProctorApi {
     setFullscreen(await requestFullscreen());
   }, [requestFullscreen]);
 
+  const { stop: stopCamera } = camera;
   const stop = React.useCallback(() => {
     stopped.current = true;
     examRef.current = false;
     setExamMode(false);
     setFullscreen(false);
+    stopCamera();
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
-  }, []);
+  }, [stopCamera]);
+
+  /**
+   * One object, so every surface's existing `signals: proctor.signals` carries
+   * the camera too. Memoised on its inputs so the reference only changes when a
+   * counter does.
+   */
+  const merged = React.useMemo<ProctorSignals>(
+    () => ({ ...signals, ...camera.signals }),
+    [signals, camera.signals],
+  );
 
   return {
-    signals,
+    signals: merged,
+    camera,
     away,
     needsAcknowledgement,
     examMode,

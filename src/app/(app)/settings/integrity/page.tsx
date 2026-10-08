@@ -5,7 +5,7 @@ import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { STRIKES_BEFORE_BLOCK } from "@/lib/integrity";
+import { CAMERA_REVIEW_FLAGS, STRIKES_BEFORE_BLOCK } from "@/lib/integrity";
 import { plural, timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Academic integrity" };
@@ -22,6 +22,15 @@ const FLAG_LABEL: Record<string, string> = {
   long_absence: "Several minutes away mid-answer",
   left_exam_mode: "Left exam mode",
   ai_style: "The writing resembles AI-generated text",
+  phone_seen: "A phone appeared on camera",
+  multiple_faces: "Another person appeared on camera",
+  no_face: "You were away from the camera for a while",
+  camera_covered: "The camera view was blocked",
+  camera_refused: "Camera access was refused",
+  camera_unavailable: "No camera was available",
+  camera_lost: "The camera stopped during the attempt",
+  camera_not_analysed: "Your device could not run the camera checks",
+  book_seen: "A book or notebook appeared on camera",
 };
 
 /**
@@ -64,7 +73,10 @@ export default async function IntegrityRecordPage() {
     .select(
       "id, activity, submission_id, severity, score, penalty_pct, flags, cleared_at, created_at, cases(slug, title)",
     )
-    .neq("severity", "clean")
+    // Camera findings cost nothing, so their attempts are usually `clean`. They
+    // are still listed: the consent notice told the student a photo may be
+    // kept, and they are entitled to see when that happened.
+    .or(`severity.neq.clean,flags.ov.{${CAMERA_REVIEW_FLAGS.join(",")}}`)
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -148,7 +160,11 @@ export default async function IntegrityRecordPage() {
                             : "secondary"
                       }
                     >
-                      {row.cleared_at ? "cleared" : row.severity}
+                      {row.cleared_at
+                        ? "cleared"
+                        : row.severity === "clean"
+                          ? "camera note"
+                          : row.severity}
                     </Badge>
                     {kase && row.submission_id ? (
                       <Link
@@ -168,7 +184,11 @@ export default async function IntegrityRecordPage() {
                     )}
                     <span className="text-xs text-muted-foreground">
                       {timeAgo(row.created_at)}
-                      {row.cleared_at ? "" : ` · −${row.penalty_pct}%`}
+                      {row.cleared_at
+                        ? ""
+                        : row.severity === "clean"
+                          ? " · no marks taken"
+                          : ` · −${row.penalty_pct}%`}
                     </span>
                   </div>
                   <ul className="space-y-0.5 text-xs text-muted-foreground">

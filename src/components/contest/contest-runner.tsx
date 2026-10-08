@@ -10,7 +10,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MAX_ANSWER_CHARS, MIN_ANSWER_CHARS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useProctor } from "@/hooks/use-proctor";
-import { ProctorGate, ProctorOverlay } from "@/components/case/proctor-overlay";
+import {
+  CameraStep,
+  cameraReady,
+  ProctorGate,
+  ProctorOverlay,
+} from "@/components/case/proctor-overlay";
+import { CameraPreview } from "@/components/proctor/camera-preview";
 
 interface ContestRunnerProps {
   contestId: string;
@@ -201,8 +207,9 @@ export function ContestRunner({
               fullscreen, pasting is disabled, and leaving the page is recorded
               with your answer.
             </p>
+            <CameraStep camera={proctor.camera} />
           </div>
-          <Button onClick={start} disabled={starting}>
+          <Button onClick={start} disabled={starting || !cameraReady(proctor.camera)}>
             {starting ? <Loader2 className="animate-spin" /> : <Play />}
             Start my timer
           </Button>
@@ -224,7 +231,7 @@ export function ContestRunner({
    * click is a small price against an unsupervised entry on a ranked board.
    */
   if (!proctor.examMode) {
-    return <ProctorGate resumed starting={proctor.starting} onStart={proctor.start} />;
+    return <ProctorGate camera={proctor.camera} resumed starting={proctor.starting} onStart={proctor.start} />;
   }
 
   const minutes = Math.floor(remainingSeconds / 60);
@@ -233,6 +240,7 @@ export function ContestRunner({
 
   return (
     <div className="space-y-3">
+      {proctor.examMode && <CameraPreview camera={proctor.camera} />}
       {proctor.examMode && proctor.needsAcknowledgement && (
         <ProctorOverlay
           count={proctor.signals.blurCount}

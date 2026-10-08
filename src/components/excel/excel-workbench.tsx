@@ -10,6 +10,7 @@ import {
   ProctorOverlay,
   WORKBENCH_RULES,
 } from "@/components/case/proctor-overlay";
+import { CameraPreview } from "@/components/proctor/camera-preview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -185,6 +186,7 @@ export function ExcelWorkbench({
   if (!proctor.examMode || !exercise) {
     return (
       <ProctorGate
+        camera={proctor.camera}
         starting={proctor.starting || opening}
         onStart={beginAttempt}
         title="This exercise is worked under exam conditions"
@@ -200,6 +202,7 @@ export function ExcelWorkbench({
 
   return (
     <div className="space-y-4">
+      {proctor.examMode && <CameraPreview camera={proctor.camera} />}
       {proctor.needsAcknowledgement && (
         <ProctorOverlay
           count={proctor.signals.blurCount}

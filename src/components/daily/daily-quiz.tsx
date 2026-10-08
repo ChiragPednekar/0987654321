@@ -10,6 +10,7 @@ import {
   ProctorOverlay,
   QUIZ_RULES,
 } from "@/components/case/proctor-overlay";
+import { CameraPreview } from "@/components/proctor/camera-preview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -171,6 +172,7 @@ export function DailyQuiz({
   if (!proctor.examMode) {
     return (
       <ProctorGate
+        camera={proctor.camera}
         starting={proctor.starting}
         onStart={proctor.start}
         title="Today's quiz is answered under exam conditions"
@@ -216,6 +218,7 @@ export function DailyQuiz({
 
   return (
     <div className="space-y-4">
+      {proctor.examMode && <CameraPreview camera={proctor.camera} />}
       {proctor.needsAcknowledgement && (
         <ProctorOverlay
           count={proctor.signals.blurCount}

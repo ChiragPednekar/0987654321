@@ -56,3 +56,6 @@ supabase/.temp
 # Scratch used when forging a session to verify against production.
 .tmpverify/
 .tmpspike/
+
+# MediaPipe runtime, copied from node_modules at build (scripts/copy-proctor-wasm.mjs)
+/public/proctor/wasm/

@@ -10,6 +10,7 @@ import {
   ProctorGate,
   ProctorOverlay,
 } from "@/components/case/proctor-overlay";
+import { CameraPreview } from "@/components/proctor/camera-preview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -148,6 +149,7 @@ export function SalesRoom({
   if (!proctor.examMode) {
     return (
       <ProctorGate
+        camera={proctor.camera}
         starting={proctor.starting}
         onStart={proctor.start}
         title="This role-play is conducted under exam conditions"
@@ -158,6 +160,7 @@ export function SalesRoom({
 
   return (
     <div className="space-y-4">
+      {proctor.examMode && <CameraPreview camera={proctor.camera} />}
       {proctor.needsAcknowledgement && (
         <ProctorOverlay
           count={proctor.signals.blurCount}

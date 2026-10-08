@@ -10,6 +10,7 @@ import { MAX_ANSWER_CHARS, MIN_ANSWER_CHARS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useProctor } from "@/hooks/use-proctor";
 import { ProctorGate, ProctorOverlay } from "@/components/case/proctor-overlay";
+import { CameraPreview } from "@/components/proctor/camera-preview";
 
 /**
  * The team's entry.
@@ -79,6 +80,7 @@ export function EntryForm({
   if (!proctor.examMode) {
     return (
       <ProctorGate
+        camera={proctor.camera}
         starting={proctor.starting}
         onStart={proctor.start}
         title="The entry is written under exam conditions"
@@ -94,6 +96,7 @@ export function EntryForm({
 
   return (
     <div className="space-y-3">
+      {proctor.examMode && <CameraPreview camera={proctor.camera} />}
       {proctor.needsAcknowledgement && (
         <ProctorOverlay
           count={proctor.signals.blurCount}

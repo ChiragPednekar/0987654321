@@ -1172,6 +1172,12 @@ export interface Database {
         Update: Partial<AccessAllowlistRow>;
         Relationships: [];
       };
+      proctor_snapshots: {
+        Row: ProctorSnapshotRow;
+        Insert: Partial<ProctorSnapshotRow>;
+        Update: Partial<ProctorSnapshotRow>;
+        Relationships: [];
+      };
       audit_log: {
         Row: AuditLogRow;
         Insert: Partial<AuditLogRow>;
@@ -2343,6 +2349,18 @@ export type AccessAllowlistRow = {
   email: string;
   note: string | null;
   granted_by: string | null;
+  created_at: string;
+};
+
+/**
+ * One evidence photo from the camera checks (public.proctor_snapshots,
+ * 20250101000061). The file itself is in the private proctor-evidence bucket.
+ */
+export type ProctorSnapshotRow = {
+  id: string;
+  user_id: string;
+  kind: "phone" | "multiple_faces" | "no_face" | "book";
+  storage_path: string;
   created_at: string;
 };
 

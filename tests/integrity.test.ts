@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assessIntegrity,
+  CAMERA_REVIEW_FLAGS,
   EMPTY_SIGNALS,
   strikeWarning,
   STRIKES_BEFORE_BLOCK,
@@ -175,6 +176,7 @@ describe("assessIntegrity", () => {
   it("keeps the score inside 0-100 when everything fires at once", () => {
     const v = assessIntegrity({
       signals: {
+        ...EMPTY_SIGNALS,
         keystrokes: 0,
         pasteCount: 4,
         pastedChars: 4000,
@@ -183,6 +185,14 @@ describe("assessIntegrity", () => {
         blurMs: 900_000,
         fullscreenExits: 5,
         proctored: true,
+        cameraRequested: true,
+        cameraGranted: true,
+        cameraLostCount: 2,
+        phoneEvents: 3,
+        multiFaceEvents: 2,
+        noFaceMs: 600_000,
+        coveredMs: 300_000,
+        bookEvents: 1,
       },
       answerChars: 4000,
       elapsedSeconds: 10,
@@ -317,5 +327,87 @@ describe("a competition entry", () => {
       aiLikelihood: null,
     });
     expect(verdict.flags.map((f) => f.code)).not.toContain("impossible_speed");
+  });
+});
+
+describe("camera findings", () => {
+  /** An honest typed answer, with the camera on and something in shot. */
+  const watched = (overrides: Partial<ProctorSignals>) => ({
+    ...CLEAN,
+    signals: honest({ cameraRequested: true, cameraGranted: true, ...overrides }),
+  });
+
+  it("never moves the mark, however much the camera saw", () => {
+    const v = assessIntegrity(
+      watched({
+        phoneEvents: 9,
+        multiFaceEvents: 9,
+        noFaceMs: 3_600_000,
+        coveredMs: 3_600_000,
+        bookEvents: 9,
+        cameraLostCount: 9,
+      }),
+    );
+    expect(v.score).toBe(100);
+    expect(v.penaltyPct).toBe(0);
+    expect(v.severity).toBe("clean");
+    const camera = v.flags.filter((f) => !f.behavioural);
+    expect(camera.length).toBeGreaterThanOrEqual(6);
+    expect(camera.every((f) => f.points === 0)).toBe(true);
+  });
+
+  it("does not read an old client's missing camera fields as a refusal", () => {
+    // Every attempt from before the camera shipped arrives with these all at
+    // their defaults. Flagging them would put the whole history in the queue.
+    const v = assessIntegrity({ ...CLEAN, signals: honest({ cameraDenied: true }) });
+    expect(v.flags.map((f) => f.code)).not.toContain("camera_refused");
+  });
+
+  it("tells a refusal apart from having no camera", () => {
+    const refused = assessIntegrity(watched({ cameraGranted: false, cameraDenied: true }));
+    const missing = assessIntegrity(watched({ cameraGranted: false, cameraUnavailable: true }));
+    expect(refused.flags.map((f) => f.code)).toContain("camera_refused");
+    expect(missing.flags.map((f) => f.code)).toContain("camera_unavailable");
+    expect(missing.flags.map((f) => f.code)).not.toContain("camera_refused");
+  });
+
+  it("ignores short absences from the frame", () => {
+    // Glancing down at rough work drops the face for seconds at a time.
+    const brief = assessIntegrity(watched({ noFaceMs: 59_000, noFaceEvents: 6 }));
+    const long = assessIntegrity(watched({ noFaceMs: 60_000, noFaceEvents: 1 }));
+    expect(brief.flags.map((f) => f.code)).not.toContain("no_face");
+    expect(long.flags.map((f) => f.code)).toContain("no_face");
+  });
+
+  it("cannot corroborate the AI-style guess into a deduction", () => {
+    // Both are model readings. Letting one model's guess unlock a deduction from
+    // another's would be exactly the stacked inference the floor exists to stop.
+    const v = assessIntegrity({ ...watched({ phoneEvents: 4 }), aiLikelihood: 95 });
+    expect(v.flags.find((f) => f.code === "ai_style")?.points).toBe(0);
+    expect(v.penaltyPct).toBe(0);
+  });
+
+  it("says when the camera ran but nothing could be analysed", () => {
+    const v = assessIntegrity(watched({ detectorFailed: true }));
+    expect(v.flags.map((f) => f.code)).toContain("camera_not_analysed");
+  });
+
+  it("only queues for review on codes it can actually emit", () => {
+    const everything = assessIntegrity(
+      watched({
+        cameraGranted: false,
+        cameraDenied: true,
+        cameraLostCount: 1,
+        phoneEvents: 1,
+        multiFaceEvents: 1,
+        noFaceMs: 60_000,
+        coveredMs: 30_000,
+      }),
+    );
+    const emitted = new Set(everything.flags.map((f) => f.code));
+    for (const code of CAMERA_REVIEW_FLAGS) expect(emitted).toContain(code);
+    // Rough work on paper and a desktop without a webcam are not acts.
+    expect(CAMERA_REVIEW_FLAGS).not.toContain("book_seen" as never);
+    expect(CAMERA_REVIEW_FLAGS).not.toContain("camera_unavailable" as never);
   });
 });

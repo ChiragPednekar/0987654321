@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAuthorizedCron } from "@/lib/cron-auth";
 import { checkOfficialLinks } from "@/lib/link-check";
+import { purgeExpiredSnapshots } from "@/lib/proctor-evidence";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -51,8 +52,28 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  /**
+   * Camera evidence photos past the 30 days the consent notice promises.
+   *
+   * Here rather than on its own schedule for the same Hobby-plan reason as the
+   * link check, and daily so the promise is kept to the day. Never allowed to
+   * fail the route: a storage hiccup must not stop the leaderboards — it only
+   * means tomorrow's run deletes a little more.
+   */
+  let purged: number | string = 0;
+  try {
+    purged = (await purgeExpiredSnapshots(admin)).deleted;
+  } catch (error) {
+    purged = "failed";
+    console.error(
+      "[cron] snapshot purge failed",
+      error instanceof Error ? error.message : error,
+    );
+  }
+
   return NextResponse.json({
     ok: true,
+    snapshots_purged: purged,
     refreshed_at: new Date().toISOString(),
     link_check: links ? { checked: links.checked, broken: links.broken.length } : "not today",
   });

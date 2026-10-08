@@ -16,10 +16,13 @@ import {
 } from "@/lib/objective";
 import { useProctor } from "@/hooks/use-proctor";
 import {
+  CameraStep,
+  cameraReady,
   ProctorGate,
   ProctorOverlay,
   QUIZ_RULES,
 } from "@/components/case/proctor-overlay";
+import { CameraPreview } from "@/components/proctor/camera-preview";
 
 interface Results {
   correct: number;
@@ -150,13 +153,19 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
             Answered under exam conditions: the page goes fullscreen, and
             leaving it is recorded with your answers.
           </p>
+          <CameraStep camera={proctor.camera} />
           <div className="flex flex-wrap justify-center gap-2 pt-2">
-            <Button onClick={() => start()} disabled={busy}>
+            <Button onClick={() => start()} disabled={busy || !cameraReady(proctor.camera)}>
               {busy ? <Loader2 className="animate-spin" /> : null}
               Mixed set
             </Button>
             {(["easy", "medium", "hard"] as const).map((d) => (
-              <Button key={d} variant="outline" disabled={busy} onClick={() => start(d)}>
+              <Button
+                key={d}
+                variant="outline"
+                disabled={busy || !cameraReady(proctor.camera)}
+                onClick={() => start(d)}
+              >
                 {d[0].toUpperCase() + d.slice(1)}
               </Button>
             ))}
@@ -261,6 +270,7 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
   if (!proctor.examMode) {
     return (
       <ProctorGate
+        camera={proctor.camera}
         resumed
         starting={proctor.starting}
         onStart={proctor.start}
@@ -273,6 +283,7 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
 
   return (
     <div className="space-y-4">
+      {proctor.examMode && <CameraPreview camera={proctor.camera} />}
       {proctor.needsAcknowledgement && (
         <ProctorOverlay
           count={proctor.signals.blurCount}

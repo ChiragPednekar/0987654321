@@ -56,6 +56,37 @@ export interface ProctorSignals {
    * client old enough to predate the gate, or a forged payload.
    */
   proctored: boolean;
+
+  // ---- camera --------------------------------------------------------------
+  // See src/lib/camera-proctor.ts for how these are counted. Every one is a
+  // model's reading of a webcam frame or a fact about the camera's state, and
+  // assessIntegrity weighs them accordingly: they are shown to a reviewer and
+  // never deduct a mark.
+
+  /**
+   * The client asked for the camera. False for every attempt made before the
+   * camera shipped — which is what stops all of those reading as "the student
+   * refused the camera".
+   */
+  cameraRequested: boolean;
+  cameraGranted: boolean;
+  /** Permission was refused, by the student or by a browser/OS setting. */
+  cameraDenied: boolean;
+  /** No camera exists, or the browser cannot offer one here. */
+  cameraUnavailable: boolean;
+  /** Times the camera stopped mid-attempt: unplugged, revoked, or taken by another app. */
+  cameraLostCount: number;
+  /** The camera ran but the detection models could not load, so nothing was analysed. */
+  detectorFailed: boolean;
+  /** Frames analysed. The denominator — zero means nothing was actually watched. */
+  cameraSamples: number;
+  noFaceMs: number;
+  noFaceEvents: number;
+  multiFaceEvents: number;
+  phoneEvents: number;
+  bookEvents: number;
+  /** Time the lens was dark or blocked. */
+  coveredMs: number;
 }
 
 export const EMPTY_SIGNALS: ProctorSignals = {
@@ -67,7 +98,42 @@ export const EMPTY_SIGNALS: ProctorSignals = {
   blurMs: 0,
   fullscreenExits: 0,
   proctored: false,
+  cameraRequested: false,
+  cameraGranted: false,
+  cameraDenied: false,
+  cameraUnavailable: false,
+  cameraLostCount: 0,
+  detectorFailed: false,
+  cameraSamples: 0,
+  noFaceMs: 0,
+  noFaceEvents: 0,
+  multiFaceEvents: 0,
+  phoneEvents: 0,
+  bookEvents: 0,
+  coveredMs: 0,
 };
+
+/**
+ * Camera findings that put an attempt in front of a reviewer even when its
+ * score is clean.
+ *
+ * Every camera flag costs zero marks, so without this list a phone in shot
+ * would be recorded on an attempt the review queue never shows — evidence that
+ * nobody ever reads. Two flags are deliberately left off:
+ *
+ *   * book_seen — rough work on paper is normal for case arithmetic, and the
+ *     object model cannot tell a notebook from a textbook. It stays visible on
+ *     the row, but on its own it would fill the queue with honest students.
+ *   * camera_unavailable — a desktop without a webcam is not an act.
+ */
+export const CAMERA_REVIEW_FLAGS = [
+  "phone_seen",
+  "multiple_faces",
+  "no_face",
+  "camera_covered",
+  "camera_refused",
+  "camera_lost",
+] as const;
 
 export type IntegritySeverity = "clean" | "suspect" | "severe";
 
@@ -224,6 +290,90 @@ export function assessIntegrity({
       `Left fullscreen ${signals.fullscreenExits} time(s) during the attempt.`,
       signals.fullscreenExits >= 3 ? 30 : 12,
     );
+  }
+
+  // ---- camera --------------------------------------------------------------
+  /**
+   * All at zero points, and all `behavioural: false`.
+   *
+   * The detections are a model's reading of a webcam frame, with the same
+   * failure modes as any model: bad light reads as an empty chair, a calculator
+   * reads as a phone, a sibling walking past reads as a helper. The camera
+   * state flags are facts, but "the camera was off" has innocent explanations
+   * that only a person can weigh. So the camera can put an attempt in front of
+   * a reviewer — see CAMERA_REVIEW_FLAGS — and can never move a mark by itself.
+   *
+   * It also does not count towards the corroboration below. `behavioural:
+   * false` keeps it out of that check, so a phone in shot cannot be what turns
+   * an AI-style opinion into a deduction.
+   */
+  if (signals.cameraRequested) {
+    const minutes = (ms: number) => Math.max(1, Math.round(ms / 60_000));
+    const times = (n: number) => (n === 1 ? "once" : `${n} times`);
+
+    if (signals.cameraDenied) {
+      add("camera_refused", "Camera access was refused for this attempt.", 0, false);
+    } else if (signals.cameraUnavailable) {
+      add("camera_unavailable", "No camera was available for this attempt.", 0, false);
+    }
+
+    if (signals.cameraLostCount > 0) {
+      add(
+        "camera_lost",
+        `The camera stopped ${times(signals.cameraLostCount)} during the attempt.`,
+        0,
+        false,
+      );
+    }
+
+    if (signals.cameraGranted && signals.detectorFailed) {
+      // Our failure, not theirs — said so a reviewer does not read the absence
+      // of camera findings as a clean bill.
+      add(
+        "camera_not_analysed",
+        "The camera was on, but this device could not run the camera checks.",
+        0,
+        false,
+      );
+    }
+
+    if (signals.phoneEvents > 0) {
+      add("phone_seen", `A phone appeared on camera ${times(signals.phoneEvents)}.`, 0, false);
+    }
+    if (signals.multiFaceEvents > 0) {
+      add(
+        "multiple_faces",
+        `More than one face appeared on camera ${times(signals.multiFaceEvents)}.`,
+        0,
+        false,
+      );
+    }
+    // Thresholds on time, not on events: one long absence is the finding, and
+    // ten glances down at a notebook are not.
+    if (signals.noFaceMs >= 60_000) {
+      add(
+        "no_face",
+        `Nobody was in front of the camera for about ${minutes(signals.noFaceMs)} min.`,
+        0,
+        false,
+      );
+    }
+    if (signals.coveredMs >= 30_000) {
+      add(
+        "camera_covered",
+        `The camera view was dark or blocked for about ${minutes(signals.coveredMs)} min.`,
+        0,
+        false,
+      );
+    }
+    if (signals.bookEvents > 0) {
+      add(
+        "book_seen",
+        `A book or notebook appeared on camera ${times(signals.bookEvents)}.`,
+        0,
+        false,
+      );
+    }
   }
 
   // ---- the model's read of the prose ---------------------------------------
