@@ -56,6 +56,11 @@ describe("lastChecked", () => {
 
 describe("seeded company profiles", () => {
   it("list only valid sources", () => {
-    for (const c of COMPANIES) expect(sourceProblems(c.sources ?? [], TODAY), c.slug).toEqual([]);
+    // The real date, not TODAY. The cases above use a frozen date so they are
+    // deterministic, but this one checks the live seed data — and with the
+    // frozen date, re-verifying a source (McKinsey, 2026-09-22) made a correct
+    // profile fail as "dated in the future".
+    const today = new Date().toISOString().slice(0, 10);
+    for (const c of COMPANIES) expect(sourceProblems(c.sources ?? [], today), c.slug).toEqual([]);
   });
 });
