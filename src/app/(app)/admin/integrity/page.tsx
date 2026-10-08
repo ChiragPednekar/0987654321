@@ -45,15 +45,24 @@ const ACTIVITY_LABEL: Record<string, string> = {
 export default async function IntegrityPage() {
   const admin = createAdminClient();
 
-  const { data } = await admin
+  /**
+   * `users!submission_integrity_user_id_fkey`, not `users`. The table has two
+   * keys into users — the student, and `cleared_by` for the admin who cleared
+   * a finding — so a bare `users(...)` is ambiguous and PostgREST refuses the
+   * whole query (PGRST201). It did exactly that, and because the error was not
+   * read, this page said "Nothing flagged yet" over every flagged attempt on
+   * the platform.
+   */
+  const { data, error } = await admin
     .from("submission_integrity")
     .select(
-      "id, activity, submission_id, user_id, severity, score, penalty_pct, flags, ai_likelihood, server_elapsed_seconds, cleared_at, created_at, users(email, full_name, deactivated_at), cases(slug, title)",
+      "id, activity, submission_id, user_id, severity, score, penalty_pct, flags, ai_likelihood, server_elapsed_seconds, cleared_at, created_at, users!submission_integrity_user_id_fkey(email, full_name, deactivated_at), cases(slug, title)",
     )
     .order("created_at", { ascending: false })
     .neq("severity", "clean")
     .limit(PAGE_SIZE);
 
+  if (error) console.error("[admin/integrity] findings query failed", error.message);
   const rows = data ?? [];
   const open = rows.filter((r) => !r.cleared_at);
   const suspended = new Set(
@@ -96,7 +105,15 @@ export default async function IntegrityPage() {
         </CardContent>
       </Card>
 
-      {rows.length === 0 ? (
+      {error ? (
+        // Never "Nothing flagged yet" when the truth is "could not look".
+        <Card className="mt-6 border-danger-border bg-danger-surface">
+          <CardContent className="p-6 text-sm text-danger">
+            Findings could not be loaded, so this list is not complete. Nothing
+            here means the query failed, not that the platform is clean.
+          </CardContent>
+        </Card>
+      ) : rows.length === 0 ? (
         <Card className="mt-6">
           <CardContent className="p-10 text-center text-sm text-muted-foreground">
             Nothing flagged yet.
