@@ -66,6 +66,15 @@ export async function POST(
   const turns = history ?? [];
   const questionsAsked = turns.filter((t) => t.role === "interviewer").length;
 
+  if (questionsAsked >= PI_MAX_QUESTIONS) {
+    return NextResponse.json(
+      {
+        error: `This interview has reached its limit of ${PI_MAX_QUESTIONS} questions. Finish and submit for your evaluation.`,
+      },
+      { status: 409 },
+    );
+  }
+
   // Recorded before the model is called. If the reply fails, the candidate's
   // answer is still on the record and the interview can be resumed rather than
   // silently losing what they just typed.

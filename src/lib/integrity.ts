@@ -443,3 +443,28 @@ export function strikeWarning(strikes: number): string | null {
   }
   return `This submission was flagged and your mark was reduced. ${left} more flagged submissions will suspend your account.`;
 }
+
+/** User-friendly labels for stored integrity flag codes. */
+export const INTEGRITY_FLAG_LABELS: Record<string, string> = {
+  pasted_answer: "Answer pasted",
+  pasted_section: "Large paste",
+  bulk_paste: "Single long paste",
+  not_typed: "Not typed",
+  little_typing: "Barely typed",
+  impossible_speed: "Too fast to write",
+  frequent_tab_away: "Left page repeatedly",
+  tab_away: "Left page",
+  long_absence: "Long absence",
+  left_exam_mode: "Left exam mode",
+  ai_style: "Reads as AI",
+  phone_seen: "Phone on camera",
+  multiple_faces: "Another person on camera",
+  no_face: "Away from camera",
+  camera_covered: "Camera blocked",
+  camera_refused: "Camera refused",
+  camera_unavailable: "No camera",
+  camera_lost: "Camera stopped",
+  camera_not_analysed: "Camera not analysed",
+  book_seen: "Book on camera",
+};
+

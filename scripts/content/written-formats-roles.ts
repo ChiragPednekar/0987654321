@@ -15,54 +15,15 @@ import type { WrittenSeed } from "./written-formats";
  * be a claim about that company rather than a practice problem.
  */
 
-const PRODUCT_SENSE_RUBRIC: Record<string, [number, string]> = {
-  user: [25, "Chooses a specific user segment and a specific problem before proposing anything, and says why that segment."],
-  insight: [25, "Identifies a real need or pain point with a reason it is unmet today, not a generic 'users want convenience'."],
-  solution: [25, "Proposes a concrete solution tied to the need, and prioritises within it rather than listing features."],
-  tradeoffs_metrics: [25, "Names what the solution costs or risks and how success would be measured."],
-};
-
-const METRICS_RUBRIC: Record<string, [number, string]> = {
-  north_star: [30, "Picks one primary metric that captures value delivered to users, and explains why it beats the obvious alternatives."],
-  tree: [30, "Breaks it into input metrics a team can actually move, in a coherent hierarchy."],
-  guardrails: [20, "Names the counter-metrics that would expose gaming or harm, and why each matters here."],
-  judgement: [20, "Says what they would do if the numbers disagreed, and avoids vanity metrics."],
-};
-
-const PRIORITISATION_RUBRIC: Record<string, [number, string]> = {
-  criteria: [25, "Sets explicit criteria tied to the stated goal before ranking anything."],
-  evaluation: [30, "Applies the criteria to each option honestly, using the figures given, including effort and risk."],
-  decision: [25, "Commits to an order and says clearly what is not being done and why."],
-  communication: [20, "Explains how the decision would be defended to the stakeholders who lose out."],
-};
-
-const RESEARCH_NOTE_RUBRIC: Record<string, [number, string]> = {
-  call: [25, "States rating, target value and the core thesis in the opening lines."],
-  valuation: [30, "Derives the target from the figures given with a clear method, and shows the arithmetic."],
-  drivers: [25, "Identifies the two or three variables the thesis actually depends on, with evidence."],
-  risks: [20, "Names what would break the call and the signal that would show it early."],
-};
-
-const GTM_RUBRIC: Record<string, [number, string]> = {
-  segment: [25, "Chooses a beachhead customer segment and justifies it over the alternatives."],
-  proposition: [20, "States the value proposition and pricing in terms that segment cares about."],
-  channels: [30, "Picks channels and a sequence that fit the segment and the budget, with rough economics."],
-  milestones: [25, "Sets measurable milestones and says what result would change the plan."],
-};
-
-const MARKETING_MIX_RUBRIC: Record<string, [number, string]> = {
-  diagnosis: [25, "Works out from the figures which part of the mix is actually causing the problem."],
-  consistency: [25, "Keeps product, price, place and promotion consistent with each other and with the target customer."],
-  recommendation: [30, "Makes specific changes with reasons, rather than touching every lever."],
-  economics: [20, "Checks the recommendation against margin or unit economics."],
-};
-
-const CAMPAIGN_CRITIQUE_RUBRIC: Record<string, [number, string]> = {
-  objective: [20, "States what the campaign was actually trying to achieve and for whom."],
-  evidence: [30, "Reads the results correctly — separates reach from response from business outcome, and spots misleading numbers."],
-  critique: [30, "Explains why it worked or failed with reasons tied to audience, message or channel, not taste."],
-  next_steps: [20, "Proposes what to test or change next, with a measure of success."],
-};
+import {
+  PRODUCT_SENSE_RUBRIC,
+  METRICS_RUBRIC,
+  PRIORITISATION_RUBRIC,
+  RESEARCH_NOTE_RUBRIC,
+  GTM_RUBRIC,
+  MARKETING_MIX_RUBRIC,
+  CAMPAIGN_CRITIQUE_ROLES_RUBRIC as CAMPAIGN_CRITIQUE_RUBRIC,
+} from "./rubrics";
 
 export const WRITTEN_SEEDS_ROLES: WrittenSeed[] = [
   // ---- product sense ------------------------------------------------------

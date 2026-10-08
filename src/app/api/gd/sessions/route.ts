@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
+import { getQuotaStatus, quotaDenial } from "@/lib/quota";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,11 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient();
   if (!(await canSolve(admin, user.id))) {
     return NextResponse.json(SOLVE_DENIAL, { status: 403 });
+  }
+
+  const quota = await getQuotaStatus(admin, user.id);
+  if (quota.interviewsLeft <= 0) {
+    return NextResponse.json(quotaDenial("interviews", quota), { status: 402 });
   }
 
   // A topic is picked at random when none is named, which is how a GD actually

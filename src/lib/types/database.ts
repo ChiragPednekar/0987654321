@@ -2118,6 +2118,14 @@ export type AssignmentReviewRow = {
    */
   ai_breakdown?: RubricCriteria | null;
   ai_feedback?: EvaluationFeedback | null;
+  integrity?: {
+    severity: "clean" | "suspect" | "severe";
+    score: number;
+    penalty_pct: number;
+    flags: string[];
+    ai_likelihood: number | null;
+    signals: Record<string, unknown>;
+  } | null;
   faculty_marks: number | null;
   faculty_remarks: string | null;
   reviewed_at: string | null;

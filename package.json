@@ -12,6 +12,7 @@
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > src/lib/types/database.ts",
+    "db:backup": "tsx scripts/backup-db.ts",
     "seed": "tsx scripts/seed.ts",
     "seed:dry": "tsx scripts/seed.ts --dry-run",
     "seed:sql": "tsx scripts/seed-sql.ts",

@@ -89,6 +89,16 @@ export async function POST(
     .eq("session_id", id)
     .order("created_at", { ascending: true });
 
+  const MAX_NEGOTIATION_TURNS = 30;
+  if ((history?.length ?? 0) >= MAX_NEGOTIATION_TURNS * 2) {
+    return NextResponse.json(
+      {
+        error: `This negotiation has reached the maximum of ${MAX_NEGOTIATION_TURNS} exchanges. Please conclude the session.`,
+      },
+      { status: 409 },
+    );
+  }
+
   await admin.from("negotiation_messages").insert({
     session_id: id,
     role: "student",

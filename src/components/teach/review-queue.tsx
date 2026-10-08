@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ChevronDown, Clock, Loader2, RotateCcw } from "lucide-react";
+import { CheckCircle2, ChevronDown, Clock, Loader2, RotateCcw, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Markdown } from "@/components/markdown";
 import { cn, timeAgo } from "@/lib/utils";
+import { INTEGRITY_FLAG_LABELS } from "@/lib/integrity";
 import type { AssignmentReviewRow } from "@/lib/types/database";
 
 /**
@@ -226,6 +227,16 @@ export function ReviewQueue({
                     </span>
                   ) : null}
 
+                  {row.integrity && row.integrity.severity !== "clean" ? (
+                    <Badge
+                      variant={row.integrity.severity === "severe" ? "destructive" : "warning"}
+                      className="shrink-0"
+                    >
+                      <ShieldAlert className="mr-1 size-3" />
+                      {row.integrity.severity === "severe" ? "Flagged" : "Suspect"}
+                    </Badge>
+                  ) : null}
+
                   {reviewed ? (
                     <Badge variant="secondary" className="shrink-0">
                       <CheckCircle2 className="mr-1 size-3" />
@@ -334,6 +345,97 @@ export function ReviewQueue({
                         Submitted but not yet graded by the AI.
                       </p>
                     )}
+
+                    {row.integrity ? (
+                      <div className="mt-3 rounded-md border border-border p-3 text-sm">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-medium">
+                            {row.integrity.severity === "clean" ? (
+                              <ShieldCheck className="size-4 text-[var(--success)]" />
+                            ) : (
+                              <ShieldAlert
+                                className={cn(
+                                  "size-4",
+                                  row.integrity.severity === "severe"
+                                    ? "text-destructive"
+                                    : "text-[var(--warning,#d97706)]",
+                                )}
+                              />
+                            )}
+                            <span className="capitalize">
+                              Integrity: {row.integrity.severity}
+                            </span>
+                            <span className="text-xs text-muted-foreground tabular">
+                              ({row.integrity.score}/100)
+                            </span>
+                          </div>
+                          {row.integrity.penalty_pct > 0 ? (
+                            <Badge variant="destructive">
+                              -{row.integrity.penalty_pct}% auto penalty
+                            </Badge>
+                          ) : null}
+                        </div>
+
+                        {row.integrity.flags.length > 0 ? (
+                          <div className="mt-2.5">
+                            <p className="text-xs font-medium text-muted-foreground">
+                              Observed findings:
+                            </p>
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              {row.integrity.flags.map((flag) => (
+                                <Badge key={flag} variant="secondary" className="text-xs">
+                                  {INTEGRITY_FLAG_LABELS[flag] ?? flag.replace(/_/g, " ")}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Clean attempt — no proctoring or plagiarism flags were triggered.
+                          </p>
+                        )}
+
+                        {row.integrity.ai_likelihood !== null ? (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            AI likeness style estimation:{" "}
+                            <span className="font-medium text-foreground">
+                              {row.integrity.ai_likelihood}%
+                            </span>{" "}
+                            (advisory only)
+                          </p>
+                        ) : null}
+
+                        {row.integrity.signals && Object.keys(row.integrity.signals).length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-3 border-t border-border pt-2 text-xs text-muted-foreground">
+                            {typeof row.integrity.signals.blurCount === "number" ? (
+                              <span>Left window: {String(row.integrity.signals.blurCount)}x</span>
+                            ) : null}
+                            {typeof row.integrity.signals.pasteCount === "number" ? (
+                              <span>Pastes: {String(row.integrity.signals.pasteCount)}</span>
+                            ) : null}
+                            {typeof row.integrity.signals.keystrokes === "number" ? (
+                              <span>Keystrokes: {String(row.integrity.signals.keystrokes)}</span>
+                            ) : null}
+                            {typeof row.integrity.signals.phoneCount === "number" &&
+                            Number(row.integrity.signals.phoneCount) > 0 ? (
+                              <span className="font-medium text-destructive">
+                                Phone on camera: {String(row.integrity.signals.phoneCount)}
+                              </span>
+                            ) : null}
+                            {typeof row.integrity.signals.multipleFacesCount === "number" &&
+                            Number(row.integrity.signals.multipleFacesCount) > 0 ? (
+                              <span className="font-medium text-destructive">
+                                Second person: {String(row.integrity.signals.multipleFacesCount)}
+                              </span>
+                            ) : null}
+                            {typeof row.integrity.signals.noFaceCount === "number" &&
+                            Number(row.integrity.signals.noFaceCount) > 0 ? (
+                              <span>Away from camera: {String(row.integrity.signals.noFaceCount)}</span>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     <form
                       onSubmit={(e) => {

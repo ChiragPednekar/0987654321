@@ -58,26 +58,51 @@ export default async function AssignmentDetail({
     .map((row) => row.submission_id)
     .filter((value): value is string => Boolean(value));
 
-  const { data: scoreRows } = submissionIds.length
-    ? await admin
-        .from("scores")
-        .select("submission_id, breakdown, feedback")
-        .in("submission_id", submissionIds)
-    : { data: [] };
+  const [{ data: scoreRows }, { data: integrityRows }] = await Promise.all([
+    submissionIds.length
+      ? admin
+          .from("scores")
+          .select("submission_id, breakdown, feedback")
+          .in("submission_id", submissionIds)
+      : Promise.resolve({ data: [] }),
+    submissionIds.length
+      ? admin
+          .from("submission_integrity")
+          .select("submission_id, severity, score, penalty_pct, flags, ai_likelihood, signals")
+          .in("submission_id", submissionIds)
+      : Promise.resolve({ data: [] }),
+  ]);
 
   const detailBySubmission = new Map(
     (scoreRows ?? []).map((s) => [s.submission_id, s]),
+  );
+
+  const integrityBySubmission = new Map(
+    (integrityRows ?? []).map((i) => [i.submission_id, i]),
   );
 
   const rows: AssignmentReviewRow[] = queue.map((row) => {
     const detail = row.submission_id
       ? detailBySubmission.get(row.submission_id)
       : undefined;
+    const integ = row.submission_id
+      ? integrityBySubmission.get(row.submission_id)
+      : undefined;
     return {
       ...row,
       // Prefer whatever the RPC gave us; fall back to the direct read.
-      ai_breakdown: row.ai_breakdown ?? detail?.breakdown ?? null,
-      ai_feedback: row.ai_feedback ?? detail?.feedback ?? null,
+      ai_breakdown: row.ai_breakdown ?? (detail?.breakdown as any) ?? null,
+      ai_feedback: row.ai_feedback ?? (detail?.feedback as any) ?? null,
+      integrity: integ
+        ? {
+            severity: integ.severity as "clean" | "suspect" | "severe",
+            score: integ.score,
+            penalty_pct: integ.penalty_pct,
+            flags: integ.flags ?? [],
+            ai_likelihood: integ.ai_likelihood,
+            signals: (integ.signals as Record<string, unknown>) ?? {},
+          }
+        : null,
     };
   });
 

@@ -39,7 +39,7 @@ jobs:
       - name: Refresh leaderboards
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          SITE_URL: ${{ secrets.SITE_URL || 'https://mableetcode.vercel.app' }}
+          SITE_URL: ${{ secrets.SITE_URL || 'https://casecode-ebon.vercel.app' }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
             echo "::error::CRON_SECRET is not set. Add it under Settings -> Secrets and variables -> Actions."
@@ -58,7 +58,7 @@ jobs:
       - name: Write the daily current-affairs quiz
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          SITE_URL: ${{ secrets.SITE_URL || 'https://mableetcode.vercel.app' }}
+          SITE_URL: ${{ secrets.SITE_URL || 'https://casecode-ebon.vercel.app' }}
         run: |
           if [ -z "$CRON_SECRET" ]; then
             echo "::error::CRON_SECRET is not set. Add it under Settings -> Secrets and variables -> Actions."

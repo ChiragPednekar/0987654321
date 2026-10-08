@@ -87,6 +87,8 @@ export interface CameraApi {
   request: () => Promise<void>;
   /** Stops the camera and freezes the counters. */
   stop: () => void;
+  /** Resets camera state and counters for a fresh attempt. */
+  reset: () => void;
 }
 
 /** Served from /public: wasm copied out of node_modules at build, models committed. */
@@ -374,7 +376,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
   }, [patch, captureSnapshot]);
 
   const request = React.useCallback(async () => {
-    if (!enabled || stopped.current) return;
+    if (!enabled) return;
+    stopped.current = false;
     if (status === "requesting" || status === "on") return;
 
     patch({ cameraRequested: true, cameraDenied: false, cameraUnavailable: false });
@@ -470,6 +473,19 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     }
   }, [enabled, status, patch, sample, teardown]);
 
+  const reset = React.useCallback(() => {
+    stopped.current = false;
+    teardown();
+    setStatus("idle");
+    setStream(null);
+    setLive(null);
+    setSignals(EMPTY_STATE_SIGNALS);
+    trackerRef.current = createTracker();
+    lastSampleAt.current = null;
+    snapshots.current = { taken: 0, lastByKind: {} };
+    setWaitedTooLong(false);
+  }, [teardown]);
+
   const stop = React.useCallback(() => {
     if (stopped.current) return;
     stopped.current = true;
@@ -480,5 +496,5 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
   // Leaving the page must release the camera, or the light stays on.
   React.useEffect(() => () => teardown(), [teardown]);
 
-  return { status, detector, stream, live, signals, waitedTooLong, request, stop };
+  return { status, detector, stream, live, signals, waitedTooLong, request, stop, reset };
 }

@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
+import { getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { debriefRun } from "@/lib/ai/sim-debrief";
 import { RateLimitError } from "@/lib/ai/errors";
 import { recordUsage } from "@/lib/usage";
@@ -57,6 +59,15 @@ export async function POST(
 
   if (rounds.length === 0) {
     return NextResponse.json({ error: "Nothing to debrief." }, { status: 409 });
+  }
+
+  if (!(await canSolve(admin, user.id))) {
+    return NextResponse.json(SOLVE_DENIAL, { status: 403 });
+  }
+
+  const quota = await getQuotaStatus(admin, user.id);
+  if (quota.gradingsLeft <= 0) {
+    return NextResponse.json(quotaDenial("gradings", quota), { status: 402 });
   }
 
   try {

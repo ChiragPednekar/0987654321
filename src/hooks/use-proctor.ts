@@ -77,6 +77,8 @@ export interface ProctorApi extends ProctorState {
   acknowledge: () => Promise<void>;
   /** Freeze collection once the answer is submitted. */
   stop: () => void;
+  /** Reset proctoring state and re-arm for another attempt. */
+  reset: () => void;
 }
 
 /** Focus losses shorter than this are a click on the URL bar, not an excursion. */
@@ -257,7 +259,8 @@ export function useProctor(enabled: boolean): ProctorApi {
    * both of those are recorded.
    */
   const start = React.useCallback(async () => {
-    if (stopped.current || examRef.current) return;
+    if (examRef.current) return;
+    stopped.current = false;
 
     // Exam mode is armed BEFORE fullscreen is attempted, never after. Paste
     // blocking, the overlay, the counters and the server clock are what
@@ -286,7 +289,7 @@ export function useProctor(enabled: boolean): ProctorApi {
     setFullscreen(await requestFullscreen());
   }, [requestFullscreen]);
 
-  const { stop: stopCamera } = camera;
+  const { stop: stopCamera, reset: resetCamera } = camera;
   const stop = React.useCallback(() => {
     stopped.current = true;
     examRef.current = false;
@@ -295,6 +298,19 @@ export function useProctor(enabled: boolean): ProctorApi {
     stopCamera();
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
   }, [stopCamera]);
+
+  const reset = React.useCallback(() => {
+    stopped.current = false;
+    examRef.current = false;
+    leftAt.current = null;
+    setSignals(EMPTY_SIGNALS);
+    setAway(false);
+    setNeedsAcknowledgement(false);
+    setExamMode(false);
+    setStarting(false);
+    setFullscreen(false);
+    resetCamera();
+  }, [resetCamera]);
 
   /**
    * One object, so every surface's existing `signals: proctor.signals` carries
@@ -318,5 +334,6 @@ export function useProctor(enabled: boolean): ProctorApi {
     start,
     acknowledge,
     stop,
+    reset,
   };
 }

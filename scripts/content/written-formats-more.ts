@@ -1,25 +1,5 @@
 import type { WrittenSeed } from "./written-formats";
-
-const GUESSTIMATE_RUBRIC: Record<string, [number, string]> = {
-  structure: [30, "Breaks the number into a chain of quantities that multiply to the answer, stated before any arithmetic."],
-  assumptions: [30, "States each assumption explicitly with a reason. A defensible wrong number beats an unstated right one."],
-  arithmetic: [20, "The maths is actually done and is correct given the assumptions."],
-  sanity_check: [20, "Tests the answer against something known, and says what would move it most."],
-};
-
-const WAT_RUBRIC: Record<string, [number, string]> = {
-  position: [25, "Takes a clear position in the opening and holds it."],
-  argument: [35, "Reasons are distinct, ordered, and actually support the position."],
-  evidence: [20, "Uses concrete examples or figures rather than assertion."],
-  expression: [20, "Tight, readable prose. No padding, no throat-clearing."],
-};
-
-const BEHAVIOURAL_RUBRIC: Record<string, [number, string]> = {
-  specificity: [35, "Grounded in the candidate's own history, not in general aspiration."],
-  structure: [25, "Situation, action, result — followed without narrating the framework."],
-  insight: [25, "Shows what the candidate actually took from it, concretely."],
-  delivery: [15, "Sounds spoken, not recited. Right length."],
-};
+import { GUESSTIMATE_RUBRIC, WAT_RUBRIC, BEHAVIOURAL_RUBRIC } from "./rubrics";
 
 /** Second batch of written exercises. */
 export const WRITTEN_SEEDS_MORE: WrittenSeed[] = [

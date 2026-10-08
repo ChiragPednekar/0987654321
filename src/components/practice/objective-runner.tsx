@@ -110,6 +110,19 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
     }
   }
 
+  function handleAnotherSet() {
+    const wasCameraOn =
+      proctor.camera.status === "stopped" && proctor.camera.signals.cameraGranted;
+    setResults(null);
+    setQuestions(null);
+    setSessionId(null);
+    setAnswers({});
+    proctor.reset();
+    if (wasCameraOn) {
+      void proctor.camera.request();
+    }
+  }
+
   async function submit() {
     if (!sessionId) return;
     setBusy(true);
@@ -194,7 +207,7 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
                   : "—"}
               </p>
             </div>
-            <Button onClick={() => start()} disabled={busy}>
+            <Button onClick={handleAnotherSet} disabled={busy}>
               {busy ? <Loader2 className="animate-spin" /> : null}
               Another set
             </Button>
