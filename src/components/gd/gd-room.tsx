@@ -9,6 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useOwnSpeech } from "@/hooks/use-own-speech";
 import { cn, formatDuration } from "@/lib/utils";
+import { useProctor } from "@/hooks/use-proctor";
+import type { ProctorSignals } from "@/lib/integrity";
+import {
+  GD_RULES,
+  ProctorGate,
+  ProctorOverlay,
+} from "@/components/case/proctor-overlay";
+import { CameraPreview } from "@/components/proctor/camera-preview";
 
 type Signal =
   | { kind: "offer"; sdp: RTCSessionDescriptionInit; from: string; to: string }
@@ -72,6 +80,36 @@ export function GdRoom({
   const [transcript, setTranscript] = React.useState<
     { speaker: string; text: string; id: number }[]
   >([]);
+
+  // ---- proctoring ---------------------------------------------------------
+  const proctor = useProctor(true);
+  const reportUrl = `/api/gd/sessions/${sessionId}/integrity`;
+
+  // Latest counters for the leave handlers, which outlive any one render.
+  const signalsRef = React.useRef<ProctorSignals>(proctor.signals);
+  React.useEffect(() => {
+    signalsRef.current = proctor.signals;
+  }, [proctor.signals]);
+
+  /**
+   * Each participant reports their own counters, because only one person
+   * presses End and everyone else just leaves. Closing the tab uses
+   * sendBeacon — an ordinary request is routinely cancelled while a page
+   * unloads — and leaving by navigation uses a keepalive fetch, since React
+   * unmounts then but pagehide never fires. text/plain so the beacon is not
+   * refused for its content type; the route reads the body as text.
+   */
+  React.useEffect(() => {
+    const body = () => JSON.stringify({ signals: signalsRef.current });
+    function onPageHide() {
+      navigator.sendBeacon(reportUrl, new Blob([body()], { type: "text/plain" }));
+    }
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      void fetch(reportUrl, { method: "POST", body: body(), keepalive: true }).catch(() => {});
+    };
+  }, [reportUrl]);
 
   const nameOf = React.useMemo(
     () => new Map(names.map((n) => [n.userId, n.name])),
@@ -334,6 +372,14 @@ export function GdRoom({
   async function end() {
     setEnding(true);
     try {
+      // This browser's own counters first, while the room still exists.
+      const report = await fetch(reportUrl, {
+        method: "POST",
+        body: JSON.stringify({ signals: proctor.signals }),
+      }).catch(() => null);
+      const reported = report?.ok ? await report.json().catch(() => null) : null;
+      if (reported?.integrity_warning) toast.warning(reported.integrity_warning);
+
       const response = await fetch(`/api/gd/sessions/${sessionId}/end`, {
         method: "POST",
       });
@@ -343,6 +389,8 @@ export function GdRoom({
         setEnding(false);
         return;
       }
+      // Before navigating, so the beforeunload guard does not trip on the way out.
+      proctor.stop();
       router.push(`/gd/${sessionId}/result`);
       router.refresh();
     } catch {
@@ -433,6 +481,30 @@ export function GdRoom({
           )}
         </CardContent>
       </Card>
+
+      {/*
+        Last children on purpose: `space-y-4` puts a margin on every child but
+        the last, and on a full-screen fixed layer that margin leaves a strip
+        of the room showing. The room itself stays mounted underneath so the
+        call can connect while the student reads the rules.
+      */}
+      {proctor.examMode && <CameraPreview camera={proctor.camera} />}
+      {proctor.examMode && proctor.needsAcknowledgement && (
+        <ProctorOverlay count={proctor.signals.blurCount} onResume={proctor.acknowledge} />
+      )}
+      {!proctor.examMode && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-background p-6">
+          <div className="w-full max-w-md">
+            <ProctorGate
+              camera={proctor.camera}
+              starting={proctor.starting}
+              onStart={proctor.start}
+              title="This discussion is held under exam conditions"
+              rules={GD_RULES}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

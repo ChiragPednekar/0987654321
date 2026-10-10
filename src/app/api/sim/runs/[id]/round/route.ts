@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { signalsSchema } from "@/lib/integrity-request";
+import { consumeActivityElapsed, recordActivityIntegrity } from "@/lib/proctoring";
 import {
   finalScore,
   rivalDecisions,
@@ -17,6 +19,13 @@ const bodySchema = z.object({
   marketing: z.number().int().min(0).max(500_000_000),
   rnd: z.number().int().min(0).max(500_000_000),
   capacity_investment: z.number().int().min(0).max(500_000_000),
+  /**
+   * The whole run's proctor counters so far, sent with every quarter. Only the
+   * final quarter's copy is recorded — it carries everything before it — but
+   * sending each time means a run that ends by bankruptcy mid-way still has
+   * its counters on the request that ends it.
+   */
+  signals: signalsSchema,
 });
 
 /**
@@ -117,7 +126,27 @@ export async function POST(
     })
     .eq("id", id);
 
+  /**
+   * Integrity, once, when the run ends. 20250101000057 named the simulation
+   * among the surfaces graded with no supervision; its enum value existed but
+   * nothing ever wrote one. There is no prose here, so no speed or AI-style
+   * check — what is recorded is leaving the page, fullscreen and the camera.
+   */
+  let integrityWarning: string | null = null;
+  if (status !== "live") {
+    const elapsedSeconds = await consumeActivityElapsed(admin, user.id, "simulation", id);
+    const integrity = await recordActivityIntegrity(admin, {
+      userId: user.id,
+      activity: "simulation",
+      activityRef: id,
+      signals: body.signals,
+      elapsedSeconds,
+    });
+    integrityWarning = integrity.warning;
+  }
+
   return NextResponse.json({
+    integrity_warning: integrityWarning,
     outcome,
     status,
     round: run.current_round,

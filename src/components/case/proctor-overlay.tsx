@@ -89,6 +89,18 @@ export const CONVERSATION_RULES = [
   "Leaving the page is recorded and shown with your result.",
 ];
 
+export const SIM_RULES = [
+  "The page goes fullscreen while you play.",
+  "Leaving the page is recorded with your run.",
+  "The decisions are yours — the camera checks you are on your own.",
+];
+
+export const GD_RULES = [
+  "The page goes fullscreen for the discussion.",
+  "Leaving the page is recorded with your result.",
+  "Speak from your own preparation, not from another screen or a phone.",
+];
+
 /**
  * The gate every graded attempt starts behind.
  *

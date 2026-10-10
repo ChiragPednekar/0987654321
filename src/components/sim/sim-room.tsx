@@ -10,6 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { SIM, type Decisions, type RoundOutcome } from "@/lib/sim/engine";
 import { cn } from "@/lib/utils";
+import { useProctor } from "@/hooks/use-proctor";
+import {
+  ProctorGate,
+  ProctorOverlay,
+  SIM_RULES,
+} from "@/components/case/proctor-overlay";
+import { CameraPreview } from "@/components/proctor/camera-preview";
 
 const crore = (n: number) => `₹${(n / 10_000_000).toFixed(2)} cr`;
 
@@ -50,6 +57,10 @@ export function SimRoom({
   );
   const [busy, setBusy] = React.useState(false);
 
+  // Only a live run is supervised; a finished one is just a record.
+  const live = status === "live";
+  const proctor = useProctor(live);
+
   async function play() {
     setBusy(true);
     try {
@@ -61,6 +72,7 @@ export function SimRoom({
           marketing: Math.round(marketing * 100_000),
           rnd: Math.round(rnd * 100_000),
           capacity_investment: Math.round(capex * 100_000),
+          signals: proctor.signals,
         }),
       });
       const payload = await response.json();
@@ -69,6 +81,9 @@ export function SimRoom({
         return;
       }
       if (payload.status !== "live") {
+        // Before navigating, or the beforeunload guard trips on the way out.
+        proctor.stop();
+        if (payload.integrity_warning) toast.warning(payload.integrity_warning);
         router.push(`/simulation/${runId}/result`);
       }
       router.refresh();
@@ -82,8 +97,30 @@ export function SimRoom({
   const you = last?.outcome.firms[0];
   const openingCapacity = you ? you.capacity : SIM.startingCapacity;
 
+  /**
+   * A live run starts behind the gate, and so does one resumed after a reload:
+   * exam mode cannot survive a reload, and the later quarters must not be
+   * played unsupervised just because the page was refreshed.
+   */
+  if (live && !proctor.examMode) {
+    return (
+      <ProctorGate
+        camera={proctor.camera}
+        resumed={currentRound > 1}
+        starting={proctor.starting}
+        onStart={proctor.start}
+        title="This simulation is played under exam conditions"
+        rules={SIM_RULES}
+      />
+    );
+  }
+
   return (
     <div className="space-y-5">
+      {proctor.examMode && <CameraPreview camera={proctor.camera} />}
+      {proctor.needsAcknowledgement && (
+        <ProctorOverlay count={proctor.signals.blurCount} onResume={proctor.acknowledge} />
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">
           Quarter {currentRound} of {SIM.rounds}

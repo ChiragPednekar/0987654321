@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { startActivityAttempt } from "@/lib/proctoring";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
@@ -45,6 +46,10 @@ export async function POST() {
     outcome: {},
     states: [newFirm("You"), newFirm("Meridian"), newFirm("Apex")],
   });
+
+  // The server's own clock for the run, read back when it ends. Shown to a
+  // reviewer as time spent; decides nothing on its own.
+  await startActivityAttempt(admin, user.id, "simulation", run.id);
 
   return NextResponse.json({ id: run.id }, { status: 201 });
 }
