@@ -2295,6 +2295,8 @@ export type UsageEventRow = {
   cached_tokens: number;
   total_tokens: number;
   cost_inr: number;
+  /** See 20250101000063. Null except for features the quota has no other way to count. */
+  feature: "competition_entry" | "simulation_debrief" | "group_discussion" | null;
   created_at: string;
 };
 

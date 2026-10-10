@@ -78,7 +78,10 @@ export async function POST(
       run.final_score ?? 0,
     );
 
-    void recordUsage(admin, {
+    // Awaited, not fire-and-forget: the quota counts this row, and work left
+    // running after the response can be cut off when the function is frozen.
+    await recordUsage(admin, {
+      feature: "simulation_debrief",
       userId: user.id,
       operation: "grading",
       model: debrief.model,

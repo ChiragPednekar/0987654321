@@ -147,7 +147,10 @@ export async function POST(
       body.answer,
     );
 
-    void recordUsage(admin, {
+    // Awaited, not fire-and-forget: the quota counts this row, and work left
+    // running after the response can be cut off when the function is frozen.
+    await recordUsage(admin, {
+      feature: "competition_entry",
       userId: user.id,
       operation: "grading",
       model: result.model,

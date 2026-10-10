@@ -145,7 +145,10 @@ export async function POST(
 
       // Per-operation accounting, as with case grading. Attributed to whoever
       // ended the room; the cost is one call shared by everyone in it.
-      void recordUsage(admin, {
+      // Awaited, not fire-and-forget: the quota counts this row, and work left
+      // running after the response can be cut off when the function is frozen.
+      await recordUsage(admin, {
+        feature: "group_discussion",
         userId: user.id,
         operation: "grading",
         model: evaluation.model,

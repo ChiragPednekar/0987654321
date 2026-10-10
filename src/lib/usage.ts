@@ -24,6 +24,13 @@ export interface UsageEvent {
   /** Null for platform work no student caused, such as writing the daily quiz. */
   userId: string | null;
   operation: "grading" | "interview" | "content";
+  /**
+   * Set only for AI features that leave no row quota_status() can count —
+   * see 20250101000063. Without it a feature is gated on the quota but never
+   * uses any of it up. Typed as a union so a misspelling fails to compile
+   * instead of quietly going uncounted.
+   */
+  feature?: "competition_entry" | "simulation_debrief" | "group_discussion";
   model: string | null;
   inputTokens: number;
   outputTokens: number;
@@ -99,6 +106,7 @@ export async function recordUsage(admin: Admin, event: UsageEvent): Promise<void
       cached_tokens: event.cachedTokens ?? 0,
       total_tokens: event.totalTokens ?? input + output,
       cost_inr: priceUsage(input, output, event.cachedTokens ?? 0),
+      feature: event.feature ?? null,
     });
 
     // Logged, not thrown. Metrics are not worth failing a graded submission or
