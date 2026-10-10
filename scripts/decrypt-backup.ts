@@ -18,9 +18,13 @@ if (!input || !passphrase) {
 
 const data = open(readFileSync(input), passphrase) as {
   started: string;
+  accounts?: unknown[];
   tables: Record<string, unknown[]>;
 };
 const out = input.replace(/\.ccbk$/, "") + ".json";
 writeFileSync(out, JSON.stringify(data, null, 2));
 const rows = Object.values(data.tables).reduce((n, t) => n + t.length, 0);
-console.log(`Decrypted backup from ${data.started}: ${Object.keys(data.tables).length} tables, ${rows} rows → ${out}`);
+console.log(
+  `Decrypted backup from ${data.started}: ${Object.keys(data.tables).length} tables, ${rows} rows, ` +
+    `${data.accounts?.length ?? 0} accounts → ${out}`,
+);

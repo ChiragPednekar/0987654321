@@ -37,10 +37,16 @@
  * success while missing a table is discovered at restore time — the worst
  * possible moment — so it must not exist.
  *
- * Limitation, stated plainly: auth.users is not reachable through this API, so
- * login identities are not in the backup. Accounts are Google sign-in only and
- * public.users keeps every email, so they can be re-linked by email after a
- * restore; a full pg_dump would avoid that and needs the database password.
+ * ---------------------------------------------------------------------------
+ * Login accounts
+ * ---------------------------------------------------------------------------
+ * auth.users is not reachable through the table API, so accounts are read
+ * from the Auth admin API instead and stored alongside the tables. Every
+ * account is Google sign-in only, so there are no passwords to lose. The
+ * point is the ID: every row a student ever wrote is keyed to it, and the
+ * admin API will recreate an account with its original ID — tested — so
+ * scripts/restore-accounts.ts brings each one back with its history attached.
+ * Google links to the restored account by email on the next sign-in.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -107,6 +113,18 @@ async function dump(rel: Relation): Promise<unknown[]> {
   }
 }
 
+/** Every login account, paged until a short page. */
+async function dumpAccounts(): Promise<unknown[]> {
+  const accounts: unknown[] = [];
+  for (let page = 1; ; page++) {
+    const res = await fetch(`${url}/auth/v1/admin/users?page=${page}&per_page=${PAGE}`, { headers });
+    if (!res.ok) throw new Error(`accounts: HTTP ${res.status} ${await res.text()}`);
+    const batch = ((await res.json()) as { users?: unknown[] }).users ?? [];
+    accounts.push(...batch);
+    if (batch.length < PAGE) return accounts;
+  }
+}
+
 async function main() {
   const started = new Date().toISOString();
   const relations = await discover();
@@ -121,13 +139,16 @@ async function main() {
     console.log(`  ✓ ${rel.name.padEnd(28)} ${String(rows.length).padStart(7)} rows`);
   }
 
-  const sealed = seal({ format: "casecode-backup/2", started, url, tables }, passphrase!);
+  const accounts = await dumpAccounts();
+  console.log(`  ✓ ${"login accounts (auth)".padEnd(28)} ${String(accounts.length).padStart(7)}`);
+
+  const sealed = seal({ format: "casecode-backup/3", started, url, accounts, tables }, passphrase!);
 
   const dir = join(process.cwd(), "backups");
   mkdirSync(dir, { recursive: true });
   const file = join(dir, `casecode_${started.replace(/[:.]/g, "-")}.ccbk`);
   writeFileSync(file, sealed);
-  console.log(`\n${total} rows from ${relations.length} relations → ${file} (${sealed.length} bytes, encrypted)`);
+  console.log(`\n${total} rows from ${relations.length} relations + ${accounts.length} accounts → ${file} (${sealed.length} bytes, encrypted)`);
 }
 
 main().catch((error) => {
