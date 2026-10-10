@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ReviewQueue } from "@/components/teach/review-queue";
 import { formatNumber } from "@/lib/utils";
+import { photosForFindings } from "@/lib/proctor-evidence";
 import type { AssignmentReviewRow } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Assignment" };
@@ -68,7 +69,7 @@ export default async function AssignmentDetail({
     submissionIds.length
       ? admin
           .from("submission_integrity")
-          .select("submission_id, severity, score, penalty_pct, flags, ai_likelihood, signals")
+          .select("id, user_id, created_at, server_elapsed_seconds, submission_id, severity, score, penalty_pct, flags, ai_likelihood, signals")
           .in("submission_id", submissionIds)
       : Promise.resolve({ data: [] }),
   ]);
@@ -80,6 +81,15 @@ export default async function AssignmentDetail({
   const integrityBySubmission = new Map(
     (integrityRows ?? []).map((i) => [i.submission_id, i]),
   );
+
+  /**
+   * Camera evidence for this assignment's submissions only. The page is
+   * already limited to the assignment's own teacher (requireAssignmentTeacher),
+   * and the photos are matched to each finding's own attempt window, so a
+   * teacher sees exactly the photos from attempts handed in to them — the
+   * "reviewer" the consent notice tells students about.
+   */
+  const photosByFinding = await photosForFindings(admin, integrityRows ?? []);
 
   const rows: AssignmentReviewRow[] = queue.map((row) => {
     const detail = row.submission_id
@@ -101,6 +111,7 @@ export default async function AssignmentDetail({
             flags: integ.flags ?? [],
             ai_likelihood: integ.ai_likelihood,
             signals: (integ.signals as Record<string, unknown>) ?? {},
+            photos: photosByFinding.get(integ.id) ?? [],
           }
         : null,
     };

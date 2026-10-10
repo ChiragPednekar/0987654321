@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ChevronDown, Clock, Loader2, RotateCcw, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Camera, CheckCircle2, ChevronDown, Clock, Loader2, RotateCcw, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Markdown } from "@/components/markdown";
 import { cn, timeAgo } from "@/lib/utils";
-import { INTEGRITY_FLAG_LABELS } from "@/lib/integrity";
+import { CAMERA_REVIEW_FLAGS, INTEGRITY_FLAG_LABELS } from "@/lib/integrity";
+
+const CAMERA_REVIEW = new Set<string>(CAMERA_REVIEW_FLAGS);
+
+/** Said plainly — the reader is deciding something about a student. */
+const PHOTO_LABEL: Record<string, string> = {
+  phone: "phone",
+  multiple_faces: "another person",
+  no_face: "nobody in frame",
+  book: "book",
+};
 import type { AssignmentReviewRow } from "@/lib/types/database";
 
 /**
@@ -235,6 +245,15 @@ export function ReviewQueue({
                       <ShieldAlert className="mr-1 size-3" />
                       {row.integrity.severity === "severe" ? "Flagged" : "Suspect"}
                     </Badge>
+                  ) : row.integrity?.flags.some((f) => CAMERA_REVIEW.has(f)) ? (
+                    // Camera findings take no marks, so these attempts are
+                    // "clean" — without this badge they would look untouched
+                    // in the list and the finding would only be seen by
+                    // whoever happened to expand the row.
+                    <Badge variant="outline" className="shrink-0">
+                      <Camera className="mr-1 size-3" />
+                      Camera
+                    </Badge>
                   ) : null}
 
                   {reviewed ? (
@@ -416,22 +435,64 @@ export function ReviewQueue({
                             {typeof row.integrity.signals.keystrokes === "number" ? (
                               <span>Keystrokes: {String(row.integrity.signals.keystrokes)}</span>
                             ) : null}
-                            {typeof row.integrity.signals.phoneCount === "number" &&
-                            Number(row.integrity.signals.phoneCount) > 0 ? (
+                            {/*
+                              phoneEvents / multiFaceEvents / noFaceMs are the
+                              names ProctorSignals actually stores. These lines
+                              read phoneCount, multipleFacesCount and
+                              noFaceCount before, which never exist, so camera
+                              findings were never shown here at all.
+                            */}
+                            {Number(row.integrity.signals.phoneEvents) > 0 ? (
                               <span className="font-medium text-destructive">
-                                Phone on camera: {String(row.integrity.signals.phoneCount)}
+                                Phone on camera: {String(row.integrity.signals.phoneEvents)}x
                               </span>
                             ) : null}
-                            {typeof row.integrity.signals.multipleFacesCount === "number" &&
-                            Number(row.integrity.signals.multipleFacesCount) > 0 ? (
+                            {Number(row.integrity.signals.multiFaceEvents) > 0 ? (
                               <span className="font-medium text-destructive">
-                                Second person: {String(row.integrity.signals.multipleFacesCount)}
+                                Second person: {String(row.integrity.signals.multiFaceEvents)}x
                               </span>
                             ) : null}
-                            {typeof row.integrity.signals.noFaceCount === "number" &&
-                            Number(row.integrity.signals.noFaceCount) > 0 ? (
-                              <span>Away from camera: {String(row.integrity.signals.noFaceCount)}</span>
+                            {Number(row.integrity.signals.noFaceMs) >= 60_000 ? (
+                              <span>
+                                Away from camera: ~{Math.round(Number(row.integrity.signals.noFaceMs) / 60_000)} min
+                              </span>
                             ) : null}
+                          </div>
+                        ) : null}
+
+                        {row.integrity.photos && row.integrity.photos.length > 0 ? (
+                          <div className="mt-2.5 border-t border-border pt-2.5">
+                            <p className="text-xs font-medium text-muted-foreground">
+                              Camera photos — the model can be wrong; check what it saw:
+                            </p>
+                            <div className="mt-1.5 flex flex-wrap gap-2">
+                              {row.integrity.photos.map((photo) => (
+                                <a
+                                  key={photo.url}
+                                  href={photo.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="group block w-28 overflow-hidden rounded-md border"
+                                >
+                                  {/*
+                                    A plain img, not next/image: these are
+                                    short-lived signed URLs to a private bucket,
+                                    and the image optimiser would cache a
+                                    private photo under a public URL.
+                                  */}
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={photo.url}
+                                    alt={`Camera photo: ${PHOTO_LABEL[photo.kind] ?? photo.kind}`}
+                                    className="aspect-[4/3] w-full bg-muted object-cover"
+                                    loading="lazy"
+                                  />
+                                  <span className="block px-1.5 py-1 text-[10px] text-muted-foreground group-hover:text-foreground">
+                                    {PHOTO_LABEL[photo.kind] ?? photo.kind} · {timeAgo(photo.takenAt)}
+                                  </span>
+                                </a>
+                              ))}
+                            </div>
                           </div>
                         ) : null}
                       </div>

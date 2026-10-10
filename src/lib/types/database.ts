@@ -2125,6 +2125,8 @@ export type AssignmentReviewRow = {
     flags: string[];
     ai_likelihood: number | null;
     signals: Record<string, unknown>;
+    /** Camera evidence from this attempt, as short-lived signed URLs. */
+    photos?: { kind: string; takenAt: string; url: string }[];
   } | null;
   faculty_marks: number | null;
   faculty_remarks: string | null;
