@@ -91,8 +91,8 @@ export default async function AssignmentDetail({
     return {
       ...row,
       // Prefer whatever the RPC gave us; fall back to the direct read.
-      ai_breakdown: row.ai_breakdown ?? (detail?.breakdown as any) ?? null,
-      ai_feedback: row.ai_feedback ?? (detail?.feedback as any) ?? null,
+      ai_breakdown: row.ai_breakdown ?? detail?.breakdown ?? null,
+      ai_feedback: row.ai_feedback ?? detail?.feedback ?? null,
       integrity: integ
         ? {
             severity: integ.severity as "clean" | "suspect" | "severe",
