@@ -1,96 +1,136 @@
-import { writeFileSync, mkdirSync } from "node:fs";
+/**
+ * Encrypted snapshot of every table the API exposes.
+ *
+ * ---------------------------------------------------------------------------
+ * Why it encrypts, and why nothing plaintext is ever written
+ * ---------------------------------------------------------------------------
+ * The repository is public, and a public repository's workflow artifacts can
+ * be downloaded by any signed-in GitHub user. An unencrypted backup artifact
+ * is every student's email, answers and integrity record, published. So the
+ * data is gzipped and sealed with AES-256-GCM in memory, and only the sealed
+ * file reaches the disk — there is no plaintext copy for a later step to
+ * upload by mistake. GCM also authenticates: a damaged or tampered file fails
+ * to decrypt instead of restoring garbage.
+ *
+ * The key comes from BACKUP_PASSPHRASE. Whoever holds the passphrase can read
+ * the backup and nobody else can, so it must be stored somewhere outside
+ * GitHub (GitHub secrets cannot be read back). Lose it and every backup is
+ * unreadable. scripts/decrypt-backup.ts reverses this.
+ *
+ * ---------------------------------------------------------------------------
+ * Why it discovers tables instead of listing them
+ * ---------------------------------------------------------------------------
+ * The hand-written list it replaced had 35 names for 87 relations, five of
+ * them wrong, and missed the invite list, institutions, bookmarks and
+ * notifications. A list maintained by hand is wrong by the next migration. The
+ * API's own OpenAPI document names every exposed relation and marks primary
+ * keys, which is everything needed to page through them.
+ *
+ * ---------------------------------------------------------------------------
+ * Why it pages, and why it fails loudly
+ * ---------------------------------------------------------------------------
+ * Supabase caps a response at 1,000 rows regardless of the limit requested, so
+ * one select per table silently truncates every table past that size. Rows are
+ * read in pages ordered by primary key until a short page comes back.
+ *
+ * A table that cannot be read fails the whole run. A backup that reports
+ * success while missing a table is discovered at restore time — the worst
+ * possible moment — so it must not exist.
+ *
+ * Limitation, stated plainly: auth.users is not reachable through this API, so
+ * login identities are not in the backup. Accounts are Google sign-in only and
+ * public.users keeps every email, so they can be re-linked by email after a
+ * restore; a full pg_dump would avoid that and needs the database password.
+ */
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { config } from "dotenv";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../src/lib/types/database";
+import { seal } from "./lib/backup-format";
 
 config({ path: ".env.local" });
 config({ path: ".env" });
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const passphrase = process.env.BACKUP_PASSPHRASE;
 
-if (!supabaseUrl || !serviceKey) {
+if (!url || !key) {
   console.error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
   process.exit(1);
 }
-
-const supabase = createClient<Database>(supabaseUrl, serviceKey, {
-  auth: { persistSession: false },
-});
-
-const TABLES_TO_BACKUP = [
-  "users",
-  "role_grants",
-  "solve_allowlist",
-  "classrooms",
-  "classroom_members",
-  "classroom_assignments",
-  "assignment_submissions",
-  "submissions",
-  "scores",
-  "submission_integrity",
-  "proctor_photos",
-  "competitions",
-  "competition_teams",
-  "competition_members",
-  "competition_entries",
-  "gd_sessions",
-  "gd_participants",
-  "gd_messages",
-  "gd_scores",
-  "negotiation_sessions",
-  "negotiation_messages",
-  "sales_sessions",
-  "sales_messages",
-  "pi_sessions",
-  "pi_messages",
-  "pi_scores",
-  "pi_profiles",
-  "objective_sessions",
-  "objective_answers",
-  "peer_sessions",
-  "peer_feedback",
-  "daily_answers",
-  "companies",
-  "cases",
-  "rubrics",
-] as const;
-
-async function runBackup() {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const backupDir = join(process.cwd(), "backups");
-  mkdirSync(backupDir, { recursive: true });
-
-  const backupData: Record<string, unknown[]> = {};
-  console.log(`Starting database backup at ${timestamp}...`);
-
-  for (const table of TABLES_TO_BACKUP) {
-    try {
-      const { data, error } = await supabase
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .from(table as any)
-        .select("*")
-        .limit(10000);
-
-      if (error) {
-        console.warn(`  - [${table}] query warning: ${error.message}`);
-        backupData[table] = [];
-      } else {
-        backupData[table] = data ?? [];
-        console.log(`  ✓ [${table}]: ${data?.length ?? 0} rows`);
-      }
-    } catch (err) {
-      console.warn(`  - [${table}] skipped: ${(err as Error).message}`);
-    }
-  }
-
-  const outFile = join(backupDir, `casecode_backup_${timestamp}.json`);
-  writeFileSync(outFile, JSON.stringify(backupData, null, 2), "utf8");
-  console.log(`\nBackup saved successfully to ${outFile}`);
+if (!passphrase || passphrase.length < 16) {
+  // Refuses rather than falling back to plaintext: the fallback is the leak.
+  console.error("BACKUP_PASSPHRASE must be set (16+ characters). Refusing to write an unencrypted backup.");
+  process.exit(1);
 }
 
-runBackup().catch((err) => {
-  console.error("Backup failed:", err);
+const PAGE = 1000;
+const headers = { apikey: key, Authorization: `Bearer ${key}` };
+
+interface Relation {
+  name: string;
+  orderBy: string | null;
+}
+
+async function discover(): Promise<Relation[]> {
+  const res = await fetch(`${url}/rest/v1/`, {
+    headers: { ...headers, Accept: "application/openapi+json" },
+  });
+  if (!res.ok) throw new Error(`could not read the API schema: HTTP ${res.status}`);
+  const spec = (await res.json()) as {
+    definitions?: Record<string, { properties?: Record<string, { description?: string }> }>;
+  };
+
+  return Object.entries(spec.definitions ?? {})
+    .map(([name, def]) => {
+      const props = def.properties ?? {};
+      // PostgREST marks primary-key columns with <pk/> in the description.
+      const pk = Object.entries(props).find(([, p]) => p.description?.includes("<pk/>"))?.[0];
+      const orderBy = pk ?? (props.id ? "id" : props.created_at ? "created_at" : null);
+      return { name, orderBy };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function dump(rel: Relation): Promise<unknown[]> {
+  const rows: unknown[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const params = new URLSearchParams({ select: "*" });
+    if (rel.orderBy) params.set("order", `${rel.orderBy}.asc`);
+    const res = await fetch(`${url}/rest/v1/${rel.name}?${params}`, {
+      headers: { ...headers, Range: `${from}-${from + PAGE - 1}`, "Range-Unit": "items" },
+    });
+    if (!res.ok) throw new Error(`${rel.name}: HTTP ${res.status} ${await res.text()}`);
+    const page = (await res.json()) as unknown[];
+    rows.push(...page);
+    if (page.length < PAGE) return rows;
+  }
+}
+
+async function main() {
+  const started = new Date().toISOString();
+  const relations = await discover();
+  console.log(`Backing up ${relations.length} relations…`);
+
+  const tables: Record<string, unknown[]> = {};
+  let total = 0;
+  for (const rel of relations) {
+    const rows = await dump(rel);
+    tables[rel.name] = rows;
+    total += rows.length;
+    console.log(`  ✓ ${rel.name.padEnd(28)} ${String(rows.length).padStart(7)} rows`);
+  }
+
+  const sealed = seal({ format: "casecode-backup/2", started, url, tables }, passphrase!);
+
+  const dir = join(process.cwd(), "backups");
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, `casecode_${started.replace(/[:.]/g, "-")}.ccbk`);
+  writeFileSync(file, sealed);
+  console.log(`\n${total} rows from ${relations.length} relations → ${file} (${sealed.length} bytes, encrypted)`);
+}
+
+main().catch((error) => {
+  console.error("Backup FAILED — nothing usable was written:", error instanceof Error ? error.message : error);
   process.exit(1);
 });

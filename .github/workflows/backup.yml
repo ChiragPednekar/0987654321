@@ -22,20 +22,32 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run database backup
+      # This repository is PUBLIC, and a public repository's artifacts can be
+      # downloaded by any signed-in GitHub user. The script therefore encrypts
+      # in memory and refuses to run without BACKUP_PASSPHRASE; only the sealed
+      # .ccbk file is ever uploaded. Keep the passphrase outside GitHub —
+      # secrets cannot be read back, and without it no backup can be opened.
+      # Restore: scripts/decrypt-backup.ts.
+      - name: Run encrypted database backup
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
         run: |
-          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-            echo "::error::SUPABASE_SERVICE_ROLE_KEY is not set. Add it under Settings -> Secrets and variables -> Actions."
-            exit 1
-          fi
+          for v in NEXT_PUBLIC_SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY BACKUP_PASSPHRASE; do
+            if [ -z "${!v}" ]; then
+              echo "::error::$v is not set. Add it under Settings -> Secrets and variables -> Actions."
+              exit 1
+            fi
+          done
           npm run db:backup
 
-      - name: Upload backup artifact
+      - name: Upload encrypted backup
         uses: actions/upload-artifact@v4
         with:
           name: database-backup-${{ github.run_id }}
-          path: backups/
+          # The sealed file only — a pattern, so a stray plaintext file in
+          # backups/ could never ride along.
+          path: backups/*.ccbk
+          if-no-files-found: error
           retention-days: 90
