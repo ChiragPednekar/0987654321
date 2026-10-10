@@ -1,7 +1,12 @@
 import type { NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-export async function middleware(request: NextRequest) {
+/**
+ * Next 16 renamed middleware to proxy: same job, new name, and it always runs
+ * on the Node.js runtime. The session refresh and every gate it applies live
+ * in updateSession (src/lib/supabase/middleware.ts), unchanged by the rename.
+ */
+export async function proxy(request: NextRequest) {
   return updateSession(request);
 }
 
