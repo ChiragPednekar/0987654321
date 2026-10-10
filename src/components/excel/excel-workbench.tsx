@@ -128,7 +128,7 @@ export function ExcelWorkbench({
       const response = await fetch("/api/excel/run", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug, formula, signals: proctor.signals }),
+        body: JSON.stringify({ slug, formula }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -155,7 +155,13 @@ export function ExcelWorkbench({
       const response = await fetch("/api/excel/submit", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug, formula }),
+        /**
+         * The signals go with Submit, the request that records integrity. They
+         * were on Run instead — whose route never reads them — so from
+         * 5d7f6f8 until this fix every attempt here was recorded as
+         * unproctored: no tab-switches, no fullscreen exits, no camera.
+         */
+        body: JSON.stringify({ slug, formula, signals: proctor.signals }),
       });
       const payload = await response.json();
       if (!response.ok) {

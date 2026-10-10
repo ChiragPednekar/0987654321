@@ -104,7 +104,7 @@ export function SqlWorkbench({
       const response = await fetch("/api/sql/run", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug, query, signals: proctor.signals }),
+        body: JSON.stringify({ slug, query }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -134,7 +134,13 @@ export function SqlWorkbench({
       const response = await fetch("/api/sql/submit", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug, query }),
+        /**
+         * The signals go with Submit, the request that records integrity. They
+         * were on Run instead — whose route never reads them — so from
+         * 5d7f6f8 until this fix every attempt here was recorded as
+         * unproctored: no tab-switches, no fullscreen exits, no camera.
+         */
+        body: JSON.stringify({ slug, query, signals: proctor.signals }),
       });
       const payload = await response.json();
       if (!response.ok) {
