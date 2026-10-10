@@ -258,9 +258,45 @@ export function useProctor(enabled: boolean): ProctorApi {
    * so once it is on the only way out is submitting or leaving the page, and
    * both of those are recorded.
    */
+  const { stop: stopCamera, reset: resetCamera, request: requestCamera } = camera;
+  const cameraWasAsked = camera.signals.cameraRequested;
+
+  /** Clears every counter and the camera, ready for a new attempt. */
+  const reset = React.useCallback(() => {
+    stopped.current = false;
+    examRef.current = false;
+    leftAt.current = null;
+    setSignals(EMPTY_SIGNALS);
+    setAway(false);
+    setNeedsAcknowledgement(false);
+    setExamMode(false);
+    setStarting(false);
+    setFullscreen(false);
+    resetCamera();
+  }, [resetCamera]);
+
   const start = React.useCallback(async () => {
     if (examRef.current) return;
-    stopped.current = false;
+
+    /**
+     * A previous attempt on this page already ended, so this is a new one.
+     *
+     * Several surfaces stay on the same page after a submit — SQL and Excel
+     * show their gate again after a correct answer — and once start() was
+     * allowed to re-arm, it re-armed with the last attempt's counters still in
+     * place. Its tab-switches and camera findings would then be submitted again
+     * with the next attempt, and could push an honest one over the penalty line.
+     * Starting from zero here fixes that for every surface at once rather than
+     * relying on each to call reset().
+     *
+     * The camera is asked for again if the last attempt asked for it: a
+     * permission already granted is reused without a prompt, and one refused
+     * stays refused — so refusing cannot be shed by simply starting over.
+     */
+    if (stopped.current) {
+      reset();
+      if (cameraWasAsked) void requestCamera();
+    }
 
     // Exam mode is armed BEFORE fullscreen is attempted, never after. Paste
     // blocking, the overlay, the counters and the server clock are what
@@ -273,7 +309,7 @@ export function useProctor(enabled: boolean): ProctorApi {
     setStarting(true);
     setFullscreen(await requestFullscreen());
     setStarting(false);
-  }, [bump, requestFullscreen]);
+  }, [bump, requestFullscreen, reset, cameraWasAsked, requestCamera]);
 
   /**
    * Dismisses the interruption overlay and goes back into fullscreen.
@@ -289,7 +325,6 @@ export function useProctor(enabled: boolean): ProctorApi {
     setFullscreen(await requestFullscreen());
   }, [requestFullscreen]);
 
-  const { stop: stopCamera, reset: resetCamera } = camera;
   const stop = React.useCallback(() => {
     stopped.current = true;
     examRef.current = false;
@@ -298,19 +333,6 @@ export function useProctor(enabled: boolean): ProctorApi {
     stopCamera();
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
   }, [stopCamera]);
-
-  const reset = React.useCallback(() => {
-    stopped.current = false;
-    examRef.current = false;
-    leftAt.current = null;
-    setSignals(EMPTY_SIGNALS);
-    setAway(false);
-    setNeedsAcknowledgement(false);
-    setExamMode(false);
-    setStarting(false);
-    setFullscreen(false);
-    resetCamera();
-  }, [resetCamera]);
 
   /**
    * One object, so every surface's existing `signals: proctor.signals` carries
