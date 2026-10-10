@@ -107,22 +107,26 @@ export async function requireAdminActor(): Promise<Actor> {
 }
 
 /**
- * May open the teacher area at all.
+ * May open the teacher area at all: teachers, and the platform owner.
  *
- * Teachers only. Admins used to pass so the owner could "inspect what teachers
- * see without a second account", but the three dashboards are separate products
- * and the middleware now bounces every role off the others' homes — leaving the
- * guard more permissive than the routing would mean the two disagree, and the
- * looser one always wins wherever it is reached first.
+ * History, because this has flipped twice. Admins once passed; then the owner
+ * was walled out and told to sign in as a teacher instead, so no session
+ * straddled two roles. 49f949b reversed that at the owner's request — admin may
+ * now open every dashboard, with a banner saying so and a "View as" link in the
+ * sidebar — but missed this check, which the teacher layout and every teacher
+ * page run. The owner clicking "Teaching product" was therefore redirected to
+ * the student dashboard without a word: the silent wrong-place defect that
+ * commit set out to remove. Routing and this guard now agree again.
  *
- * The owner inspects the teacher product by signing in as a teacher. Three
- * logins exist precisely so no session has to straddle two roles.
- *
- * This says nothing about *which* batches — see requireBatchTeacher.
+ * It opens the teacher SECTION, not anyone's classes. requireBatchTeacher and
+ * requireAssignmentTeacher still demand teacher membership of the specific
+ * batch, so an admin cannot mark another teacher's class through these routes
+ * — and is_admin() already reads every row, so nothing becomes reachable that
+ * was not before.
  */
 export async function requireTeacherActor(): Promise<Actor> {
   const actor = await requireActor();
-  if (actor.role !== "teacher") {
+  if (actor.role !== "teacher" && actor.role !== "admin") {
     throw new AuthzError("Teacher access required", 403);
   }
   return actor;
