@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ProctorEndedHost } from "@/components/proctor/proctor-ended";
 import "./globals.css";
 
 /**
@@ -73,6 +74,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <ProctorEndedHost />
           <Toaster
             position="bottom-right"
             toastOptions={{

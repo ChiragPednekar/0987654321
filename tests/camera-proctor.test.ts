@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   createTracker,
+  END_REASON_LABEL,
+  END_REASONS,
+  endReason,
   isCovered,
+  NO_FACE_END_MS,
   observe,
   SAMPLE_INTERVAL_MS,
   type CameraSample,
@@ -124,5 +128,44 @@ describe("isCovered", () => {
 
   it("does not call an empty frame covered", () => {
     expect(isCovered(new Uint8ClampedArray(0))).toBe(false);
+  });
+});
+
+describe("endReason", () => {
+  it("does not end a test for one misread frame", () => {
+    const { state } = run([{}, phone, {}, {}, {}]);
+    expect(endReason(state)).toBeNull();
+  });
+
+  it("ends the test once a phone is held in view", () => {
+    expect(endReason(run([phone, phone]).state)).toBeNull();
+    expect(endReason(run([phone, phone, phone]).state)).toBe("phone");
+  });
+
+  it("ends the test for a second person or a covered lens", () => {
+    const two = Array.from({ length: 3 }, () => ({ faces: 2 }));
+    expect(endReason(run(two).state)).toBe("multiple_faces");
+    const dark = Array.from({ length: 3 }, () => ({ covered: true, faces: 0 }));
+    expect(endReason(run(dark).state)).toBe("camera_covered");
+  });
+
+  it("never ends a test for a book — rough work is allowed", () => {
+    const books = Array.from({ length: 10 }, () => ({ book: true }));
+    const { state } = run(books);
+    expect(state.counters.bookEvents).toBe(1);
+    expect(endReason(state)).toBeNull();
+  });
+
+  it("allows looking away, but not a continuous minute out of frame", () => {
+    const away = (n: number) => Array.from({ length: n }, () => ({ faces: 0 }));
+    // About 35 seconds away, back, 35 more: past a minute in total, never a minute at once.
+    const glances = run([...away(25), {}, {}, {}, {}, {}, ...away(25)]).state;
+    expect(glances.counters.noFaceMs).toBeGreaterThan(NO_FACE_END_MS);
+    expect(endReason(glances)).toBeNull();
+    expect(endReason(run(away(45)).state)).toBe("no_face");
+  });
+
+  it("every reason has a label the student is shown", () => {
+    for (const r of END_REASONS) expect(END_REASON_LABEL[r]).toBeTruthy();
   });
 });

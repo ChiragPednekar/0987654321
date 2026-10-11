@@ -4,10 +4,12 @@ import * as React from "react";
 import type { FaceDetector, ObjectDetector } from "@mediapipe/tasks-vision";
 import {
   createTracker,
+  endReason,
   isCovered,
   observe,
   SAMPLE_INTERVAL_MS,
   type CameraCounters,
+  type EndReason,
   type SnapshotKind,
   type TrackerState,
 } from "@/lib/camera-proctor";
@@ -76,6 +78,12 @@ export interface CameraApi {
   stream: MediaStream | null;
   live: LiveView | null;
   signals: CameraSignals;
+  /**
+   * Something the camera saw that ends the attempt, once it has been seen —
+   * see endReason in src/lib/camera-proctor.ts. Only ever set while the attempt
+   * is being counted, and it stays set: useProctor turns it into the lock.
+   */
+  violation: EndReason | null;
   /**
    * The permission prompt has been open long enough that the student should be
    * allowed to start without it. Some browsers leave the request pending with
@@ -245,6 +253,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
   const [live, setLive] = React.useState<LiveView | null>(null);
   const [signals, setSignals] = React.useState<CameraSignals>(EMPTY_STATE_SIGNALS);
   const [waitedTooLong, setWaitedTooLong] = React.useState(false);
+  const [violation, setViolation] = React.useState<EndReason | null>(null);
 
   const stopped = React.useRef(false);
   const streamRef = React.useRef<MediaStream | null>(null);
@@ -372,7 +381,11 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     trackerRef.current = state;
     setLive({ faces, phone, covered });
     patch({ ...state.counters });
+    // The photo is taken first, from this same frame: it is the evidence for
+    // the ending, and the camera is switched off as soon as the ending lands.
     for (const kind of started) captureSnapshot(kind);
+    const reason = endReason(state);
+    if (reason) setViolation((v) => v ?? reason);
   }, [patch, captureSnapshot]);
 
   const request = React.useCallback(async () => {
@@ -425,6 +438,9 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
         if (stopped.current) return;
         setStatus("lost");
         setSignals((s) => ({ ...s, cameraLostCount: s.cameraLostCount + 1 }));
+        // Switching the camera off would otherwise be the way round every
+        // other rule. Before the attempt starts it is only a camera that went.
+        if (countingRef.current) setViolation((v) => v ?? "camera_off");
         teardown();
       });
     });
@@ -484,6 +500,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     lastSampleAt.current = null;
     snapshots.current = { taken: 0, lastByKind: {} };
     setWaitedTooLong(false);
+    setViolation(null);
   }, [teardown]);
 
   const stop = React.useCallback(() => {
@@ -496,5 +513,5 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
   // Leaving the page must release the camera, or the light stays on.
   React.useEffect(() => () => teardown(), [teardown]);
 
-  return { status, detector, stream, live, signals, waitedTooLong, request, stop, reset };
+  return { status, detector, stream, live, signals, violation, waitedTooLong, request, stop, reset };
 }

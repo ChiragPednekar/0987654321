@@ -10,6 +10,8 @@ import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
 import { RosterTable } from "@/components/institution/roster-table";
 import { BatchControls } from "@/components/teacher/batch-controls";
+import { LockoutList } from "@/components/proctor/lockout-list";
+import { loadLockouts } from "@/lib/exam-lockouts";
 import { DOMAIN_LABEL } from "@/lib/constants";
 import { formatNumber } from "@/lib/utils";
 import type { Domain, InstitutionRosterRow } from "@/lib/types/database";
@@ -57,7 +59,7 @@ export default async function BatchDetail({
 
   const studentIds = (members ?? []).map((m) => m.user_id);
 
-  const [{ data: scores }, { data: domains }, { data: interviewRows }] =
+  const [{ data: scores }, { data: domains }, { data: interviewRows }, lockouts] =
     await Promise.all([
       studentIds.length
         ? admin
@@ -80,6 +82,8 @@ export default async function BatchDetail({
             .select("user_id")
             .in("user_id", studentIds)
         : Promise.resolve({ data: [] }),
+      // Only this batch's students: a teacher reopens tests for their own class.
+      loadLockouts(admin, { students: studentIds }),
     ]);
 
   const interviewsByUser = new Map<string, number>();
@@ -226,6 +230,15 @@ export default async function BatchDetail({
               })}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Tests ended by the camera</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LockoutList rows={lockouts.rows} failed={lockouts.failed} />
         </CardContent>
       </Card>
 

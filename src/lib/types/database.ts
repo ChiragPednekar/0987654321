@@ -1178,6 +1178,12 @@ export interface Database {
         Update: Partial<ProctorSnapshotRow>;
         Relationships: [];
       };
+      exam_lockouts: {
+        Row: ExamLockoutRow;
+        Insert: Partial<ExamLockoutRow>;
+        Update: Partial<ExamLockoutRow>;
+        Relationships: [];
+      };
       audit_log: {
         Row: AuditLogRow;
         Insert: Partial<AuditLogRow>;
@@ -2374,6 +2380,21 @@ export type ProctorSnapshotRow = {
   kind: "phone" | "multiple_faces" | "no_face" | "book";
   storage_path: string;
   created_at: string;
+};
+
+/**
+ * A test the camera ended (public.exam_lockouts, 20250101000064). While
+ * reopened_at is null, that page stays locked for that account.
+ */
+export type ExamLockoutRow = {
+  id: string;
+  user_id: string;
+  path: string;
+  reason: "phone" | "multiple_faces" | "camera_covered" | "no_face" | "camera_off";
+  signals: Record<string, unknown>;
+  created_at: string;
+  reopened_at: string | null;
+  reopened_by: string | null;
 };
 
 /** Platform-wide operational totals (public.platform_overview). */

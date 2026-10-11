@@ -152,7 +152,10 @@ export function GdRoom({
     [sessionId],
   );
 
-  const { supported: speechSupported } = useOwnSpeech(!inPrep && !ending, postUtterance);
+  const { supported: speechSupported } = useOwnSpeech(
+    !inPrep && !ending && !proctor.ended,
+    postUtterance,
+  );
 
   // ---- mesh ----------------------------------------------------------------
   React.useEffect(() => {
@@ -326,6 +329,18 @@ export function GdRoom({
       supabase.removeChannel(channel);
     };
   }, [sessionId, userId]);
+
+  /**
+   * The camera ended this student's discussion. The ended screen stops them
+   * typing or clicking, but in a live room they could still be heard and seen
+   * — so their own microphone and camera go off for the others too, and their
+   * speech stops being transcribed (above). The room carries on without them.
+   */
+  React.useEffect(() => {
+    if (!proctor.ended) return;
+    // Tracks only: the Mute and Camera buttons are under the ended screen.
+    streamRef.current?.getTracks().forEach((t) => (t.enabled = false));
+  }, [proctor.ended]);
 
   // ---- live transcript from everyone --------------------------------------
   React.useEffect(() => {

@@ -8,6 +8,8 @@ import { IntegrityActions } from "@/components/admin/integrity-actions";
 import { plural, timeAgo } from "@/lib/utils";
 import { CAMERA_REVIEW_FLAGS } from "@/lib/integrity";
 import { photosForFindings } from "@/lib/proctor-evidence";
+import { loadLockouts } from "@/lib/exam-lockouts";
+import { LockoutList } from "@/components/proctor/lockout-list";
 
 export const metadata: Metadata = { title: "Integrity" };
 
@@ -96,7 +98,10 @@ export default async function IntegrityPage() {
 
   if (error) console.error("[admin/integrity] findings query failed", error.message);
   const rows = data ?? [];
-  const photos = await photosForFindings(admin, rows);
+  const [photos, lockouts] = await Promise.all([
+    photosForFindings(admin, rows),
+    loadLockouts(admin),
+  ]);
   const open = rows.filter((r) => !r.cleared_at);
   const suspended = new Set(
     rows
@@ -137,6 +142,13 @@ export default async function IntegrityPage() {
             look at the answer, not as a verdict. Clearing one restores the
             student&apos;s standing immediately.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardContent className="space-y-3 p-4">
+          <h2 className="text-sm font-medium">Tests ended by the camera</h2>
+          <LockoutList rows={lockouts.rows} failed={lockouts.failed} />
         </CardContent>
       </Card>
 

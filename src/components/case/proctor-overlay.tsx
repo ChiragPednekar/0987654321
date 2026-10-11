@@ -267,6 +267,16 @@ function CameraConsent({ camera }: { camera: CameraApi }) {
         something is detected, one small photo is saved for a reviewer and
         deleted after 30 days.
       </p>
+      {/*
+        Said before Start, in full, because it is the rule with the hardest
+        consequence: nobody should learn that a phone ends the test by having
+        their test ended.
+      */}
+      <p className="mt-1.5 font-medium text-foreground">
+        Your test ends at once, and cannot be continued, if a phone or another
+        person is seen, the camera is covered or switched off, or you are out
+        of view for over a minute. Only your teacher can reopen it.
+      </p>
       {state && <p className={`mt-1.5 ${state.tone}`}>{state.text}</p>}
       {canRetry && (
         <button

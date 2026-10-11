@@ -91,6 +91,13 @@ export interface TrackerState {
   phone: Condition;
   book: Condition;
   covered: Condition;
+  /**
+   * How long nobody has been in frame without a break. Not a counter — it is
+   * not reported — but what END_RULES reads: `noFaceMs` adds up every absence,
+   * so three short glances down at rough work would eventually reach any
+   * total, while a continuous minute away from the desk is a different thing.
+   */
+  noFaceRunMs: number;
 }
 
 const fresh = (): Condition => ({ hits: [], active: false });
@@ -103,6 +110,7 @@ export function createTracker(): TrackerState {
     phone: fresh(),
     book: fresh(),
     covered: fresh(),
+    noFaceRunMs: 0,
   };
 }
 
@@ -181,9 +189,63 @@ export function observe(
       phone: phone.next,
       book: book.next,
       covered: covered.next,
+      noFaceRunMs: noFace.next.active ? state.noFaceRunMs + credit : 0,
     },
     started,
   };
+}
+
+/**
+ * Why the camera ended an attempt. Stored with the lock and shown to the
+ * student, the teacher and the admin.
+ */
+export type EndReason =
+  | "phone"
+  | "multiple_faces"
+  | "camera_covered"
+  | "no_face"
+  | "camera_off";
+
+export const END_REASONS: readonly EndReason[] = [
+  "phone",
+  "multiple_faces",
+  "camera_covered",
+  "no_face",
+  "camera_off",
+];
+
+/** Said to the student on the ended screen, and to whoever reviews it. */
+export const END_REASON_LABEL: Record<EndReason, string> = {
+  phone: "A phone was seen on camera",
+  multiple_faces: "Another person was seen on camera",
+  camera_covered: "The camera was covered",
+  no_face: "You were away from the camera for over a minute",
+  camera_off: "The camera was switched off",
+};
+
+/** Continuous time out of frame that ends an attempt. */
+export const NO_FACE_END_MS = 60_000;
+
+/**
+ * Whether what the camera is seeing now ends the attempt.
+ *
+ * It reads the debounced conditions, never a raw frame: a phone has to be in
+ * view for 3 of the last 5 samples — about 4.5 seconds — before this fires,
+ * the same bar that makes it an event at all. One misread frame cannot end
+ * anyone's test.
+ *
+ * A book is not on the list. Rough work on paper is normal for case
+ * arithmetic, and the object model cannot tell a notebook from a textbook.
+ * Absence needs a continuous minute, not a few seconds: a student looking
+ * down at their own notes drops out of the face detector's view, and ending
+ * the test for that would end most tests.
+ */
+export function endReason(state: TrackerState): EndReason | null {
+  if (state.phone.active) return "phone";
+  if (state.multiFace.active) return "multiple_faces";
+  if (state.covered.active) return "camera_covered";
+  if (state.noFaceRunMs >= NO_FACE_END_MS) return "no_face";
+  return null;
 }
 
 /**

@@ -3,6 +3,8 @@
 import * as React from "react";
 import { EMPTY_SIGNALS, type ProctorSignals } from "@/lib/integrity";
 import { useCameraProctor, type CameraApi } from "@/hooks/use-camera-proctor";
+import type { EndReason } from "@/lib/camera-proctor";
+import { setEndedTest } from "@/hooks/proctor-ended-store";
 
 /**
  * Watches how an answer is being written.
@@ -57,6 +59,12 @@ export interface ProctorState {
    * rather than more.
    */
   fullscreen: boolean;
+  /**
+   * The camera ended this test, now or on an earlier visit to this page. While
+   * set, the surface shows the ended screen and nothing can be written or
+   * started — see ProctorEnded.
+   */
+  ended: { reason: EndReason; at: string } | null;
 }
 
 export interface ProctorApi extends ProctorState {
@@ -91,6 +99,7 @@ export function useProctor(enabled: boolean): ProctorApi {
   const [examMode, setExamMode] = React.useState(false);
   const [starting, setStarting] = React.useState(false);
   const [fullscreen, setFullscreen] = React.useState(false);
+  const [ended, setEnded] = React.useState<ProctorState["ended"]>(null);
 
   // Counts only while the attempt is running; see useCameraProctor.
   const camera = useCameraProctor(enabled, examMode);
@@ -100,6 +109,8 @@ export function useProctor(enabled: boolean): ProctorApi {
   // Mirrors examMode for the event listeners, which close over their first
   // render otherwise and would stop counting fullscreen exits after the first.
   const examRef = React.useRef(false);
+  // Read by start(), which must refuse synchronously once the test has ended.
+  const endedRef = React.useRef(false);
 
   const bump = React.useCallback(
     (patch: (s: ProctorSignals) => Partial<ProctorSignals>) => {
@@ -276,7 +287,7 @@ export function useProctor(enabled: boolean): ProctorApi {
   }, [resetCamera]);
 
   const start = React.useCallback(async () => {
-    if (examRef.current) return;
+    if (examRef.current || endedRef.current) return;
 
     /**
      * A previous attempt on this page already ended, so this is a new one.
@@ -343,6 +354,64 @@ export function useProctor(enabled: boolean): ProctorApi {
     () => ({ ...signals, ...camera.signals }),
     [signals, camera.signals],
   );
+  const mergedRef = React.useRef(merged);
+  React.useEffect(() => {
+    mergedRef.current = merged;
+  }, [merged]);
+
+  // ---- the camera ends the test -------------------------------------------
+  // Shown by ProctorEndedHost in the root layout, for as long as this page is.
+  React.useEffect(() => {
+    setEndedTest(ended);
+    return () => setEndedTest(null);
+  }, [ended]);
+
+  /**
+   * A lock from an earlier visit. Without this the freeze would last exactly
+   * until the student pressed reload. Asked once per page; a failed lookup
+   * leaves the page unlocked rather than refusing an honest student the test.
+   */
+  React.useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    const path = window.location.pathname;
+    fetch(`/api/proctor/lockout?path=${encodeURIComponent(path)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((lock: { locked?: boolean; reason?: EndReason; at?: string } | null) => {
+        if (cancelled || !lock?.locked || !lock.reason) return;
+        endedRef.current = true;
+        setEnded({ reason: lock.reason, at: lock.at ?? new Date().toISOString() });
+        // The lookup can land after a quick Start press.
+        if (examRef.current) stop();
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, stop]);
+
+  /**
+   * Something the camera saw ended the attempt: freeze now, then record it.
+   *
+   * The freeze comes first and does not wait on the network. Stopping exam
+   * mode releases the camera, fullscreen and the leave-page warning, and the
+   * ended screen covers the whole page, so nothing more can be typed, clicked
+   * or submitted. The lock is written afterwards; if it fails to arrive the
+   * page is still frozen until it is left.
+   */
+  const violation = camera.violation;
+  React.useEffect(() => {
+    if (!violation || !examRef.current || endedRef.current) return;
+    endedRef.current = true;
+    setEnded({ reason: violation, at: new Date().toISOString() });
+    const report = { ...mergedRef.current };
+    stop();
+    void fetch("/api/proctor/lockout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: window.location.pathname, reason: violation, signals: report }),
+    }).catch(() => {});
+  }, [violation, stop]);
 
   return {
     signals: merged,
@@ -352,6 +421,7 @@ export function useProctor(enabled: boolean): ProctorApi {
     examMode,
     starting,
     fullscreen,
+    ended,
     handlers,
     start,
     acknowledge,
