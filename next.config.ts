@@ -25,6 +25,15 @@ const nextConfig: NextConfig = {
     // Keep server action payloads generous — case answers are long-form essays.
     serverActions: { bodySizeLimit: "2mb" },
   },
+  /**
+   * The ₹499 retail plan is off the site while CaseCode sells campus licences,
+   * so its page is gone. Old links and bookmarks land on the home page rather
+   * than a 404. Temporary, not permanent: the page may come back, and a 308
+   * would be cached by browsers for good.
+   */
+  async redirects() {
+    return [{ source: "/pricing", destination: "/", permanent: false }];
+  },
   async headers() {
     return [
       {

@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
   }
 
   // Pro gate. The interviewer is the one feature here with a real marginal
-  // cost per use — every turn is a model call — and /pricing already lists
-  // "Timed interview simulation" under Pro, so this is what was advertised.
+  // cost per use — every turn is a model call — so it is what Pro unlocks,
+  // whether Pro comes from a college licence or is set on the account.
   //
   // has_pro() covers both routes to access: a retail `users.plan = 'pro'`, and
   // membership of an institution whose licence is in date. Derived in SQL

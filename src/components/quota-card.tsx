@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn, formatNumber } from "@/lib/utils";
@@ -66,11 +65,9 @@ export function QuotaCard({ quota }: { quota: QuotaStatus }) {
 
         {!quota.isPro ? (
           <p className="text-xs text-muted-foreground">
-            Pro raises this to {formatNumber(QUOTA.pro.gradings)} graded answers
-            and {QUOTA.pro.interviews} interviews.{" "}
-            <Link href="/pricing" className="underline underline-offset-4">
-              See Pro
-            </Link>
+            Pro, which comes with a college licence, raises this to{" "}
+            {formatNumber(QUOTA.pro.gradings)} graded answers and{" "}
+            {QUOTA.pro.interviews} interviews.
           </p>
         ) : anyLow ? (
           <p className="text-xs text-muted-foreground">

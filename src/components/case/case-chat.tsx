@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { Loader2, Send, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -106,12 +105,10 @@ export function CaseChat({
             written feedback.
           </p>
           <p className="text-muted-foreground">
-            Every case on CaseCode stays free to solve and get graded. Pro adds
-            the live interviewer.
+            Every case stays open to solve and get graded. The live interviewer
+            comes with Pro, which is part of your college&apos;s licence — ask
+            your placement cell or teacher if your account should have it.
           </p>
-          <Button asChild>
-            <Link href="/pricing">See Pro</Link>
-          </Button>
         </CardContent>
       </Card>
     );

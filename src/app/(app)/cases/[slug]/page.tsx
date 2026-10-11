@@ -113,19 +113,14 @@ export default async function CaseDetailPage({
           {caseData.title}
         </h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          This case is part of CaseCode Pro. Everything you have already solved
-          stays free — Pro adds the cases marked with this badge.
+          This case is part of CaseCode Pro, which comes with your
+          college&apos;s licence. Ask your placement cell or teacher if your
+          account should have it.
         </p>
         <div className="mt-6 flex justify-center gap-3">
           <Link
-            href="/pricing"
-            className="rounded-md bg-action px-4 py-2 text-sm font-medium text-action-foreground hover:bg-action-hover"
-          >
-            See Pro
-          </Link>
-          <Link
             href="/cases"
-            className="rounded-md border border-border px-4 py-2 text-sm"
+            className="rounded-md bg-action px-4 py-2 text-sm font-medium text-action-foreground hover:bg-action-hover"
           >
             Back to cases
           </Link>

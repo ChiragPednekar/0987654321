@@ -35,8 +35,12 @@ export function LicenceGate() {
         </p>
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          {/* No public price list while licences are agreed per college: the
+              conversation is the next step, so this starts one. */}
           <Button asChild>
-            <Link href="/pricing">Licence your campus</Link>
+            <a href="mailto:chiragpednekar3@gmail.com?subject=CaseCode%20campus%20licence">
+              Licence your campus
+            </a>
           </Button>
           <Button variant="outline" asChild>
             <Link href="/cases">Keep browsing</Link>
