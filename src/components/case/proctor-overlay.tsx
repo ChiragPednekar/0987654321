@@ -37,7 +37,8 @@ export function ProctorOverlay({
         </h2>
         <p className="text-sm text-muted-foreground">
           This attempt is proctored. Leaving the page has been recorded and will
-          be shown with your submission.
+          be shown with your submission. Switching tabs, or staying in another
+          window for more than two seconds, ends the test.
         </p>
         <p className="text-sm font-medium tabular">
           {count === 1 ? "1 interruption" : `${count} interruptions`} so far
@@ -60,7 +61,7 @@ export function ProctorOverlay({
 export const CASE_RULES = [
   "The page goes fullscreen while you write.",
   "Pasting is disabled. Type your answer here.",
-  "Leaving the page hides the case and is recorded with your answer.",
+  "Switching tabs or leaving this window ends the test.",
   "Answers that were not written here can lose marks.",
 ];
 
@@ -73,31 +74,30 @@ export const CASE_RULES = [
  */
 export const QUIZ_RULES = [
   "The page goes fullscreen while you answer.",
-  "Leaving the page is recorded with every answer.",
-  "Looking a question up in another tab is the thing this counts.",
+  "Switching tabs or leaving this window ends the test.",
 ];
 
 export const WORKBENCH_RULES = [
   "The page goes fullscreen while you work.",
   "Pasting is disabled. Type the query or formula yourself.",
-  "Leaving the page is recorded with your attempt.",
+  "Switching tabs or leaving this window ends the test.",
 ];
 
 export const CONVERSATION_RULES = [
   "The page goes fullscreen for the whole session.",
   "Pasting is disabled. Answer in your own words.",
-  "Leaving the page is recorded and shown with your result.",
+  "Switching tabs or leaving this window ends the session.",
 ];
 
 export const SIM_RULES = [
   "The page goes fullscreen while you play.",
-  "Leaving the page is recorded with your run.",
+  "Switching tabs or leaving this window ends the run.",
   "The decisions are yours — the camera checks you are on your own.",
 ];
 
 export const GD_RULES = [
   "The page goes fullscreen for the discussion.",
-  "Leaving the page is recorded with your result.",
+  "Switching tabs or leaving this window ends the discussion for you.",
   "Speak from your own preparation, not from another screen or a phone.",
 ];
 
@@ -139,8 +139,8 @@ export function ProctorGate({
    */
   camera?: CameraApi;
 }) {
-  const cameraFirst = camera !== undefined && camera.status === "idle";
-  const waitingForCamera = camera !== undefined && !cameraFirst && !cameraReady(camera);
+  const waitingForCamera = camera !== undefined && camera.status === "requesting";
+  const cameraOff = camera !== undefined && !waitingForCamera && !cameraReady(camera);
 
   return (
     <div className="rounded-xl border bg-card p-6 text-center">
@@ -157,10 +157,10 @@ export function ProctorGate({
       </ul>
       {camera && <CameraConsent camera={camera} />}
 
-      {cameraFirst ? (
+      {cameraOff ? (
         <Button className="mt-5" onClick={() => void camera.request()}>
           <Camera />
-          Turn on camera
+          {cameraRefused(camera) ? "Try the camera again" : "Turn on camera"}
         </Button>
       ) : waitingForCamera ? (
         <Button className="mt-5" disabled>
@@ -178,20 +178,26 @@ export function ProctorGate({
 }
 
 /**
- * Whether a surface may start the attempt as far as the camera is concerned.
+ * Whether a surface may start the attempt as far as the camera is concerned:
+ * only when it is on.
  *
- * Ready once the camera question has an answer — on, refused or unavailable —
- * or once the prompt has gone unanswered long enough that waiting longer would
- * be the camera stopping someone sitting the paper. Not ready while it has not
- * been asked at all, which is the point: the camera must be settled before the
- * start click goes fullscreen, because some browsers leave fullscreen to show a
- * permission prompt, and that exit is a penalised flag the student did nothing
- * to earn.
+ * It used to be enough for the camera question to have any answer, refused
+ * included, so a student without a webcam could still sit the paper. That made
+ * refusing the camera the way round every camera rule — an attempt nobody is
+ * watching cannot be ended for a phone — so the camera is now required.
+ * useProctor.start() enforces the same rule, in case a surface's own button
+ * forgets to.
+ *
+ * It must also be on before the start click goes fullscreen, as before: some
+ * browsers leave fullscreen to show a permission prompt.
  */
 export function cameraReady(camera: CameraApi): boolean {
-  if (camera.status === "idle") return false;
-  if (camera.status === "requesting") return camera.waitedTooLong;
-  return true;
+  return camera.status === "on";
+}
+
+/** The browser or the machine said no, as opposed to not having been asked. */
+function cameraRefused(camera: CameraApi): boolean {
+  return camera.status === "denied" || camera.status === "unavailable";
 }
 
 /**
@@ -208,13 +214,13 @@ export function CameraStep({ camera }: { camera: CameraApi }) {
   return (
     <div className="text-center">
       <CameraConsent camera={camera} />
-      {camera.status === "idle" && (
+      {camera.status !== "requesting" && (
         <Button className="mt-3" variant="outline" onClick={() => void camera.request()}>
           <Camera />
-          Turn on camera
+          {cameraRefused(camera) ? "Try the camera again" : "Turn on camera"}
         </Button>
       )}
-      {camera.status === "requesting" && !camera.waitedTooLong && (
+      {camera.status === "requesting" && (
         <Button className="mt-3" variant="outline" disabled>
           <Loader2 className="animate-spin" />
           Allow the camera in your browser…
@@ -238,22 +244,20 @@ function CameraConsent({ camera }: { camera: CameraApi }) {
       ? { tone: "text-success", text: "Camera is on." }
       : camera.status === "denied"
         ? {
-            tone: "text-warning",
-            text: "Camera access was refused. You can still start, but the attempt will be marked as taken with the camera off.",
+            tone: "text-danger",
+            text: "Camera access was refused. The test cannot start without the camera — allow it for this site in your browser's settings, then try again.",
           }
         : camera.status === "unavailable"
           ? {
-              tone: "text-warning",
-              text: "No camera could be used — it may be missing or open in another app. You can still start; this will be noted with the attempt.",
+              tone: "text-danger",
+              text: "No camera could be used — it may be missing, or open in another app such as Zoom or Teams. The test cannot start without one.",
             }
           : camera.status === "requesting" && camera.waitedTooLong
             ? {
                 tone: "text-warning",
-                text: "Still waiting for camera permission. You can start without it; the attempt will be noted as taken with the camera off.",
+                text: "Still waiting for camera permission — look for the prompt next to your browser's address bar.",
               }
             : null;
-
-  const canRetry = camera.status === "denied" || camera.status === "unavailable";
 
   return (
     <div className="mx-auto mt-4 max-w-sm rounded-md border bg-muted/40 p-3 text-left text-xs text-muted-foreground">
@@ -273,20 +277,13 @@ function CameraConsent({ camera }: { camera: CameraApi }) {
         their test ended.
       */}
       <p className="mt-1.5 font-medium text-foreground">
-        Your test ends at once, and cannot be continued, if a phone or another
-        person is seen, the camera is covered or switched off, or you are out
-        of view for over a minute. Only your teacher can reopen it.
+        The camera must stay on for the whole test. Your test ends at once,
+        and cannot be continued, if you switch tabs or leave this window, a
+        phone or another person is seen, the camera is covered or switched
+        off, or you are out of view for over a minute. Only your teacher can
+        reopen it.
       </p>
       {state && <p className={`mt-1.5 ${state.tone}`}>{state.text}</p>}
-      {canRetry && (
-        <button
-          type="button"
-          className="mt-1.5 underline underline-offset-2 hover:text-foreground"
-          onClick={() => void camera.request()}
-        >
-          Try the camera again
-        </button>
-      )}
     </div>
   );
 }

@@ -163,8 +163,9 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
             instantly with a worked explanation for every one.
           </p>
           <p className="mx-auto max-w-md text-xs text-muted-foreground">
-            Answered under exam conditions: the page goes fullscreen, and
-            leaving it is recorded with your answers.
+            Answered under exam conditions: the page goes fullscreen, the
+            camera stays on, and switching tabs or leaving the window ends the
+            test.
           </p>
           <CameraStep camera={proctor.camera} />
           <div className="flex flex-wrap justify-center gap-2 pt-2">

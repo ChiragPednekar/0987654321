@@ -196,15 +196,20 @@ export function observe(
 }
 
 /**
- * Why the camera ended an attempt. Stored with the lock and shown to the
- * student, the teacher and the admin.
+ * Why an attempt was ended. Stored with the lock and shown to the student, the
+ * teacher and the admin.
+ *
+ * All but the last come from the camera. `tab_switch` is the page's own focus
+ * check in src/hooks/use-proctor.ts; it lives here so there is one list of
+ * reasons, one set of labels, and one constraint in the database to match.
  */
 export type EndReason =
   | "phone"
   | "multiple_faces"
   | "camera_covered"
   | "no_face"
-  | "camera_off";
+  | "camera_off"
+  | "tab_switch";
 
 export const END_REASONS: readonly EndReason[] = [
   "phone",
@@ -212,6 +217,7 @@ export const END_REASONS: readonly EndReason[] = [
   "camera_covered",
   "no_face",
   "camera_off",
+  "tab_switch",
 ];
 
 /** Said to the student on the ended screen, and to whoever reviews it. */
@@ -221,6 +227,7 @@ export const END_REASON_LABEL: Record<EndReason, string> = {
   camera_covered: "The camera was covered",
   no_face: "You were away from the camera for over a minute",
   camera_off: "The camera was switched off",
+  tab_switch: "You left the test window",
 };
 
 /** Continuous time out of frame that ends an attempt. */

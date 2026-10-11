@@ -147,7 +147,7 @@ export default async function IntegrityPage() {
 
       <Card className="mt-6">
         <CardContent className="space-y-3 p-4">
-          <h2 className="text-sm font-medium">Tests ended by the camera</h2>
+          <h2 className="text-sm font-medium">Ended tests</h2>
           <LockoutList rows={lockouts.rows} failed={lockouts.failed} />
         </CardContent>
       </Card>

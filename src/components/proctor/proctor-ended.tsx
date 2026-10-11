@@ -7,7 +7,8 @@ import { useEndedTest } from "@/hooks/proctor-ended-store";
 import { END_REASON_LABEL } from "@/lib/camera-proctor";
 
 /**
- * What a student sees once the camera has ended their test.
+ * What a student sees once their test has been ended — by the camera, or by
+ * leaving the test window.
  *
  * Covers the whole viewport, above everything including the interruption
  * overlay, so the answer underneath can be neither read nor changed. It has no
@@ -38,10 +39,10 @@ export function ProctorEndedHost() {
           {END_REASON_LABEL[ended.reason]}.
         </p>
         <p className="text-sm text-muted-foreground">
-          You can no longer write or change your answer. What the camera saw
-          has been recorded, with a photo where one could be taken, for your
-          teacher to review. If this was a mistake, ask your teacher to reopen
-          the test.
+          You can no longer write or change your answer. What happened has
+          been recorded for your teacher to review, with a camera photo where
+          one could be taken. If this was a mistake, ask your teacher to
+          reopen the test.
         </p>
         <Button asChild className="w-full">
           <Link href="/dashboard">Back to dashboard</Link>

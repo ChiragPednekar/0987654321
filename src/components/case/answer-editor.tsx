@@ -261,8 +261,8 @@ export function AnswerEditor({
       <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
         <Lock className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
         <p className="text-muted-foreground">
-          Exam conditions. Pasting is disabled — type your answer here. Time
-          away from this page is recorded and can reduce your mark.
+          Exam conditions. Pasting is disabled — type your answer here.
+          Switching tabs or leaving this window ends the test.
         </p>
       </div>
 

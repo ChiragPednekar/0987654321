@@ -88,7 +88,7 @@ export function EntryForm({
           "Read the brief and work on it wherever you like — that part is not supervised.",
           "The page goes fullscreen while the entry is written.",
           "Pasting is disabled here, so the final version is typed in.",
-          "Leaving the page is recorded and shown with the entry.",
+          "Switching tabs or leaving this window ends the entry.",
         ]}
       />
     );
@@ -131,8 +131,8 @@ export function EntryForm({
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Exam conditions. Pasting is disabled — type the entry in. Time away
-        from this page is recorded with it.
+        Exam conditions. Pasting is disabled — type the entry in. Switching
+        tabs or leaving this window ends the entry.
       </p>
       <p className="text-xs text-muted-foreground">
         You will not see your score until results are published — otherwise

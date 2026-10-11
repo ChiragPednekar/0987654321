@@ -85,10 +85,11 @@ export interface CameraApi {
    */
   violation: EndReason | null;
   /**
-   * The permission prompt has been open long enough that the student should be
-   * allowed to start without it. Some browsers leave the request pending with
-   * no answer at all if the prompt is ignored, and a camera nobody can switch on
-   * must not be able to stop someone sitting the paper.
+   * The permission prompt has been open long enough that the student probably
+   * has not seen it. Some browsers leave the request pending with no answer at
+   * all if the prompt is ignored. The camera is required, so this no longer
+   * lets anyone start without it — it only changes what the gate says, to
+   * point at the prompt.
    */
   waitedTooLong: boolean;
   /** Asks for the camera. Call from a button press so the prompt has a reason to appear. */
@@ -113,7 +114,7 @@ const FACE_MODEL = "/proctor/models/blaze_face_short_range.tflite";
  */
 const OBJECT_MODEL = "/proctor/models/efficientdet_lite2.tflite";
 
-/** How long the permission prompt may sit unanswered before Start unlocks anyway. */
+/** How long the permission prompt may sit unanswered before the gate points at it. */
 const PROMPT_PATIENCE_MS = 15_000;
 
 /** Evidence photos per attempt, and the gap between two of the same kind. */
@@ -390,8 +391,18 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
 
   const request = React.useCallback(async () => {
     if (!enabled) return;
+    // Asking again after an attempt ended is the start of the next attempt:
+    // its counters, photos and violation must not carry over into it.
+    const nextAttempt = stopped.current;
     stopped.current = false;
     if (status === "requesting" || status === "on") return;
+    if (nextAttempt) {
+      setSignals(EMPTY_STATE_SIGNALS);
+      trackerRef.current = createTracker();
+      lastSampleAt.current = null;
+      snapshots.current = { taken: 0, lastByKind: {} };
+      setViolation(null);
+    }
 
     patch({ cameraRequested: true, cameraDenied: false, cameraUnavailable: false });
     setStatus("requesting");

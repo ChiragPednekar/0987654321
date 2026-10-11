@@ -13,7 +13,8 @@ const PHOTO_LABEL: Record<string, string> = {
 };
 
 /**
- * Tests the camera ended, for whoever may reopen them.
+ * Tests that were ended — by the camera or by leaving the window — for
+ * whoever may reopen them.
  *
  * The photo sits next to the button on purpose: the ending is a model's
  * reading of a webcam frame, and the decision to let a student back in should
@@ -28,7 +29,7 @@ export function LockoutList({ rows, failed }: { rows: LockoutView[]; failed: boo
     );
   }
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">No test has been ended by the camera.</p>;
+    return <p className="text-sm text-muted-foreground">No test has been ended.</p>;
   }
 
   return (

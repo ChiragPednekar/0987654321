@@ -2390,7 +2390,7 @@ export type ExamLockoutRow = {
   id: string;
   user_id: string;
   path: string;
-  reason: "phone" | "multiple_faces" | "camera_covered" | "no_face" | "camera_off";
+  reason: "phone" | "multiple_faces" | "camera_covered" | "no_face" | "camera_off" | "tab_switch";
   signals: Record<string, unknown>;
   created_at: string;
   reopened_at: string | null;

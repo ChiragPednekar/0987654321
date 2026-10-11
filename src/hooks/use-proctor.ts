@@ -32,6 +32,9 @@ import { setEndedTest } from "@/hooks/proctor-ended-store";
  *     cannot read the case while doing it, and they must acknowledge the
  *     interruption to get back in.
  *   * Every departure is counted and reported with the submission.
+ *   * Switching tabs, or staying in another window for two seconds, ENDS the
+ *     test outright (endIfStillAway below). Only a glance shorter than that —
+ *     a click on the address bar — gets the overlay instead.
  *   * In exam mode paste is refused outright, so an answer from elsewhere has
  *     to be retyped by hand.
  *
@@ -92,6 +95,27 @@ export interface ProctorApi extends ProctorState {
 /** Focus losses shorter than this are a click on the URL bar, not an excursion. */
 const AWAY_GRACE_MS = 400;
 
+/**
+ * Time in another window, with this tab still showing, that ends the test.
+ *
+ * Switching TABS ends it at once — the page is hidden, and there is nothing
+ * innocent a student does in an exam by opening another tab. Focus moving to
+ * another window while this one stays visible is less certain: a click on the
+ * browser's own address bar or a system dialog does it too. So that has to
+ * last two seconds, which no real lookup takes less than and no stray click
+ * takes more than.
+ */
+const LEAVE_ENDS_AFTER_MS = 2_000;
+
+/**
+ * After fullscreen is entered or left, focus and visibility can flicker while
+ * the browser moves the window — on macOS it slides into its own Space. An
+ * excursion that starts inside this window is not judged until it is over, so
+ * a transition never ends anyone's test; one that is still going once it
+ * passes is judged as usual.
+ */
+const FULLSCREEN_SETTLE_MS = 1_500;
+
 export function useProctor(enabled: boolean): ProctorApi {
   const [signals, setSignals] = React.useState<ProctorSignals>(EMPTY_SIGNALS);
   const [away, setAway] = React.useState(false);
@@ -111,6 +135,11 @@ export function useProctor(enabled: boolean): ProctorApi {
   const examRef = React.useRef(false);
   // Read by start(), which must refuse synchronously once the test has ended.
   const endedRef = React.useRef(false);
+  // The focus listeners are bound once; this lets them reach the current
+  // endTest, which is declared further down.
+  const endTestRef = React.useRef<(reason: EndReason) => void>(() => {});
+  const leaveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const settleUntil = React.useRef(0);
 
   const bump = React.useCallback(
     (patch: (s: ProctorSignals) => Partial<ProctorSignals>) => {
@@ -130,7 +159,44 @@ export function useProctor(enabled: boolean): ProctorApi {
       setAway(true);
     }
 
+    /**
+     * Ends the test if the student is still away once the allowance is up:
+     * at once for a hidden tab, after LEAVE_ENDS_AFTER_MS for another window,
+     * and never before a fullscreen transition has settled.
+     *
+     * Judged when the time is up rather than on return, deliberately. A student
+     * who switches away and then reloads instead of coming back would never
+     * "return", and the ending would never be recorded.
+     */
+    function endIfStillAway(hidden: boolean) {
+      if (!examRef.current || endedRef.current || leaveTimer.current) return;
+      const wait = Math.max(
+        settleUntil.current - Date.now(),
+        hidden ? 0 : LEAVE_ENDS_AFTER_MS,
+      );
+      const check = () => {
+        leaveTimer.current = null;
+        if (!examRef.current || endedRef.current) return;
+        // hasFocus, not just the blur: focus moving into the page's own
+        // iframe or devtools-free widgets blurs the window but keeps the
+        // document focused.
+        const away =
+          document.visibilityState === "hidden" ||
+          (leftAt.current !== null && !document.hasFocus());
+        if (away) endTestRef.current("tab_switch");
+      };
+      if (wait <= 0) check();
+      else leaveTimer.current = setTimeout(check, wait);
+    }
+
+    function onBlur() {
+      leave();
+      endIfStillAway(document.visibilityState === "hidden");
+    }
+
     function back() {
+      if (leaveTimer.current) clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
       if (leftAt.current === null) return;
       const ms = Date.now() - leftAt.current;
       leftAt.current = null;
@@ -145,12 +211,15 @@ export function useProctor(enabled: boolean): ProctorApi {
     }
 
     function onVisibility() {
-      if (document.visibilityState === "hidden") leave();
-      else back();
+      if (document.visibilityState === "hidden") {
+        leave();
+        endIfStillAway(true);
+      } else back();
     }
 
     function onFullscreenChange() {
       const on = Boolean(document.fullscreenElement);
+      settleUntil.current = Date.now() + FULLSCREEN_SETTLE_MS;
       setFullscreen(on);
       if (!examRef.current || on) return;
 
@@ -167,15 +236,17 @@ export function useProctor(enabled: boolean): ProctorApi {
     }
 
     document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("blur", leave);
+    window.addEventListener("blur", onBlur);
     window.addEventListener("focus", back);
     document.addEventListener("fullscreenchange", onFullscreenChange);
 
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("blur", leave);
+      window.removeEventListener("blur", onBlur);
       window.removeEventListener("focus", back);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
+      if (leaveTimer.current) clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
     };
   }, [enabled, bump]);
 
@@ -243,6 +314,7 @@ export function useProctor(enabled: boolean): ProctorApi {
     try {
       const el = document.documentElement;
       if (!el.requestFullscreen) return false;
+      settleUntil.current = Date.now() + FULLSCREEN_SETTLE_MS;
       /**
        * Raced against a timeout because the promise does not always settle.
        * Where fullscreen is disallowed — an embedded frame without
@@ -262,18 +334,11 @@ export function useProctor(enabled: boolean): ProctorApi {
     }
   }, []);
 
-  /**
-   * Begins the supervised attempt. Must be called from a user gesture.
-   *
-   * There is no counterpart. Exam mode is mandatory for every graded answer,
-   * so once it is on the only way out is submitting or leaving the page, and
-   * both of those are recorded.
-   */
-  const { stop: stopCamera, reset: resetCamera, request: requestCamera } = camera;
-  const cameraWasAsked = camera.signals.cameraRequested;
+  const { stop: stopCamera, reset: resetCamera } = camera;
+  const cameraOn = camera.status === "on";
 
-  /** Clears every counter and the camera, ready for a new attempt. */
-  const reset = React.useCallback(() => {
+  /** Clears this hook's own counters and state. The camera keeps its own. */
+  const resetOwn = React.useCallback(() => {
     stopped.current = false;
     examRef.current = false;
     leftAt.current = null;
@@ -283,11 +348,31 @@ export function useProctor(enabled: boolean): ProctorApi {
     setExamMode(false);
     setStarting(false);
     setFullscreen(false);
-    resetCamera();
-  }, [resetCamera]);
+  }, []);
 
+  /** Clears every counter and the camera, ready for a new attempt. */
+  const reset = React.useCallback(() => {
+    resetOwn();
+    resetCamera();
+  }, [resetOwn, resetCamera]);
+
+  /**
+   * Begins the supervised attempt. Must be called from a user gesture.
+   *
+   * There is no counterpart. Exam mode is mandatory for every graded answer,
+   * so once it is on the only way out is submitting or leaving the page, and
+   * leaving the page ends the test.
+   */
   const start = React.useCallback(async () => {
     if (examRef.current || endedRef.current) return;
+
+    /**
+     * No camera, no test. Enforced here as well as by the gates' buttons, so
+     * a surface that calls start() from its own handler cannot open a test
+     * with the camera off — refusing the camera used to be the one way round
+     * every camera rule, since an attempt that is not watched cannot be ended.
+     */
+    if (!cameraOn) return;
 
     /**
      * A previous attempt on this page already ended, so this is a new one.
@@ -295,19 +380,12 @@ export function useProctor(enabled: boolean): ProctorApi {
      * Several surfaces stay on the same page after a submit — SQL and Excel
      * show their gate again after a correct answer — and once start() was
      * allowed to re-arm, it re-armed with the last attempt's counters still in
-     * place. Its tab-switches and camera findings would then be submitted again
-     * with the next attempt, and could push an honest one over the penalty line.
-     * Starting from zero here fixes that for every surface at once rather than
-     * relying on each to call reset().
-     *
-     * The camera is asked for again if the last attempt asked for it: a
-     * permission already granted is reused without a prompt, and one refused
-     * stays refused — so refusing cannot be shed by simply starting over.
+     * place. Its tab-switches would then be submitted again with the next
+     * attempt, and could push an honest one over the penalty line. The camera
+     * clears its own counters when it is switched back on for the new attempt,
+     * which the gate requires before this can run.
      */
-    if (stopped.current) {
-      reset();
-      if (cameraWasAsked) void requestCamera();
-    }
+    if (stopped.current) resetOwn();
 
     // Exam mode is armed BEFORE fullscreen is attempted, never after. Paste
     // blocking, the overlay, the counters and the server clock are what
@@ -320,7 +398,7 @@ export function useProctor(enabled: boolean): ProctorApi {
     setStarting(true);
     setFullscreen(await requestFullscreen());
     setStarting(false);
-  }, [bump, requestFullscreen, reset, cameraWasAsked, requestCamera]);
+  }, [bump, requestFullscreen, resetOwn, cameraOn]);
 
   /**
    * Dismisses the interruption overlay and goes back into fullscreen.
@@ -391,27 +469,40 @@ export function useProctor(enabled: boolean): ProctorApi {
   }, [enabled, stop]);
 
   /**
-   * Something the camera saw ended the attempt: freeze now, then record it.
+   * Ends the attempt: freeze now, then record it.
    *
    * The freeze comes first and does not wait on the network. Stopping exam
    * mode releases the camera, fullscreen and the leave-page warning, and the
    * ended screen covers the whole page, so nothing more can be typed, clicked
-   * or submitted. The lock is written afterwards; if it fails to arrive the
-   * page is still frozen until it is left.
+   * or submitted. The lock is written afterwards — with keepalive, because a
+   * tab switch ends the test while the page is hidden and may be closed next.
+   * If it fails to arrive the page is still frozen until it is left.
    */
+  const endTest = React.useCallback(
+    (reason: EndReason) => {
+      if (endedRef.current || !examRef.current) return;
+      endedRef.current = true;
+      setEnded({ reason, at: new Date().toISOString() });
+      const report = { ...mergedRef.current };
+      stop();
+      void fetch("/api/proctor/lockout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: window.location.pathname, reason, signals: report }),
+        keepalive: true,
+      }).catch(() => {});
+    },
+    [stop],
+  );
+  React.useEffect(() => {
+    endTestRef.current = endTest;
+  }, [endTest]);
+
+  // Something the camera saw.
   const violation = camera.violation;
   React.useEffect(() => {
-    if (!violation || !examRef.current || endedRef.current) return;
-    endedRef.current = true;
-    setEnded({ reason: violation, at: new Date().toISOString() });
-    const report = { ...mergedRef.current };
-    stop();
-    void fetch("/api/proctor/lockout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: window.location.pathname, reason: violation, signals: report }),
-    }).catch(() => {});
-  }, [violation, stop]);
+    if (violation) endTest(violation);
+  }, [violation, endTest]);
 
   return {
     signals: merged,

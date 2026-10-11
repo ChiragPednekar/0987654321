@@ -235,7 +235,7 @@ export default async function BatchDetail({
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle className="text-base">Tests ended by the camera</CardTitle>
+          <CardTitle className="text-base">Ended tests</CardTitle>
         </CardHeader>
         <CardContent>
           <LockoutList rows={lockouts.rows} failed={lockouts.failed} />

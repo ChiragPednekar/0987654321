@@ -204,8 +204,8 @@ export function ContestRunner({
             </p>
             <p className="mt-3 text-sm text-muted-foreground">
               This entry is answered under exam conditions: the page goes
-              fullscreen, pasting is disabled, and leaving the page is recorded
-              with your answer.
+              fullscreen, pasting is disabled, the camera stays on, and
+              switching tabs or leaving the window ends the test.
             </p>
             <CameraStep camera={proctor.camera} />
           </div>
@@ -251,8 +251,8 @@ export function ContestRunner({
       <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
         <Lock className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
         <p className="text-muted-foreground">
-          Exam conditions. Pasting is disabled — type your answer here. Time
-          away from this page is recorded and can reduce your mark.
+          Exam conditions. Pasting is disabled — type your answer here.
+          Switching tabs or leaving this window ends the test.
         </p>
       </div>
 
