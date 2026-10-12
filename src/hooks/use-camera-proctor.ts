@@ -60,6 +60,8 @@ export type DetectorStatus = "idle" | "loading" | "ready" | "failed";
 export interface LiveView {
   faces: number;
   phone: boolean;
+  /** The model's best phone score this sample, 0 when none — for ?camera-debug. */
+  phoneScore: number;
   covered: boolean;
 }
 
@@ -113,6 +115,16 @@ const FACE_MODEL = "/proctor/models/blaze_face_short_range.tflite";
  * that limit is stated in the plan, not hidden.
  */
 const OBJECT_MODEL = "/proctor/models/efficientdet_lite2.tflite";
+
+/**
+ * Confidence a detection needs to count. A phone held up to a webcam scores
+ * modestly on this model — 0.3 to 0.6 in testing, and lower at an angle — so
+ * the old 0.4 let real phones through. 0.3 still sits well above what it gave
+ * a plain portrait with no phone (0.12). Books keep the stricter bar: they
+ * never end a test, and a notebook for rough work should not be flagged.
+ */
+const PHONE_MIN_SCORE = 0.3;
+const BOOK_MIN_SCORE = 0.4;
 
 /** How long the permission prompt may sit unanswered before the gate points at it. */
 const PROMPT_PATIENCE_MS = 15_000;
@@ -194,10 +206,10 @@ async function loadDetectorsUnmuted(): Promise<Detectors> {
     ObjectDetector.createFromOptions(fileset, {
       baseOptions: { modelAssetPath: OBJECT_MODEL, delegate: "CPU" },
       runningMode: "VIDEO",
-      // Low-ish on purpose: this model scores phones modestly, and the
-      // 3-in-5 debounce in camera-proctor.ts is what stops one bad frame
-      // becoming an event.
-      scoreThreshold: 0.4,
+      // The lowest score anything is reported at. Phones are accepted from
+      // here (PHONE_MIN_SCORE); books need BOOK_MIN_SCORE. The debounce in
+      // camera-proctor.ts is what stops one bad frame becoming an event.
+      scoreThreshold: PHONE_MIN_SCORE,
       maxResults: 5,
       categoryAllowlist: ["cell phone", "book"],
     }),
@@ -362,15 +374,21 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
 
     let faces = 0;
     let phone = false;
+    let phoneScore = 0;
     let book = false;
 
     if (!covered) {
       try {
         faces = detectors.face.detectForVideo(video, now).detections.length;
         for (const d of detectors.objects.detectForVideo(video, now).detections) {
-          const name = d.categories[0]?.categoryName;
-          if (name === "cell phone") phone = true;
-          else if (name === "book") book = true;
+          const top = d.categories[0];
+          const score = top?.score ?? 0;
+          if (top?.categoryName === "cell phone") {
+            phoneScore = Math.max(phoneScore, score);
+            if (score >= PHONE_MIN_SCORE) phone = true;
+          } else if (top?.categoryName === "book" && score >= BOOK_MIN_SCORE) {
+            book = true;
+          }
         }
       } catch {
         // A frame the models choke on is skipped, not counted as anything.
@@ -380,7 +398,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
 
     const { state, started } = observe(trackerRef.current, { faces, phone, book, covered }, elapsed);
     trackerRef.current = state;
-    setLive({ faces, phone, covered });
+    setLive({ faces, phone, phoneScore, covered });
     patch({ ...state.counters });
     // The photo is taken first, from this same frame: it is the evidence for
     // the ending, and the camera is switched off as soon as the ending lands.

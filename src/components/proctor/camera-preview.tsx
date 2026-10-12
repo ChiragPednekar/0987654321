@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { CameraOff, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CameraApi } from "@/hooks/use-camera-proctor";
+import { useBrowserValue } from "@/hooks/use-browser-state";
 
 /**
  * The student's own view of what the camera sees, pinned to a corner.
@@ -28,6 +29,10 @@ import type { CameraApi } from "@/hooks/use-camera-proctor";
  */
 export function CameraPreview({ camera }: { camera: CameraApi }) {
   const [open, setOpen] = React.useState(true);
+  const debug = useBrowserValue(
+    () => new URLSearchParams(window.location.search).has("camera-debug"),
+    false,
+  );
   const videoRef = React.useRef<HTMLVideoElement>(null);
 
   React.useEffect(() => {
@@ -92,6 +97,18 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
           {open ? <ChevronDown className="size-3.5" /> : <ChevronUp className="size-3.5" />}
         </button>
       </div>
+      {/*
+        Diagnostics, only with ?camera-debug in the address: what the models
+        are reporting, sample by sample. For checking a real webcam and room
+        against the thresholds — not shown to students otherwise.
+      */}
+      {debug && (
+        <p className="border-t px-2 py-1 font-mono text-[10px] text-muted-foreground">
+          {camera.detector} · faces {camera.live?.faces ?? "–"} · phone{" "}
+          {camera.live ? camera.live.phoneScore.toFixed(2) : "–"} · events{" "}
+          {camera.signals.phoneEvents}
+        </p>
+      )}
     </div>,
     document.body,
   );

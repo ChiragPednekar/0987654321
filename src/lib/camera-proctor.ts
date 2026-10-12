@@ -17,8 +17,14 @@
  * and only becomes false again once it has dropped to RELEASE_AT — hysteresis,
  * so a condition hovering at the threshold is one event rather than ten.
  *
- * At a sample every 1.5s that means a phone has to be in view for roughly 4.5
- * seconds across a 7.5-second span before anything is counted.
+ * At a sample every 1.5s that means most conditions need roughly 4.5 seconds
+ * in view across a 7.5-second span before anything is counted.
+ *
+ * A phone needs only two of the five samples. Measured on a real webcam, the
+ * object model's confidence for a phone held in front of the camera hovers
+ * around its threshold — in shot for ten seconds, it is seen in some frames and
+ * missed in others — so three hits out of five was rarely reached and phones
+ * went unnoticed. Two still ignores a single misread frame.
  */
 
 export const SAMPLE_INTERVAL_MS = 1500;
@@ -27,6 +33,8 @@ export const SAMPLE_INTERVAL_MS = 1500;
 const WINDOW = 5;
 /** Hits in the window needed to switch a condition on. */
 const ACTIVATE_AT = 3;
+/** The same, for a phone. See "Why everything is debounced" above. */
+const PHONE_ACTIVATE_AT = 2;
 /** Hits in the window at or below which it switches off again. */
 const RELEASE_AT = 1;
 
@@ -115,12 +123,16 @@ export function createTracker(): TrackerState {
 }
 
 /** Pushes one sample into a condition. Returns the new condition and whether it just switched on. */
-function step(c: Condition, hit: boolean): { next: Condition; rose: boolean } {
+function step(
+  c: Condition,
+  hit: boolean,
+  activateAt = ACTIVATE_AT,
+): { next: Condition; rose: boolean } {
   const hits = [...c.hits, hit].slice(-WINDOW);
   const count = hits.filter(Boolean).length;
 
   let active = c.active;
-  if (!active && count >= ACTIVATE_AT) active = true;
+  if (!active && count >= activateAt) active = true;
   else if (active && count <= RELEASE_AT) active = false;
 
   return { next: { hits, active }, rose: active && !c.active };
@@ -161,7 +173,7 @@ export function observe(
 
   const noFace = step(state.noFace, seeing && sample.faces === 0);
   const multiFace = step(state.multiFace, seeing && sample.faces >= 2);
-  const phone = step(state.phone, seeing && sample.phone);
+  const phone = step(state.phone, seeing && sample.phone, PHONE_ACTIVATE_AT);
   const book = step(state.book, seeing && sample.book);
 
   const c = state.counters;

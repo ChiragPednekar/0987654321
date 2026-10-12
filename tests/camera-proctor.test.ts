@@ -138,8 +138,18 @@ describe("endReason", () => {
   });
 
   it("ends the test once a phone is held in view", () => {
-    expect(endReason(run([phone, phone]).state)).toBeNull();
-    expect(endReason(run([phone, phone, phone]).state)).toBe("phone");
+    expect(endReason(run([phone]).state)).toBeNull();
+    expect(endReason(run([phone, phone]).state)).toBe("phone");
+  });
+
+  it("catches a phone the model only sees in some frames", () => {
+    // Measured on a real webcam: a phone in shot is detected, missed, detected.
+    // Two hits in the last five samples is enough.
+    expect(endReason(run([{}, phone, {}, {}, phone]).state)).toBe("phone");
+  });
+
+  it("still needs a second sighting — one misread frame never ends a test", () => {
+    expect(endReason(run([phone, {}, {}, {}, {}, {}, phone]).state)).toBeNull();
   });
 
   it("ends the test for a second person or a covered lens", () => {
