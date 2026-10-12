@@ -19,6 +19,8 @@ interface CaseHit { id: string; title: string }
  * cases plus a teacher's own will not fit in a select, and search is what a
  * teacher actually does — they know roughly what they want.
  */
+const NO_HITS: CaseHit[] = [];
+
 export function AssignmentForm({
   batches,
   ownQuestions,
@@ -29,11 +31,13 @@ export function AssignmentForm({
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [hits, setHits] = React.useState<CaseHit[]>([]);
+  const [fetchedHits, setHits] = React.useState<CaseHit[]>([]);
+  // Too short to search shows nothing — derived, not cleared in the effect.
+  const hits = query.trim().length < 2 ? NO_HITS : fetchedHits;
   const [picked, setPicked] = React.useState<CaseHit | null>(null);
 
   React.useEffect(() => {
-    if (query.trim().length < 2) { setHits([]); return; }
+    if (query.trim().length < 2) return;
     const timer = setTimeout(async () => {
       try {
         const r = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);

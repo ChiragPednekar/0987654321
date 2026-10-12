@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Check, Clock, Code2, SkipForward, Terminal } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useStored, writeStored } from "@/hooks/use-browser-state";
 
 interface PracticeConfig {
   autoTimer: boolean;
@@ -27,29 +28,28 @@ const DEFAULT_CONFIG: PracticeConfig = {
 };
 
 export function PracticePreferences() {
-  const [config, setConfig] = React.useState<PracticeConfig>(DEFAULT_CONFIG);
-  const [saved, setSaved] = React.useState(false);
-
-  React.useEffect(() => {
+  // Defaults on the server; this browser's saved choices take over on
+  // hydration. Parsed from the stored string, which is stable between
+  // renders, so the object is only rebuilt when the preference changes.
+  const stored = useStored(STORAGE_KEY);
+  const config = React.useMemo<PracticeConfig>(() => {
+    if (!stored) return DEFAULT_CONFIG;
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setConfig(JSON.parse(stored));
-      }
+      return { ...DEFAULT_CONFIG, ...(JSON.parse(stored) as Partial<PracticeConfig>) };
     } catch {
-      // ignore
+      return DEFAULT_CONFIG;
     }
-  }, []);
+  }, [stored]);
+  const [saved, setSaved] = React.useState(false);
 
   function update<K extends keyof PracticeConfig>(key: K, value: PracticeConfig[K]) {
     const updated = { ...config, [key]: value };
-    setConfig(updated);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    if (writeStored(STORAGE_KEY, JSON.stringify(updated))) {
       setSaved(true);
       toast.success("Practice preference updated.");
       setTimeout(() => setSaved(false), 1500);
-    } catch {
+    } else {
+      // Applied for this visit, but this browser will not keep it.
       toast.error("Could not save preference.");
     }
   }

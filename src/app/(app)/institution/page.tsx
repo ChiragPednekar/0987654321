@@ -72,6 +72,7 @@ export default async function InstitutionPage() {
   const students = (roster ?? []) as InstitutionRosterRow[];
   const byDomain = (domains ?? []) as InstitutionDomainRow[];
 
+  // eslint-disable-next-line react-hooks/purity -- async server component: renders once per request, so reading the clock here is the request time, not a re-render hazard.
   const cutoff = Date.now() - STALE_DAYS * 86_400_000;
   const activeRecently = students.filter(
     (s) => s.last_active && new Date(s.last_active).getTime() >= cutoff,
@@ -92,6 +93,7 @@ export default async function InstitutionPage() {
 
   const daysLeft = institution.licence_ends_on
     ? Math.ceil(
+        // eslint-disable-next-line react-hooks/purity -- async server component: renders once per request, so reading the clock here is the request time, not a re-render hazard.
         (new Date(institution.licence_ends_on).getTime() - Date.now()) / 86_400_000,
       )
     : null;

@@ -627,6 +627,7 @@ export default async function CaseDetailPage({
             <div className="lg:col-span-2">
               {entitled ? (
                 <AnswerEditor
+                  key={`casecode:draft:${caseData.id}`}
                   caseId={caseData.id}
                   caseSlug={caseData.slug}
                   signedIn={Boolean(profile)}

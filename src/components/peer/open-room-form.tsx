@@ -17,19 +17,20 @@ type CaseOption = { id: string; title: string; domain: string };
  * The case is searched rather than listed — there are 886 of them, and a
  * dropdown that long is a worse experience than typing three letters.
  */
+const NO_RESULTS: CaseOption[] = [];
+
 export function OpenRoomForm() {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
-  const [results, setResults] = React.useState<CaseOption[]>([]);
+  const [fetched, setResults] = React.useState<CaseOption[]>([]);
+  // Too short to search shows nothing — derived, not cleared in the effect.
+  const results = query.trim().length < 3 ? NO_RESULTS : fetched;
   const [chosen, setChosen] = React.useState<CaseOption | null>(null);
   const [role, setRole] = React.useState<"candidate" | "interviewer">("candidate");
   const [busy, setBusy] = React.useState(false);
 
   React.useEffect(() => {
-    if (query.trim().length < 3) {
-      setResults([]);
-      return;
-    }
+    if (query.trim().length < 3) return;
     const timer = setTimeout(async () => {
       const supabase = createClient();
       const { data } = await supabase

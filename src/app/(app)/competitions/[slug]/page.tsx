@@ -36,6 +36,7 @@ export default async function CompetitionPage({
 
   if (!comp) notFound();
 
+  // eslint-disable-next-line react-hooks/purity -- async server component: renders once per request, so reading the clock here is the request time, not a re-render hazard.
   const now = Date.now();
   const open =
     new Date(comp.opens_at).getTime() <= now && new Date(comp.closes_at).getTime() > now;

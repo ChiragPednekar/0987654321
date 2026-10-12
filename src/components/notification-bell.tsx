@@ -43,11 +43,15 @@ export function NotificationBell({
   const [unread, setUnread] = React.useState(unreadCount);
 
   // The server is the source of truth; re-sync when props change after a
-  // router.refresh() elsewhere in the app.
-  React.useEffect(() => {
+  // router.refresh() elsewhere in the app. Done during render, comparing with
+  // the props last seen — React's pattern for state that follows a prop — so
+  // the fresh list is drawn in the same pass instead of one render late.
+  const [seen, setSeen] = React.useState({ initial, unreadCount });
+  if (seen.initial !== initial || seen.unreadCount !== unreadCount) {
+    setSeen({ initial, unreadCount });
     setItems(initial);
     setUnread(unreadCount);
-  }, [initial, unreadCount]);
+  }
 
   async function markAllRead() {
     if (unread === 0) return;

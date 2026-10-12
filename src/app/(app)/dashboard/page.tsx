@@ -212,6 +212,7 @@ export default async function DashboardPage() {
   }
 
   // ---- 8-week activity ---------------------------------------------------
+  // eslint-disable-next-line react-hooks/purity -- async server component: renders once per request, so reading the clock here is the request time, not a re-render hazard.
   const since = new Date(Date.now() - 8 * 7 * 86_400_000);
   const { data: recentSubmissions } = await supabase
     .from("submissions")
@@ -231,11 +232,13 @@ export default async function DashboardPage() {
     .from("scores")
     .select("total_score, evaluated_at")
     .eq("user_id", profile.id)
+    // eslint-disable-next-line react-hooks/purity -- async server component: renders once per request, so reading the clock here is the request time, not a re-render hazard.
     .gte("evaluated_at", new Date(Date.now() - 8 * 7 * 86_400_000).toISOString())
     .limit(500);
 
   const weekBuckets = new Map<string, { points: number; solved: number }>();
   for (let i = 7; i >= 0; i--) {
+    // eslint-disable-next-line react-hooks/purity -- async server component: renders once per request, so reading the clock here is the request time, not a re-render hazard.
     const d = new Date(Date.now() - i * 7 * 86_400_000);
     const key = `${d.getUTCFullYear()}-${Math.floor(d.getTime() / (7 * 86_400_000))}`;
     weekBuckets.set(key, { points: 0, solved: 0 });

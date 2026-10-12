@@ -40,16 +40,18 @@ export function DrillRunner({
   const [elapsed, setElapsed] = React.useState(0);
   const [submitting, setSubmitting] = React.useState(false);
   const [result, setResult] = React.useState<DrillResult | null>(null);
-  const startedAt = React.useRef(Date.now());
+  // Read once, at mount, never again: a lazy initialiser, so re-renders cannot
+  // move the start of the clock.
+  const [startedAt] = React.useState(() => Date.now());
 
   React.useEffect(() => {
     if (result) return;
     const timer = setInterval(
-      () => setElapsed(Math.floor((Date.now() - startedAt.current) / 1000)),
+      () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
       1000,
     );
     return () => clearInterval(timer);
-  }, [result]);
+  }, [result, startedAt]);
 
   const answeredCount = questions.filter((q) =>
     answers[q.id]?.trim(),
@@ -88,7 +90,7 @@ export function DrillRunner({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           case_id: caseId,
-          duration_seconds: Math.floor((Date.now() - startedAt.current) / 1000),
+          duration_seconds: Math.floor((Date.now() - startedAt) / 1000),
           answers: numeric,
         }),
       });

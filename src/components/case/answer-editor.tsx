@@ -19,6 +19,7 @@ import type { AnswerSections } from "@/lib/types/database";
 import { useProctor } from "@/hooks/use-proctor";
 import { ProctorGate, ProctorOverlay } from "./proctor-overlay";
 import { CameraPreview } from "@/components/proctor/camera-preview";
+import { readStoredOnce } from "@/hooks/use-browser-state";
 
 interface AnswerEditorProps {
   caseId: string;
@@ -50,6 +51,33 @@ function composeAnswer(sections: SectionState): string {
     .join("\n\n");
 }
 
+/**
+ * The draft this browser saved for the case, or an empty one. Null-safe on the
+ * server, where the editor is not shown and storage does not exist: the
+ * textareas only render after Start, so the server and the first client render
+ * still agree.
+ */
+function loadDraft(key: string): { mode: Mode; sections: SectionState; freeText: string } {
+  const empty = { mode: "structured" as Mode, sections: EMPTY_SECTIONS, freeText: "" };
+  const saved = readStoredOnce(key);
+  if (!saved) return empty;
+  try {
+    const parsed = JSON.parse(saved) as {
+      mode?: Mode;
+      sections?: SectionState;
+      freeText?: string;
+    } | null;
+    return {
+      mode: parsed?.mode ?? empty.mode,
+      sections: { ...EMPTY_SECTIONS, ...parsed?.sections },
+      freeText: parsed?.freeText ?? "",
+    };
+  } catch {
+    // Drafts saved by the older single-textarea editor were plain strings.
+    return { mode: "free", sections: EMPTY_SECTIONS, freeText: saved };
+  }
+}
+
 export function AnswerEditor({
   caseId,
   caseSlug,
@@ -58,12 +86,18 @@ export function AnswerEditor({
   storageKey,
 }: AnswerEditorProps) {
   const router = useRouter();
-  const [mode, setMode] = React.useState<Mode>("structured");
-  const [sections, setSections] = React.useState<SectionState>(EMPTY_SECTIONS);
-  const [freeText, setFreeText] = React.useState("");
+  // The saved draft seeds the editor once, as it first renders. The page keys
+  // this component by the draft, so another case is a fresh mount with its own
+  // draft rather than this one's state carried across.
+  const [draft] = React.useState(() => loadDraft(storageKey));
+  const [mode, setMode] = React.useState<Mode>(draft.mode);
+  const [sections, setSections] = React.useState<SectionState>(draft.sections);
+  const [freeText, setFreeText] = React.useState(draft.freeText);
   const [submitting, setSubmitting] = React.useState(false);
   const [elapsed, setElapsed] = React.useState(0);
-  const startedAt = React.useRef<number>(Date.now());
+  // Read once, at mount, never again: a lazy initialiser, so re-renders cannot
+  // move the start of the clock.
+  const [startedAt] = React.useState(() => Date.now());
 
   const proctor = useProctor(signedIn);
 
@@ -89,26 +123,6 @@ export function AnswerEditor({
   }, [signedIn, caseId]);
 
 
-  // Restore any local draft on mount.
-  React.useEffect(() => {
-    const saved = window.localStorage.getItem(storageKey);
-    if (!saved) return;
-    try {
-      const parsed = JSON.parse(saved) as {
-        mode?: Mode;
-        sections?: SectionState;
-        freeText?: string;
-      };
-      if (parsed.mode) setMode(parsed.mode);
-      if (parsed.sections) setSections({ ...EMPTY_SECTIONS, ...parsed.sections });
-      if (parsed.freeText) setFreeText(parsed.freeText);
-    } catch {
-      // Drafts saved by the older single-textarea editor were plain strings.
-      setMode("free");
-      setFreeText(saved);
-    }
-  }, [storageKey]);
-
   const answer = mode === "structured" ? composeAnswer(sections) : freeText;
 
   // Persist the draft — losing 45 minutes of writing to a stray refresh is
@@ -128,11 +142,11 @@ export function AnswerEditor({
 
   React.useEffect(() => {
     const timer = setInterval(
-      () => setElapsed(Math.floor((Date.now() - startedAt.current) / 1000)),
+      () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
       1000,
     );
     return () => clearInterval(timer);
-  }, []);
+  }, [startedAt]);
 
   const wordCount = answer.trim() ? answer.trim().split(/\s+/).length : 0;
   const tooShort = answer.trim().length < MIN_ANSWER_CHARS;
@@ -172,7 +186,7 @@ export function AnswerEditor({
           contest_id: contestId,
           answer,
           answer_sections,
-          time_spent_seconds: Math.floor((Date.now() - startedAt.current) / 1000),
+          time_spent_seconds: Math.floor((Date.now() - startedAt) / 1000),
           signals: proctor.signals,
         }),
       });

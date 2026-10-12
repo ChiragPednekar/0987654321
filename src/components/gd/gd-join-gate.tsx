@@ -6,6 +6,7 @@ import { Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useBrowserValue } from "@/hooks/use-browser-state";
 
 /**
  * The join step, which exists to do one thing before anyone is in the room:
@@ -26,12 +27,11 @@ export function GdJoinGate({
 }) {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
-  const [supported, setSupported] = React.useState<boolean | null>(null);
-
-  React.useEffect(() => {
+  // Unknown (null) on the server; answered by the browser on hydration.
+  const supported = useBrowserValue<boolean | null>(() => {
     const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown };
-    setSupported(Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition));
-  }, []);
+    return Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition);
+  }, null);
 
   async function join() {
     setBusy(true);

@@ -72,7 +72,10 @@ export function RosterTable({
   const [asc, setAsc] = React.useState(false);
   const [query, setQuery] = React.useState("");
 
-  const cutoff = Date.now() - staleDays * 86_400_000;
+  // Read once, when the table mounts. "Stale" is days-scale, so a clock that
+  // moved on during one visit changes nothing — and reading it on every render
+  // would make re-renders disagree with each other.
+  const [cutoff] = React.useState(() => Date.now() - staleDays * 86_400_000);
 
   const rows = React.useMemo(() => {
     const filtered = query.trim()

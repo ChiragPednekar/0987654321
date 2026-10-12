@@ -117,10 +117,10 @@ export function GdRoom({
   );
 
   // ---- phase clock ---------------------------------------------------------
-  const begunAt = React.useMemo(
-    () => (startedAt ? new Date(startedAt).getTime() : Date.now()),
-    [startedAt],
-  );
+  // Until the room has a server start time, count from when this page opened —
+  // read once, so re-renders cannot move it.
+  const [openedAt] = React.useState(() => Date.now());
+  const begunAt = startedAt ? new Date(startedAt).getTime() : openedAt;
 
   React.useEffect(() => {
     const t = setInterval(

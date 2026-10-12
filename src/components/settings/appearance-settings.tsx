@@ -5,6 +5,7 @@ import { useTheme } from "next-themes";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useIsClient, useStored, writeStored } from "@/hooks/use-browser-state";
 
 const THEMES = [
   { value: "light", label: "Light", icon: Sun },
@@ -36,26 +37,20 @@ const LINE_HEIGHTS = [
 
 export function AppearanceSettings() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  const [fontSize, setFontSize] = React.useState("14");
-  const [lineHeight, setLineHeight] = React.useState("1.7");
-
   // next-themes resolves on the client; rendering before that flashes the
-  // wrong option as selected.
-  React.useEffect(() => {
-    setMounted(true);
-    setFontSize(window.localStorage.getItem(PREF_KEYS.fontSize) ?? "14");
-    setLineHeight(window.localStorage.getItem(PREF_KEYS.lineHeight) ?? "1.7");
-  }, []);
+  // wrong option as selected. The editor sizes come from this browser's
+  // storage, so the server renders the defaults and the stored values take
+  // over on hydration.
+  const mounted = useIsClient();
+  const fontSize = useStored(PREF_KEYS.fontSize) ?? "14";
+  const lineHeight = useStored(PREF_KEYS.lineHeight) ?? "1.7";
 
   function updateFontSize(value: string) {
-    setFontSize(value);
-    window.localStorage.setItem(PREF_KEYS.fontSize, value);
+    writeStored(PREF_KEYS.fontSize, value);
   }
 
   function updateLineHeight(value: string) {
-    setLineHeight(value);
-    window.localStorage.setItem(PREF_KEYS.lineHeight, value);
+    writeStored(PREF_KEYS.lineHeight, value);
   }
 
   return (

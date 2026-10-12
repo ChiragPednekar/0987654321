@@ -16,20 +16,22 @@ interface CaseHit {
 }
 
 /** Teacher-only: search a case and set it for the cohort (spec §11). */
+const NO_HITS: CaseHit[] = [];
+
 export function AssignCaseForm({ classroomId }: { classroomId: string }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [hits, setHits] = React.useState<CaseHit[]>([]);
+  const [fetchedHits, setHits] = React.useState<CaseHit[]>([]);
+  // Too short to search shows nothing — derived here rather than cleared in
+  // the effect, which would cost an extra render on every keystroke.
+  const hits = query.trim().length < 2 ? NO_HITS : fetchedHits;
   const [busy, setBusy] = React.useState(false);
 
   // Reuse the existing search endpoint rather than shipping 507 case titles
   // down to the browser.
   React.useEffect(() => {
-    if (query.trim().length < 2) {
-      setHits([]);
-      return;
-    }
+    if (query.trim().length < 2) return;
     const timer = setTimeout(async () => {
       try {
         const response = await fetch(

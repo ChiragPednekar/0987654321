@@ -82,8 +82,21 @@ export function CommandPalette({ role }: { role?: UserRole | null }) {
   const PAGES = React.useMemo(() => pagesFor(role), [role]);
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [results, setResults] = React.useState<SearchResponse>(EMPTY);
-  const [loading, setLoading] = React.useState(false);
+  /**
+   * The last answer, together with the term it answers. Everything else is
+   * derived from it at render rather than set in the effect: a term too short
+   * to search shows nothing, and the palette is "searching" exactly while the
+   * typed term has no answer yet. Clearing or flagging state inside the effect
+   * cost an extra render on every keystroke.
+   */
+  const [answer, setAnswer] = React.useState<{ term: string; results: SearchResponse }>({
+    term: "",
+    results: EMPTY,
+  });
+  const term = query.trim();
+  const searchable = term.length >= 2;
+  const results = searchable ? answer.results : EMPTY;
+  const loading = searchable && answer.term !== term;
 
   // ⌘K / Ctrl+K anywhere, and Escape to leave.
   React.useEffect(() => {
@@ -99,14 +112,8 @@ export function CommandPalette({ role }: { role?: UserRole | null }) {
 
   // Debounced remote search. Local pages filter instantly via cmdk itself.
   React.useEffect(() => {
-    const term = query.trim();
-    if (term.length < 2) {
-      setResults(EMPTY);
-      setLoading(false);
-      return;
-    }
+    if (!searchable) return;
 
-    setLoading(true);
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
@@ -114,11 +121,12 @@ export function CommandPalette({ role }: { role?: UserRole | null }) {
           `/api/search?q=${encodeURIComponent(term)}`,
           { signal: controller.signal },
         );
-        if (response.ok) setResults(await response.json());
+        const next: SearchResponse = response.ok ? await response.json() : EMPTY;
+        setAnswer({ term, results: next });
       } catch {
-        // Aborted or offline — leave the last results in place.
-      } finally {
-        setLoading(false);
+        // Aborted: a newer keystroke owns the answer. Offline: settle on
+        // nothing for this term, so "Searching…" does not spin for ever.
+        if (!controller.signal.aborted) setAnswer({ term, results: EMPTY });
       }
     }, 180);
 
@@ -126,7 +134,7 @@ export function CommandPalette({ role }: { role?: UserRole | null }) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [term, searchable]);
 
   function go(href: string) {
     setOpen(false);

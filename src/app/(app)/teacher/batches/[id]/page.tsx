@@ -96,6 +96,7 @@ export default async function BatchDetail({
     ? graded.reduce((a, s) => a + Number(s.percentage), 0) / graded.length
     : null;
 
+  // eslint-disable-next-line react-hooks/purity -- async server component: renders once per request, so reading the clock here is the request time, not a re-render hazard.
   const cutoff = Date.now() - STALE_DAYS * 86_400_000;
   const lastActive = new Map<string, string>();
   for (const s of graded) {

@@ -10,6 +10,7 @@ import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
 import { msUntilReset } from "@/lib/daily-case";
 import { cn } from "@/lib/utils";
 import type { Difficulty, Domain } from "@/lib/types/database";
+import { useTicking } from "@/hooks/use-browser-state";
 
 export interface DailyCase {
   slug: string;
@@ -35,16 +36,11 @@ export function DailyCaseCard({
   dailyCase: DailyCase;
   solved: boolean;
 }) {
-  // Rendered on the server too, so the countdown starts from null and fills in
-  // after mount — otherwise the server and client disagree on the second and
-  // React reports a hydration mismatch.
-  const [remaining, setRemaining] = React.useState<number | null>(null);
-
-  React.useEffect(() => {
-    setRemaining(msUntilReset());
-    const timer = setInterval(() => setRemaining(msUntilReset()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Rendered on the server too, so the countdown is null until hydration —
+  // otherwise the server and client disagree on the second and React reports
+  // a mismatch. Read in whole seconds, so it changes once per tick.
+  const seconds = useTicking<number | null>(() => Math.floor(msUntilReset() / 1000), 1000, null);
+  const remaining = seconds === null ? null : seconds * 1000;
 
   return (
     <Card className="overflow-hidden">

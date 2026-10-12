@@ -17,6 +17,7 @@ import {
   ProctorOverlay,
 } from "@/components/case/proctor-overlay";
 import { CameraPreview } from "@/components/proctor/camera-preview";
+import { readStoredOnce } from "@/hooks/use-browser-state";
 
 interface ContestRunnerProps {
   contestId: string;
@@ -39,13 +40,14 @@ export function ContestRunner({
   isOpen,
 }: ContestRunnerProps) {
   const router = useRouter();
+  const storageKey = `casecode:contest:${contestId}`;
   const [startedAt, setStartedAt] = React.useState(initialStartedAt);
-  const [answer, setAnswer] = React.useState("");
+  // The saved draft seeds the answer once, as the runner first renders.
+  const [answer, setAnswer] = React.useState(() => readStoredOnce(storageKey) ?? "");
   const [starting, setStarting] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [now, setNow] = React.useState(() => Date.now());
 
-  const storageKey = `casecode:contest:${contestId}`;
 
   /**
    * Contests are the one surface where the answer is ranked against other
@@ -68,11 +70,6 @@ export function ContestRunner({
       // check, which is the lenient outcome and the right one.
     });
   }, [caseId]);
-
-  React.useEffect(() => {
-    const saved = window.localStorage.getItem(storageKey);
-    if (saved) setAnswer(saved);
-  }, [storageKey]);
 
   React.useEffect(() => {
     if (!answer) return;

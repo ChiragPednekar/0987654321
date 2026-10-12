@@ -12,28 +12,6 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  {
-    /**
-     * Warnings, not errors — for now.
-     *
-     * Next 16 brought eslint-plugin-react-hooks from 5.2 to 7.1, which adds
-     * React Compiler rules that flag 93 existing places in 78 files: purity
-     * (mostly Date.now() during render, harmless in server components that
-     * render once), setState inside an effect, writing a ref during render, and
-     * mutating a value after it was handed to React. The code ran correctly
-     * under the old rules and still does.
-     *
-     * Kept visible rather than silenced, and kept out of the framework upgrade:
-     * rewriting 78 files there would hide 93 behaviour changes inside a commit
-     * meant to change none. Promote these back to errors as they are fixed.
-     */
-    rules: {
-      "react-hooks/purity": "warn",
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/refs": "warn",
-      "react-hooks/immutability": "warn",
-    },
-  },
   globalIgnores([
     ".next/**",
     "out/**",
@@ -44,6 +22,8 @@ const eslintConfig = defineConfig([
     "supabase/.branches/**",
     // MediaPipe's runtime, copied from node_modules at build time.
     "public/proctor/wasm/**",
+    // Other sessions' git worktrees: separate checkouts, linted in their own.
+    ".claude/**",
   ]),
 ]);
 

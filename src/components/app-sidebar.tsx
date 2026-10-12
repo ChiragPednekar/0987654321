@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types/database";
+import { useIsClient, useStored, writeStored } from "@/hooks/use-browser-state";
 
 /**
  * Collapsible primary navigation (spec §1).
@@ -187,22 +188,13 @@ export function AppSidebar({
   isInstitutionStaff?: boolean;
 }) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = React.useState(false);
-  // Rendered expanded on the server; the stored preference is applied after
-  // mount so the markup matches and hydration does not warn.
-  const [ready, setReady] = React.useState(false);
-
-  React.useEffect(() => {
-    setCollapsed(window.localStorage.getItem(STORAGE_KEY) === "1");
-    setReady(true);
-  }, []);
+  // Rendered expanded on the server; the stored preference takes over on
+  // hydration, so the markup matches and hydration does not warn.
+  const collapsed = useStored(STORAGE_KEY) === "1";
+  const ready = useIsClient();
 
   function toggle() {
-    setCollapsed((prev) => {
-      const next = !prev;
-      window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      return next;
-    });
+    writeStored(STORAGE_KEY, collapsed ? "0" : "1");
   }
 
   /**

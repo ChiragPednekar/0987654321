@@ -72,6 +72,7 @@ export default async function PublicProfilePage({
       .eq("user_id", user.id)
       .gte(
         "created_at",
+        // eslint-disable-next-line react-hooks/purity -- async server component: renders once per request, so reading the clock here is the request time, not a re-render hazard.
         new Date(Date.now() - 366 * 86_400_000).toISOString(),
       )
       .limit(2000),

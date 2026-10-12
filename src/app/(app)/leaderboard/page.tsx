@@ -145,11 +145,16 @@ export default async function LeaderboardPage({
     a.accuracy === b.accuracy &&
     a.cases_solved === b.cases_solved;
 
-  let currentRank = 0;
-  const rows = allRankedRows.map((r, idx, all) => {
-    if (idx === 0 || !ties(r, all[idx - 1])) currentRank = idx + 1;
-    return { ...r, rank: currentRank };
-  });
+  // Competition ranking ("1, 2, 2, 4"): a row tied with the one above takes its
+  // rank, any other row takes its position. Read from the row before rather
+  // than a counter mutated inside the callback.
+  type RankedRow = (typeof allRankedRows)[number] & { rank: number };
+  const rows = allRankedRows.reduce<RankedRow[]>((acc, r, idx) => {
+    const above = acc[idx - 1];
+    const rank = above && ties(r, allRankedRows[idx - 1]) ? above.rank : idx + 1;
+    acc.push({ ...r, rank });
+    return acc;
+  }, []);
 
   const universities = [
     ...new Set(

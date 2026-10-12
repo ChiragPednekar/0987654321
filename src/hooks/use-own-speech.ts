@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useBrowserValue } from "@/hooks/use-browser-state";
 
 /**
  * Transcribes this browser's own microphone.
@@ -36,6 +37,7 @@ interface SpeechRecognitionLike {
   onresult: ((event: SpeechRecognitionEventLike) => void) | null;
   onerror: ((event: { error: string }) => void) | null;
   onend: (() => void) | null;
+  onstart: (() => void) | null;
 }
 
 interface SpeechRecognitionEventLike {
@@ -62,10 +64,18 @@ export function useOwnSpeech(
   active: boolean,
   onUtterance: (text: string) => void,
 ) {
-  const [supported] = React.useState(() => getRecogniser() !== null);
+  // Assumed supported on the server, so no "cannot transcribe" warning flashes
+  // up; the browser's real answer takes over on hydration, matching markup.
+  const supported = useBrowserValue(() => getRecogniser() !== null, true);
   const [listening, setListening] = React.useState(false);
+
+  // The latest callback, for the recogniser's handlers, which outlive renders.
+  // Updated after each render commits — writing a ref during render is not
+  // allowed — and in a layout effect, so it is current before any handler runs.
   const callbackRef = React.useRef(onUtterance);
-  callbackRef.current = onUtterance;
+  React.useLayoutEffect(() => {
+    callbackRef.current = onUtterance;
+  });
 
   React.useEffect(() => {
     if (!active || !supported) return;
@@ -114,11 +124,14 @@ export function useOwnSpeech(
       }
     };
 
+    // "Listening" is what the recogniser reports, not what was asked of it:
+    // a start that silently fails never fires onstart. If start() throws,
+    // nothing changes — listening was already false.
+    recogniser.onstart = () => setListening(true);
     try {
       recogniser.start();
-      setListening(true);
     } catch {
-      setListening(false);
+      // Unavailable here; transcription stays off.
     }
 
     return () => {

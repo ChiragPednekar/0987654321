@@ -60,6 +60,7 @@ export default async function LicencesPage() {
 
   const renewingSoon = live.filter((r) => {
     if (!r.licence_ends_on) return false;
+    // eslint-disable-next-line react-hooks/purity -- async server component: renders once per request, so reading the clock here is the request time, not a re-render hazard.
     const days = (new Date(r.licence_ends_on).getTime() - Date.now()) / 86_400_000;
     return days <= 60;
   });

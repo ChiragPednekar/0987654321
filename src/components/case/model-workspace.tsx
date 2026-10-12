@@ -42,17 +42,19 @@ export function ModelWorkspace({
   const [elapsed, setElapsed] = React.useState(0);
   const [submitting, setSubmitting] = React.useState(false);
   const [result, setResult] = React.useState<ModelResult | null>(null);
-  const startedAt = React.useRef(Date.now());
+  // Read once, at mount, never again: a lazy initialiser, so re-renders cannot
+  // move the start of the clock.
+  const [startedAt] = React.useState(() => Date.now());
   const inputs = React.useRef(new Map<string, HTMLInputElement>());
 
   React.useEffect(() => {
     if (result) return;
     const timer = setInterval(
-      () => setElapsed(Math.floor((Date.now() - startedAt.current) / 1000)),
+      () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
       1000,
     );
     return () => clearInterval(timer);
-  }, [result]);
+  }, [result, startedAt]);
 
   // Group into rows, and work out how wide the grid is, so the header and each
   // row agree on column count even when a row has gaps.
