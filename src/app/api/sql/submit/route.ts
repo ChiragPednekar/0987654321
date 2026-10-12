@@ -9,6 +9,7 @@ import {
   consumeActivityElapsed,
   recordActivityIntegrity,
 } from "@/lib/proctoring";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 export const maxDuration = 30;
 export const dynamic = "force-dynamic";
@@ -44,6 +45,10 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Write a query first." }, { status: 400 });
   }
+
+  // The test on this page may have been ended (camera or leaving the window).
+  const locked = await lockoutResponse(user.id, `/sql/${body.slug}`);
+  if (locked) return locked;
 
   const admin = createAdminClient();
   if (!(await canSolve(admin, user.id))) {

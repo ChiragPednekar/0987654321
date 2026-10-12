@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { AuthzError, requireAdminActor } from "@/lib/authz";
+import { AuthzError, audit, requireAdminActor } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +89,13 @@ export async function POST(request: NextRequest) {
       .update({ deactivated_at: null, deactivated_reason: null })
       .eq("id", finding.user_id);
   }
+
+  // Clearing a finding, and above all reopening an account, are decisions
+  // about a person; the audit log is where they are answerable.
+  await audit(actor, body.reinstate ? "integrity.clear_and_reinstate" : "integrity.clear", "submission_integrity", body.finding_id, {
+    student: finding.user_id,
+    note: body.note ?? null,
+  });
 
   return NextResponse.json({ ok: true });
 }

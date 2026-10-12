@@ -7,6 +7,7 @@ import { istDate } from "@/lib/current-affairs/questions";
 import { loadReview } from "@/lib/current-affairs/review";
 import { signalsSchema } from "@/lib/integrity-request";
 import { recordActivityIntegrity } from "@/lib/proctoring";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,10 @@ export async function POST(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  // The test on this page may have been ended (camera or leaving the window).
+  const locked = await lockoutResponse(user.id, "/daily");
+  if (locked) return locked;
 
   let body: z.infer<typeof bodySchema>;
   try {

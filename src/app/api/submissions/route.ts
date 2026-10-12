@@ -11,6 +11,7 @@ import type { RubricRow } from "@/lib/types/database";
 import { wantsAssignmentNotices } from "@/lib/notify";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { consumeAttemptElapsed, recordIntegrity } from "@/lib/proctoring";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 // Model evaluation regularly takes 15-40s; the default function timeout is not
 // enough. (Vercel: requires Pro for >60s.)
@@ -112,6 +113,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Case not found" }, { status: 404 });
   }
 
+  // The test on this page may have been ended (camera or leaving the window).
+  const lockedCase = await lockoutResponse(user.id, `/cases/${caseData.slug}`);
+  if (lockedCase) return lockedCase;
+
   const { data: rubric } = await admin
     .from("rubrics")
     .select("criteria, descriptors, max_score")
@@ -129,9 +134,14 @@ export async function POST(request: NextRequest) {
   if (body.contest_id) {
     const { data: contest } = await admin
       .from("contests")
-      .select("id, starts_at, ends_at, case_id")
+      .select("id, slug, starts_at, ends_at, case_id")
       .eq("id", body.contest_id)
       .maybeSingle();
+
+    if (contest) {
+      const lockedContest = await lockoutResponse(user.id, `/contests/${contest.slug}`);
+      if (lockedContest) return lockedContest;
+    }
 
     const now = Date.now();
     const open =
@@ -215,8 +225,13 @@ export async function POST(request: NextRequest) {
   }
 
   // ---- record the attempt --------------------------------------------------
-  // Inserted through the user's own client so RLS confirms they may write it.
-  const { data: submission, error: insertError } = await supabase
+  // Inserted with the service role, after every check above has passed —
+  // signed in, licensed, within quota, not locked out, contest open. Signed-in
+  // accounts can no longer insert submissions themselves (20250101000066):
+  // doing it straight through the public API skipped every one of those
+  // checks, and the assignment trigger would still have filed the answer with
+  // the student's teacher.
+  const { data: submission, error: insertError } = await admin
     .from("submissions")
     .insert({
       user_id: user.id,

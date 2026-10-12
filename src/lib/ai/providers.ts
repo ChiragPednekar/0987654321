@@ -2,8 +2,9 @@ import "server-only";
 
 import OpenAI from "openai";
 import type { RubricCriteria } from "@/lib/types/database";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import { buildJsonSchema } from "./schema";
-import { parseRetryAfter, RateLimitError } from "./errors";
+import { parseRetryAfter, RateLimitError, SpendCapError } from "./errors";
 
 export interface ProviderResult {
   raw: string;
@@ -278,7 +279,40 @@ async function callGemini({
   };
 }
 
-export function callModel(args: ProviderArgs): Promise<ProviderResult> {
+/**
+ * Model calls the whole platform may make in any 24 hours.
+ *
+ * The per-account quota (QUOTA in constants.ts) bounds what one student can
+ * spend in a year, and the per-session turn limits bound one session. Neither
+ * bounds a bad day: a bug that loops, a burst of accounts, or a route someone
+ * finds a way to call repeatedly. This does — a hard stop on the bill,
+ * checked before every call. At about Rs 0.72 a call it caps a day at roughly
+ * Rs 1,500 by default; AI_DAILY_CALL_CAP raises it when a campus goes live.
+ */
+const DAILY_CALL_CAP = Number(process.env.AI_DAILY_CALL_CAP) || 2_000;
+
+async function assertUnderDailyCap(): Promise<void> {
+  const admin = createAdminClientOrNull();
+  if (!admin) return;
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count, error } = await admin
+    .from("usage_events")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", since);
+  // Fails open: if the count cannot be read the per-account quota still
+  // applies, and refusing every student over a monitoring hiccup is worse.
+  if (error) {
+    console.error("[ai] daily cap check failed", error.message);
+    return;
+  }
+  if ((count ?? 0) >= DAILY_CALL_CAP) {
+    console.error("[ai] daily call cap reached", { count, cap: DAILY_CALL_CAP });
+    throw new SpendCapError(60 * 60);
+  }
+}
+
+export async function callModel(args: ProviderArgs): Promise<ProviderResult> {
+  await assertUnderDailyCap();
   const provider = (process.env.AI_PROVIDER || "openai").toLowerCase();
 
   switch (provider) {

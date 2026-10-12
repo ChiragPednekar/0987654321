@@ -15,6 +15,7 @@ import {
   type SalesState,
 } from "@/lib/sales/engine";
 import type { SalesDebrief } from "@/lib/types/database";
+import { fence, GRADER_GUARD, ROLEPLAY_GUARD } from "./untrusted";
 
 /**
  * The buyer's turn, and the end-of-meeting review.
@@ -106,7 +107,7 @@ Quotes must be copied exactly from the seller's latest message.`;
   }));
   turns.push({ role: "candidate", content: studentMessage });
 
-  const reply = await callChat(system, turns, 900);
+  const reply = await callChat(system + ROLEPLAY_GUARD, turns, 900);
   const parsed = parseBuyerReply(reply.content);
 
   // Claims may only quote the seller's words from this turn: an earlier message
@@ -203,11 +204,11 @@ Concerns: ${scenario.objections.map((o) => `${o.label} (${o.detail})`).join("; "
 ${facts}
 
 <<<TRANSCRIPT
-${transcript.map((t) => `${t.role === "student" ? "SELLER" : "BUYER"}: ${t.content}`).join("\n\n")}
+${fence(transcript.map((t) => `${t.role === "student" ? "SELLER" : "BUYER"}: ${t.content}`).join("\n\n"), "TRANSCRIPT")}
 TRANSCRIPT`;
 
   const { raw, model, tokensUsed, inputTokens, outputTokens, cachedTokens } = await callModel({
-    system,
+    system: system + GRADER_GUARD,
     user,
     criteria: { placeholder: 1 },
     jsonSchema: {

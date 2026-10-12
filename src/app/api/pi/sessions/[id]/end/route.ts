@@ -9,6 +9,7 @@ import { z } from "zod";
 import { signalsSchema } from "@/lib/integrity-request";
 import { recordActivityIntegrity } from "@/lib/proctoring";
 import { EMPTY_SIGNALS } from "@/lib/integrity";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
@@ -41,6 +42,10 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  // The test on this page may have been ended (camera or leaving the window).
+  const locked = await lockoutResponse(user.id, `/interview/${id}`);
+  if (locked) return locked;
 
   const admin = createAdminClient();
 

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/utils";
 import { generateGroupJoinCode } from "@/lib/group-codes";
+import { internalError } from "@/lib/http-errors";
 
 const createSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -110,10 +111,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!group) {
-    return NextResponse.json(
-      { error: insertError?.message ?? "Could not create the group." },
-      { status: 500 },
-    );
+    return internalError("groups", insertError, "Could not create the group.");
   }
 
   const { error: memberError } = await admin

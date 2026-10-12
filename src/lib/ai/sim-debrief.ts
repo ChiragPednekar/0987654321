@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { callModel } from "./providers";
 import type { Decisions, RoundOutcome } from "@/lib/sim/engine";
+import { GRADER_GUARD } from "./untrusted";
 
 /**
  * Reads a finished run and says what the student's pattern of decisions
@@ -95,7 +96,7 @@ ${table}`;
 
   const { raw, model, tokensUsed, inputTokens, outputTokens, cachedTokens } =
     await callModel({
-      system: SYSTEM,
+      system: SYSTEM + GRADER_GUARD,
       user,
       criteria: { placeholder: 1 },
       jsonSchema: {

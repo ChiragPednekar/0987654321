@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit, authzResponse, requireAssignmentTeacher } from "@/lib/authz";
 import { wantsAssignmentNotices } from "@/lib/notify";
+import { internalError } from "@/lib/http-errors";
 
 const bodySchema = z.object({
   student_id: z.string().uuid(),
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     .eq("id", existing.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return internalError("review", error);
   }
 
   const caseRow = Array.isArray(assignment.cases)

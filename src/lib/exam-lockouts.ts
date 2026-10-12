@@ -1,5 +1,7 @@
 import "server-only";
+import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database, ExamLockoutRow } from "@/lib/types/database";
 import { photosForFindings, type EvidencePhoto } from "@/lib/proctor-evidence";
 
@@ -93,4 +95,40 @@ export async function loadLockouts(
       };
     }),
   };
+}
+
+/**
+ * The server's half of an ended test: refuses the request if this account is
+ * locked out of the page the request belongs to.
+ *
+ * The browser freezes the page the moment a test ends, but the browser is the
+ * student's. Without this, anyone who opened devtools after their test was
+ * ended could keep posting answers straight to the API. Every route that
+ * writes to a proctored test calls this with the path of that test's page —
+ * the same key the lock was written under (see /api/proctor/lockout).
+ *
+ * Returns the response to send, or null to carry on. A failed lookup carries
+ * on: refusing every honest student because one query timed out is the worse
+ * failure, and the lock is still enforced in the browser.
+ */
+export async function lockoutResponse(
+  userId: string,
+  path: string,
+): Promise<NextResponse | null> {
+  const { data, error } = await createAdminClient()
+    .from("exam_lockouts")
+    .select("reason")
+    .eq("user_id", userId)
+    .eq("path", path)
+    .is("reopened_at", null)
+    .maybeSingle();
+  if (error) {
+    console.error("[lockouts] check failed", error.message);
+    return null;
+  }
+  if (!data) return null;
+  return NextResponse.json(
+    { error: "This test has ended and can no longer be changed. Ask your teacher to reopen it." },
+    { status: 403 },
+  );
 }

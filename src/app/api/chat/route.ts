@@ -7,6 +7,7 @@ import { RATE_LIMIT } from "@/lib/constants";
 import { getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { recordUsage } from "@/lib/usage";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
+import { ROLEPLAY_GUARD } from "@/lib/ai/untrusted";
 
 // A model turn takes several seconds; the default function timeout is tight.
 export const maxDuration = 60;
@@ -204,7 +205,7 @@ export async function POST(request: NextRequest) {
   // ---- model ---------------------------------------------------------------
   let reply;
   try {
-    reply = await callChat(interviewerSystemPrompt(caseData), turns);
+    reply = await callChat(interviewerSystemPrompt(caseData) + ROLEPLAY_GUARD, turns);
   } catch (error) {
     return NextResponse.json(
       {

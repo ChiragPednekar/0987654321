@@ -11,6 +11,7 @@ import {
   simulateRound,
   type FirmState,
 } from "@/lib/sim/engine";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,10 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  // The test on this page may have been ended (camera or leaving the window).
+  const locked = await lockoutResponse(user.id, `/simulation/${id}`);
+  if (locked) return locked;
 
   let body: z.infer<typeof bodySchema>;
   try {

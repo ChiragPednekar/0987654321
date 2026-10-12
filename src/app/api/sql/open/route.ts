@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { startActivityAttempt } from "@/lib/proctoring";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,10 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
+
+  // The test on this page may have been ended (camera or leaving the window).
+  const locked = await lockoutResponse(user.id, `/sql/${body.slug}`);
+  if (locked) return locked;
 
   const admin = createAdminClient();
 

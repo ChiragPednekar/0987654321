@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit, authzResponse, requireBatchTeacher } from "@/lib/authz";
 import { assignmentNoticeRecipients } from "@/lib/notify";
+import { internalError } from "@/lib/http-errors";
 
 const bodySchema = z.object({
   case_id: z.string().uuid(),
@@ -134,10 +135,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     .single();
 
   if (error || !created) {
-    return NextResponse.json(
-      { error: error?.message ?? "Could not set the assignment." },
-      { status: 500 },
-    );
+    return internalError("classrooms", error, "Could not set the assignment.");
   }
 
   // Students hear about it, the same as they do from the full assignment form.

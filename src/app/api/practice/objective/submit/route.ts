@@ -8,6 +8,7 @@ import {
   consumeActivityElapsed,
   recordActivityIntegrity,
 } from "@/lib/proctoring";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
 
   const { data: session } = await admin
     .from("objective_sessions")
-    .select("id, user_id, question_ids, total, submitted_at")
+    .select("id, user_id, track, question_ids, total, submitted_at")
     .eq("id", body.session_id)
     .maybeSingle();
 
@@ -62,6 +63,12 @@ export async function POST(request: NextRequest) {
   // and read the answers to somebody else's sitting.
   if (session.user_id !== user.id) {
     return NextResponse.json({ error: "Not your sitting." }, { status: 403 });
+  }
+
+  // The test on this page may have been ended (camera or leaving the window).
+  {
+    const locked = await lockoutResponse(user.id, `/practice/${session.track}`);
+    if (locked) return locked;
   }
 
   if (session.submitted_at) {

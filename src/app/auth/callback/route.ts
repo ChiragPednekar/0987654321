@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
   // Only ever redirect to a path on this origin — never to an attacker-supplied
   // absolute URL.
-  let safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+  let safeNext = isSameOriginPath(next, origin) ? next : "/dashboard";
 
   /**
    * Land on the dashboard this account owns.
@@ -62,4 +62,21 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.redirect(`${origin}${safeNext}`);
+}
+
+/**
+ * `next` is attacker-supplied: anyone can send a sign-in link carrying it.
+ *
+ * A prefix check is not enough. "//evil.com" was caught, but browsers read
+ * "/\evil.com" the same way — as another host — and so would any other spelling
+ * the URL parser normalises. So resolve it exactly as the browser will, and
+ * keep it only if it lands on this origin.
+ */
+function isSameOriginPath(next: string, origin: string): boolean {
+  if (!next.startsWith("/") || next.includes("\\")) return false;
+  try {
+    return new URL(next, origin).origin === origin;
+  } catch {
+    return false;
+  }
 }

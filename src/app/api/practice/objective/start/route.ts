@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { OBJECTIVE_SET_SIZE, OBJECTIVE_TRACK_VALUES } from "@/lib/objective";
 import { startActivityAttempt } from "@/lib/proctoring";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,10 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
+
+  // The test on this page may have been ended (camera or leaving the window).
+  const locked = await lockoutResponse(user.id, `/practice/${body.track}`);
+  if (locked) return locked;
 
   const admin = createAdminClient();
 

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAuthorizedCron } from "@/lib/cron-auth";
+import { internalError } from "@/lib/http-errors";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -123,7 +124,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: true, finalised, created: null });
     }
     console.error("[cron] contest creation failed", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return internalError("cron", error);
   }
 
   return NextResponse.json({ ok: true, finalised, created });

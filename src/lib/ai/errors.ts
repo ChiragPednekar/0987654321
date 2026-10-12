@@ -19,6 +19,19 @@ export class RateLimitError extends Error {
   }
 }
 
+/**
+ * The platform's own daily ceiling on model calls has been reached.
+ *
+ * A RateLimitError, so every route that already tells a student "busy, try
+ * again shortly" says the same here rather than reporting a fault.
+ */
+export class SpendCapError extends RateLimitError {
+  constructor(retryAfterSeconds: number) {
+    super("The daily AI limit for the platform has been reached.", retryAfterSeconds);
+    this.name = "SpendCapError";
+  }
+}
+
 /** Pulls a retry delay out of whatever shape the provider used to say it. */
 export function parseRetryAfter(detail: string): number | null {
   // Gemini returns `"retryDelay": "39s"` inside its error body.

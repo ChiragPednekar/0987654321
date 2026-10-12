@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { AuthzError, requireTeacherActor } from "@/lib/authz";
+import { AuthzError, audit, requireTeacherActor } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +64,10 @@ export async function POST(request: NextRequest) {
     console.error("[proctor] reopen failed", error.message);
     return NextResponse.json({ error: "Could not reopen" }, { status: 500 });
   }
+
+  await audit(actor, "lockout.reopen", "exam_lockouts", lockout.id, {
+    student: lockout.user_id,
+  });
   return NextResponse.json({ ok: true });
 }
 

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit, authzResponse, requireBatchTeacher } from "@/lib/authz";
+import { internalError } from "@/lib/http-errors";
 
 const bodySchema = z.object({
   user_id: z.string().uuid(),
@@ -79,7 +80,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     .eq("user_id", body.user_id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return internalError("classrooms", error);
   }
 
   // Removal is not a punishment and should not read as a silent one — the

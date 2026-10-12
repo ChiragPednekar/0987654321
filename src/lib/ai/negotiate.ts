@@ -7,6 +7,7 @@ import {
   type NegotiationSetup,
   type Terms,
 } from "@/lib/negotiation/engine";
+import { ROLEPLAY_GUARD } from "./untrusted";
 
 /**
  * The counterparty's turn.
@@ -110,7 +111,7 @@ Return JSON: message (what you say), offer (an object of issue key to option key
   // 1,400 rather than the conversational default: this reply carries a
   // complete counter-offer as JSON alongside the prose, and a truncated object
   // cannot be parsed at all.
-  const reply = await callChat(system, turns, 1_400);
+  const reply = await callChat(system + ROLEPLAY_GUARD, turns, 1_400);
 
   const parsed = parseCounterpartyReply(reply.content, setup.issues);
 

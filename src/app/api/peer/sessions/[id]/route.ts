@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
+import { internalError } from "@/lib/http-errors";
 
 const actionSchema = z.object({
   action: z.enum(["join", "start", "end", "cancel"]),
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       .select("id")
       .maybeSingle();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return internalError("peer", error);
     if (!claimed && !isGuest) {
       return NextResponse.json({ error: "Someone just took that seat." }, { status: 409 });
     }

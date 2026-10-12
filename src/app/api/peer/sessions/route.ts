@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
+import { internalError } from "@/lib/http-errors";
 
 const createSchema = z.object({
   case_id: z.string().uuid(),
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return internalError("peer", error);
   }
 
   return NextResponse.json({ ok: true, session_id: data.id });

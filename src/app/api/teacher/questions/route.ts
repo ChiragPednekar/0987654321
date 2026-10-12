@@ -10,6 +10,7 @@ import {
 } from "@/lib/authz";
 import { slugify } from "@/lib/utils";
 import type { Difficulty, Domain } from "@/lib/types/database";
+import { internalError } from "@/lib/http-errors";
 
 const rubricCriterion = z.object({
   key: z.string().trim().min(1).max(60),
@@ -124,10 +125,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error || !created) {
-    return NextResponse.json(
-      { error: error?.message ?? "Could not create the question." },
-      { status: 500 },
-    );
+    return internalError("teacher", error, "Could not create the question.");
   }
 
   // A rubric is not optional. Grading clamps each criterion to its weight and
@@ -207,7 +205,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await query;
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return internalError("teacher", error);
   }
 
   return NextResponse.json({ questions: data ?? [], batches: mine });

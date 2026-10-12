@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { internalError } from "@/lib/http-errors";
 
 const bodySchema = z.object({
   to_user: z.string().uuid(),
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   );
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return internalError("peer", error);
   }
 
   await admin.from("notifications").insert({

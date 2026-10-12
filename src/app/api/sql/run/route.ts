@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { runQuery } from "@/lib/sql/runner";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 // A cross join on a bounded fixture is still slow. The platform cap is the
 // backstop for a query sql.js cannot be interrupted out of.
@@ -35,6 +36,10 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
+
+  // The test on this page may have been ended (camera or leaving the window).
+  const locked = await lockoutResponse(user.id, `/sql/${body.slug}`);
+  if (locked) return locked;
 
   const admin = createAdminClient();
   if (!(await canSolve(admin, user.id))) {

@@ -8,6 +8,7 @@ import {
   stripInventedNumbers,
   type ResumeCritiqueResult,
 } from "@/lib/resume";
+import { fence, GRADER_GUARD } from "./untrusted";
 
 /**
  * Critiques resume bullets in one call.
@@ -116,14 +117,14 @@ export async function critiqueBullets(
 ): Promise<CritiqueCall> {
   const numbered = bullets.map((b, i) => `${i + 1}. ${b}`).join("\n");
   const user = `<<<STUDENT_INPUT
-Target role: ${targetRole?.trim() || "not given"}
+Target role: ${fence(targetRole?.trim() || "not given", "STUDENT_INPUT")}
 
 Bullets:
-${numbered}
+${fence(numbered, "STUDENT_INPUT")}
 STUDENT_INPUT`;
 
   const { raw, model, tokensUsed, inputTokens, outputTokens, cachedTokens } = await callModel({
-    system: SYSTEM,
+    system: SYSTEM + GRADER_GUARD,
     user,
     criteria: { placeholder: 1 },
     jsonSchema: JSON_SCHEMA as unknown as Record<string, unknown>,

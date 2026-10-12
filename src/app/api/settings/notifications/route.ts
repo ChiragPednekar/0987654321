@@ -59,12 +59,15 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Notification settings are not available yet — this database is missing the preference column. Apply migration 20250101000030_notification_preferences.sql.",
+            "Notification settings are not available right now. Please try again later.",
         },
         { status: 503 },
       );
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // The database's own message stays in the server log: it names tables
+    // and columns, which is detail for us, not for the person saving a toggle.
+    console.error("[settings] notification update failed", error.message);
+    return NextResponse.json({ error: "Could not save your settings." }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, ...body });

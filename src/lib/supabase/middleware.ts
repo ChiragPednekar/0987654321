@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/types/database";
 import { ROLE_HOMES, mustRedirectFromHome, roleHome } from "@/lib/role-home";
+import { SESSION_COOKIE_OPTIONS } from "./cookie-options";
 
 /**
  * The platform is invite-only: everything is closed except the way in.
@@ -45,6 +46,7 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return request.cookies.getAll();

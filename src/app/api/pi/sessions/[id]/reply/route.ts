@@ -7,6 +7,7 @@ import { buildPiSystemPrompt } from "@/lib/ai/pi-interview";
 import { recordUsage } from "@/lib/usage";
 import { RateLimitError } from "@/lib/ai/errors";
 import { PI_MAX_QUESTIONS } from "@/lib/pi";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -26,6 +27,10 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  // The test on this page may have been ended (camera or leaving the window).
+  const locked = await lockoutResponse(user.id, `/interview/${id}`);
+  if (locked) return locked;
 
   let body: z.infer<typeof bodySchema>;
   try {

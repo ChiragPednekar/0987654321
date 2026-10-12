@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateGroupDiscussion, GD_MAX_SCORE } from "@/lib/ai/gd-evaluate";
 import { recordUsage } from "@/lib/usage";
 import type { GdScoreRow } from "@/lib/types/database";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 // One model call for the whole room, but the transcript can be long.
 export const maxDuration = 120;
@@ -27,6 +28,10 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  // The test on this page may have been ended (camera or leaving the window).
+  const locked = await lockoutResponse(user.id, `/gd/${id}`);
+  if (locked) return locked;
 
   const admin = createAdminClient();
 

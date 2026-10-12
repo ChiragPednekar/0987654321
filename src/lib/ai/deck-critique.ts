@@ -8,6 +8,7 @@ import {
   groundSuggestedTitle,
   type DeckCritiqueResult,
 } from "@/lib/deck";
+import { fence, GRADER_GUARD } from "./untrusted";
 
 /**
  * Reviews a deck, read natively as a PDF so the model sees charts and layout
@@ -110,13 +111,13 @@ export async function critiqueDeck(args: {
   cachedTokens: number;
 }> {
   const user = `<<<CONTEXT
-What this deck is for: ${args.context?.trim() || "not stated"}
+What this deck is for: ${fence(args.context?.trim() || "not stated", "CONTEXT")}
 CONTEXT
 
 Review the attached deck.`;
 
   const { raw, model, tokensUsed, inputTokens, outputTokens, cachedTokens } = await callModel({
-    system: SYSTEM,
+    system: SYSTEM + GRADER_GUARD,
     user,
     criteria: { placeholder: 1 },
     jsonSchema: JSON_SCHEMA,

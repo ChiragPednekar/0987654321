@@ -90,10 +90,17 @@ export async function requireActor(): Promise<Actor> {
     }
   }
 
+  /**
+   * The profile could not be read. Fall back to the LEAST privilege, never to
+   * anything on the token: `user_metadata` is writable by the user themselves
+   * (supabase.auth.updateUser({ data: { role: "admin" } }) works with the
+   * public anon key), so reading a role from it would hand admin to anyone who
+   * tried it while the database was briefly unreachable.
+   */
   return {
     id: user.id,
     email: user.email ?? "",
-    role: ((user.user_metadata?.role as string) ?? "student") as UserRole,
+    role: "student",
   };
 }
 

@@ -9,6 +9,7 @@ import {
   consumeActivityElapsed,
   recordActivityIntegrity,
 } from "@/lib/proctoring";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,10 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Write a formula first." }, { status: 400 });
   }
+
+  // The test on this page may have been ended (camera or leaving the window).
+  const locked = await lockoutResponse(user.id, `/excel/${body.slug}`);
+  if (locked) return locked;
 
   const admin = createAdminClient();
   if (!(await canSolve(admin, user.id))) {

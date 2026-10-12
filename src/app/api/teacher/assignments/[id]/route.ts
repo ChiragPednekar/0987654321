@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit, authzResponse, requireAssignmentTeacher } from "@/lib/authz";
+import { internalError } from "@/lib/http-errors";
 
 const bodySchema = z.object({
   title: z.string().trim().min(3).max(200).optional(),
@@ -50,7 +51,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     .eq("id", id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return internalError("teacher", error);
   }
 
   await audit(actor, "assignment.update", "classroom_assignments", id, body);
@@ -72,7 +73,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   const admin = createAdminClient();
   const { error } = await admin.from("classroom_assignments").delete().eq("id", id);
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return internalError("teacher", error);
   }
 
   await audit(actor, "assignment.delete", "classroom_assignments", id, {});

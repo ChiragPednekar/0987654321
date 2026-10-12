@@ -7,6 +7,7 @@ import {
   requireBatchTeacher,
   requireTeacherActor,
 } from "@/lib/authz";
+import { internalError } from "@/lib/http-errors";
 
 const createSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     if (!error && data) created = data;
     else if (error && error.code !== "23505") {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return internalError("classrooms", error);
     }
   }
 
@@ -163,7 +164,7 @@ export async function PATCH(request: NextRequest) {
     .eq("id", classroom_id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return internalError("classrooms", error);
   }
 
   await audit(actor, "classroom.update", "classrooms", classroom_id, changes);

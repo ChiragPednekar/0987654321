@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { callModel } from "./providers";
+import { fence, GRADER_GUARD } from "./untrusted";
 
 /**
  * Grades one group discussion.
@@ -133,14 +134,14 @@ ${rubricLines}
 Each line is one participant's speech, attributed by their own device. Lines are in the order they were spoken.
 
 <<<TRANSCRIPT
-${body}
+${fence(body, "TRANSCRIPT")}
 TRANSCRIPT
 
 Return a score for every participant listed above, using exactly those labels — including any who appear in the list but barely speak in the transcript.`;
 
   const { raw, model, tokensUsed, inputTokens, outputTokens, cachedTokens } =
     await callModel({
-      system: SYSTEM_PROMPT,
+      system: SYSTEM_PROMPT + GRADER_GUARD,
       user,
       // The grading path's structured-output helper is built around a rubric
       // keyed by criterion for a single answer. A GD returns an array of those,

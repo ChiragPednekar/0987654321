@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/types/database";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
+import { SESSION_COOKIE_OPTIONS } from "./cookie-options";
 
 /**
  * Server client for RSCs, route handlers and server actions.
@@ -14,6 +15,7 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -117,7 +119,10 @@ export async function getCurrentUser() {
     }
   }
 
-  // Safe fallback profile so authenticated users never get stuck in a redirect loop
+  // Safe fallback profile so authenticated users never get stuck in a redirect
+  // loop. Least privilege, always: the role is never taken from
+  // `user_metadata`, which the user can set on their own account through the
+  // public API — see requireActor in src/lib/authz.ts.
   return {
     id: user.id,
     email: user.email ?? "",
@@ -125,7 +130,7 @@ export async function getCurrentUser() {
     avatar_url: avatarUrl,
     university: null,
     career_goal: null,
-    role: ((user.user_metadata?.role as string) ?? "student") as Database["public"]["Tables"]["users"]["Row"]["role"],
+    role: "student" as const,
     ce: 0,
     level: 1,
     total_score: 0,

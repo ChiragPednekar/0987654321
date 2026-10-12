@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit, authzResponse, requireBatchTeacher } from "@/lib/authz";
 import { assignmentNoticeRecipients } from "@/lib/notify";
+import { internalError } from "@/lib/http-errors";
 
 const bodySchema = z
   .object({
@@ -105,10 +106,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error || !created) {
-    return NextResponse.json(
-      { error: error?.message ?? "Could not create the assignment." },
-      { status: 500 },
-    );
+    return internalError("teacher", error, "Could not create the assignment.");
   }
 
   // Students only hear about it once it is actually published.
