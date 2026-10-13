@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { CheckCircle2, CircleDashed, Clock, Circle } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { PickToggle } from "@/components/teacher/library-picker";
+import { PickHint } from "@/components/teacher/pick-hint";
 import { CaseFilters } from "@/components/case-filters";
 import {
   CasesByTrack,
@@ -44,6 +46,8 @@ export default async function CasesPage({
   const params = await searchParams;
   const supabase = await createClient();
   const profile = await getCurrentUser();
+  // Teachers tick cases here and add them to a batch.
+  const canAssign = profile?.role === "teacher" || profile?.role === "admin";
 
   const page = Math.max(1, Number(params.page ?? 1) || 1);
   const from = (page - 1) * CASES_PER_PAGE;
@@ -223,6 +227,7 @@ export default async function CasesPage({
           </p>
         </div>
       </div>
+      {canAssign && <PickHint noun="cases" />}
 
       <div className="mt-6 inline-flex rounded-lg bg-muted p-1 text-sm">
         {(
@@ -288,10 +293,11 @@ export default async function CasesPage({
               const attempted = attemptedCaseIds.has(item.id);
 
               return (
-                <li key={item.id}>
+                <li key={item.id} className={cn(canAssign && "flex items-center gap-1 pl-3")}>
+                  {canAssign && <PickToggle kind="case" id={item.id} title={item.title} />}
                   <Link
                     href={`/cases/${item.slug}`}
-                    className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-accent/50 sm:flex-row sm:items-center sm:gap-4"
+                    className="flex min-w-0 flex-1 flex-col gap-2 px-4 py-3 transition-colors hover:bg-accent/50 sm:flex-row sm:items-center sm:gap-4"
                   >
                     <span className="w-6 shrink-0">
                       {solved ? (

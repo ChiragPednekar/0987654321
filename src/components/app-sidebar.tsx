@@ -28,6 +28,7 @@ import {
   Calculator,
   Gauge,
   ListOrdered,
+  SquarePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types/database";
@@ -121,6 +122,9 @@ const TEACHER_GROUPS: { heading: string; items: Item[] }[] = [
       { href: "/sql", label: "SQL", icon: Database },
       { href: "/excel", label: "Excel", icon: Sheet },
       { href: "/paths", label: "Paths", icon: Route },
+      // Any teacher can add their own case or aptitude question, then assign
+      // it from the library like everything else.
+      { href: "/teacher/questions/new", label: "Add question", icon: SquarePlus },
     ],
   },
   {
@@ -229,6 +233,14 @@ export function AppSidebar({
     }))
     .filter((group) => group.items.length > 0);
 
+  // Only the most specific match is highlighted. A plain prefix test lit up
+  // "Dashboard" (/teacher) on every teacher page, and "Question bank" next to
+  // "Add question" (/teacher/questions/new).
+  const activeHref = groups
+    .flatMap((group) => group.items.map((item) => item.href))
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+
   return (
     <aside
       data-collapsed={collapsed}
@@ -254,8 +266,7 @@ export function AppSidebar({
             <ul className="space-y-0.5">
               {group.items.map((item) => {
                 const Icon = item.icon;
-                const active =
-                  pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const active = item.href === activeHref;
                 return (
                   <li key={item.href}>
                     <Link

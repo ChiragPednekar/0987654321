@@ -420,6 +420,8 @@ export type ObjectiveSessionRow = {
   seconds: number | null;
   started_at: string;
   submitted_at: string | null;
+  /** Set when the sitting is an assigned quiz (20250101000067). */
+  assignment_id: string | null;
 }
 
 export type ObjectiveSummaryRow = {
@@ -2060,7 +2062,16 @@ export type ClassroomAssignmentRow = {
   is_public?: boolean;
   id: string;
   classroom_id: string;
-  case_id: string;
+  /**
+   * What is assigned (20250101000067). Exactly one target column is set,
+   * matching the kind — enforced by a check constraint.
+   */
+  kind: AssignmentKind;
+  case_id: string | null;
+  sql_exercise_id: string | null;
+  excel_exercise_id: string | null;
+  /** The questions of an aptitude quiz, in order. */
+  question_ids: string[] | null;
   title: string | null;
   instructions: string | null;
   starts_at: string | null;
@@ -2085,11 +2096,21 @@ export type AssignmentStatus =
 
 export type CaseVisibility = "platform" | "private";
 
+/** What an assignment can hold. A learning path is added as one case per step. */
+export type AssignmentKind = "case" | "sql" | "excel" | "aptitude";
+
 export type AssignmentSubmissionRow = {
   id: string;
   assignment_id: string;
   user_id: string;
   submission_id: string | null;
+  /** The hand-in for the non-case kinds (20250101000067). */
+  sql_attempt_id: string | null;
+  excel_attempt_id: string | null;
+  objective_session_id: string | null;
+  /** Platform-marked result: correct of total for a quiz, 1 of 1 for a solved exercise. */
+  auto_score: number | null;
+  auto_max: number | null;
   status: AssignmentStatus;
   submitted_at: string;
   is_late: boolean;

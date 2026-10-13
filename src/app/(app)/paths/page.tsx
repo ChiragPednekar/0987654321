@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PickToggle } from "@/components/teacher/library-picker";
+import { PickHint } from "@/components/teacher/pick-hint";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { DOMAIN_LABEL } from "@/lib/constants";
@@ -13,6 +15,8 @@ export const metadata: Metadata = { title: "Learning paths" };
 export default async function PathsPage() {
   const supabase = await createClient();
   const profile = await getCurrentUser();
+  // A teacher can add a whole path to a batch: one assignment per step.
+  const canAssign = profile?.role === "teacher" || profile?.role === "admin";
 
   const [{ data: paths }, { data: progress }] = await Promise.all([
     supabase
@@ -38,6 +42,7 @@ export default async function PathsPage() {
       <p className="mt-1 text-sm text-muted-foreground">
         Ordered sequences. Clear a step to unlock the next one.
       </p>
+      {canAssign && <PickHint noun="paths (each step becomes a case assignment)" />}
 
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         {(paths ?? []).map((path) => {
@@ -53,7 +58,12 @@ export default async function PathsPage() {
               <Card className="h-full transition-colors hover:border-foreground/25">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="text-base">{path.title}</CardTitle>
+                    <div className="flex items-start gap-2">
+                      {canAssign && (
+                        <PickToggle kind="path" id={path.id} title={`${path.title} (${steps} steps)`} />
+                      )}
+                      <CardTitle className="text-base">{path.title}</CardTitle>
+                    </div>
                     <Badge variant="secondary">
                       {DOMAIN_LABEL[path.domain as Domain]}
                     </Badge>

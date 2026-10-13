@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
   const { data: session } = await admin
     .from("objective_sessions")
-    .select("id, user_id, track, question_ids, total, submitted_at")
+    .select("id, user_id, track, question_ids, total, submitted_at, assignment_id")
     .eq("id", body.session_id)
     .maybeSingle();
 
@@ -67,7 +67,13 @@ export async function POST(request: NextRequest) {
 
   // The test on this page may have been ended (camera or leaving the window).
   {
-    const locked = await lockoutResponse(user.id, `/practice/${session.track}`);
+    const locked = await lockoutResponse(
+      user.id,
+      // An assigned quiz is sat on its own page, so its lock is keyed there.
+      session.assignment_id
+        ? `/practice/assigned/${session.assignment_id}`
+        : `/practice/${session.track}`,
+    );
     if (locked) return locked;
   }
 

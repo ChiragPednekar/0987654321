@@ -21,6 +21,7 @@ import { AssignCaseForm } from "@/components/classroom/assign-case-form";
 import { StudentAssignmentStatus } from "@/components/classroom/student-assignment-status";
 import { JoinBatchModal } from "@/components/classroom/join-batch-modal";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
+import { assignmentTarget } from "@/lib/assignments";
 import { cn } from "@/lib/utils";
 import type { Difficulty, Domain } from "@/lib/types/database";
 
@@ -134,7 +135,7 @@ export default async function ClassroomPage({ params }: PageProps) {
   // User is enrolled (or is teacher) -> fetch all batch data
   const [
     { data: roster },
-    { data: assignments },
+    { data: allAssignments },
     { data: myWork },
   ] = await Promise.all([
     admin
@@ -143,14 +144,18 @@ export default async function ClassroomPage({ params }: PageProps) {
       .eq("classroom_id", id),
     admin
       .from("classroom_assignments")
-      .select("id, due_at, note, max_marks, cases(slug, title, domain, difficulty)")
+      .select("id, title, due_at, note, max_marks, is_published, kind, question_ids, cases(slug, title, domain, difficulty), sql_exercises(slug, title), excel_exercises(slug, title)")
       .eq("classroom_id", id)
       .order("due_at", { ascending: true }),
     admin
       .from("assignment_submissions")
-      .select("assignment_id, status, faculty_marks, faculty_remarks, is_late, submitted_at")
+      .select("assignment_id, status, faculty_marks, faculty_remarks, is_late, submitted_at, auto_score, auto_max")
       .eq("user_id", profile.id),
   ]);
+
+  // Read with the service role, so the "students never see drafts" policy does
+  // not apply here; filter drafts out by hand for everyone but the teacher.
+  const assignments = (allAssignments ?? []).filter((a) => isTeacher || a.is_published);
 
   const mine = new Map((myWork ?? []).map((w) => [w.assignment_id, w]));
 
@@ -229,8 +234,8 @@ export default async function ClassroomPage({ params }: PageProps) {
           ) : (
             <ul className="divide-y divide-border/60">
               {assignments.map((row) => {
-                const c = Array.isArray(row.cases) ? row.cases[0] : row.cases;
-                if (!c) return null;
+                const target = assignmentTarget(row);
+                if (!target.href) return null;
                 const submission = mine.get(row.id);
 
                 return (
@@ -238,17 +243,28 @@ export default async function ClassroomPage({ params }: PageProps) {
                     <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <Link
-                          href={`/cases/${c.slug}`}
+                          href={target.href}
                           className="font-semibold text-foreground hover:underline"
                         >
-                          {c.title}
+                          {row.title || target.itemTitle}
                         </Link>
-                        <Badge variant="outline" className="text-[11px]">{DOMAIN_LABEL[c.domain as Domain]}</Badge>
-                        <span
-                          className={cn("text-xs font-medium", DIFFICULTY_CLASS[c.difficulty as Difficulty])}
-                        >
-                          {c.difficulty}
-                        </span>
+                        <Badge variant="secondary" className="text-[11px]">{target.kindLabel}</Badge>
+                        {target.kind === "aptitude" ? (
+                          <span className="text-xs text-muted-foreground">{target.itemTitle}</span>
+                        ) : null}
+                        {target.domain ? (
+                          <Badge variant="outline" className="text-[11px]">{DOMAIN_LABEL[target.domain as Domain]}</Badge>
+                        ) : null}
+                        {target.difficulty ? (
+                          <span
+                            className={cn("text-xs font-medium", DIFFICULTY_CLASS[target.difficulty as Difficulty])}
+                          >
+                            {target.difficulty}
+                          </span>
+                        ) : null}
+                        {isTeacher && !row.is_published ? (
+                          <Badge variant="outline" className="text-[11px]">Draft</Badge>
+                        ) : null}
                       </div>
                       <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                         {row.due_at ? (
@@ -282,11 +298,18 @@ export default async function ClassroomPage({ params }: PageProps) {
                             work={submission ?? null}
                             maxMarks={row.max_marks ? Number(row.max_marks) : null}
                           />
+                          {submission?.auto_max ? (
+                            <span className="text-xs text-muted-foreground tabular">
+                              {target.kind === "aptitude"
+                                ? `${Number(submission.auto_score)}/${Number(submission.auto_max)} correct`
+                                : "Solved"}
+                            </span>
+                          ) : null}
                           <Link
-                            href={`/cases/${c.slug}`}
+                            href={target.href}
                             className="inline-flex items-center rounded-md border border-action bg-action px-3 py-1 text-xs font-medium text-action-foreground hover:bg-action-hover"
                           >
-                            Solve Case →
+                            {target.kind === "case" ? "Solve case" : target.kind === "aptitude" ? "Take quiz" : "Solve exercise"} →
                           </Link>
                         </div>
                       )}

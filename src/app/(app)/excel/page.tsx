@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { Check, Sheet } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { PickToggle } from "@/components/teacher/library-picker";
+import { PickHint } from "@/components/teacher/pick-hint";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +20,9 @@ export default async function ExcelIndex() {
   if (!user) redirect("/login?next=/excel");
 
   const admin = createAdminClient();
+  // Teachers can tick exercises here and add them to a batch.
+  const profile = await getCurrentUser();
+  const canAssign = profile?.role === "teacher" || profile?.role === "admin";
   const [{ data: exercises }, { data: solved }] = await Promise.all([
     admin
       .from("excel_exercises")
@@ -57,6 +62,7 @@ export default async function ExcelIndex() {
         </CardContent>
       </Card>
 
+      {canAssign && <PickHint noun="exercises" />}
       <p className="mt-6 text-sm text-muted-foreground">
         {plural(solvedCount, "exercise")} solved of {list.length}.
       </p>
@@ -68,6 +74,7 @@ export default async function ExcelIndex() {
               <CardContent className="flex items-start justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
+                    {canAssign && <PickToggle kind="excel" id={e.id} title={e.title} />}
                     {done.has(e.id) ? (
                       <Check className="size-4 text-[var(--success)]" />
                     ) : (

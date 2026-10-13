@@ -31,8 +31,12 @@ const bodySchema = z.object({
   instructions: z.string().trim().min(10).max(5_000),
   expected_framework: z.string().trim().max(4_000).optional().nullable(),
   model_answer: z.string().trim().max(20_000).optional().nullable(),
-  /** Which batch owns it. The question is visible only inside that batch. */
-  classroom_id: z.string().uuid(),
+  /**
+   * Which batch owns it, if any. Without one the question belongs to the
+   * teacher alone and can be assigned to any batch they teach — so a teacher
+   * can write questions before they have a batch at all.
+   */
+  classroom_id: z.string().uuid().optional().nullable(),
   hints: z
     .array(z.object({
       body: z.string().trim().min(4).max(2_000),
@@ -74,11 +78,13 @@ export async function POST(request: NextRequest) {
   }
 
   // The batch id came from the client, so prove they teach it.
-  try {
-    await requireBatchTeacher(body.classroom_id);
-  } catch (error) {
-    const { body: b, status } = authzResponse(error);
-    return NextResponse.json(b, { status });
+  if (body.classroom_id) {
+    try {
+      await requireBatchTeacher(body.classroom_id);
+    } catch (error) {
+      const { body: b, status } = authzResponse(error);
+      return NextResponse.json(b, { status });
+    }
   }
 
   // Rubric weights are the denominator of every score on this question, so a
@@ -119,7 +125,7 @@ export async function POST(request: NextRequest) {
       is_published: body.is_published,
       created_by: actor.id,
       visibility: "private",
-      owner_classroom_id: body.classroom_id,
+      owner_classroom_id: body.classroom_id ?? null,
     })
     .select("id, slug")
     .single();
@@ -166,7 +172,7 @@ export async function POST(request: NextRequest) {
   }
 
   await audit(actor, "question.create", "cases", created.id, {
-    title: body.title, classroom_id: body.classroom_id,
+    title: body.title, classroom_id: body.classroom_id ?? null,
   });
 
   return NextResponse.json(

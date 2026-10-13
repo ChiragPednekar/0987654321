@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
 import { cn, formatNumber, timeAgo } from "@/lib/utils";
 import type { Difficulty, Domain } from "@/lib/types/database";
+import { PickToggle } from "@/components/teacher/library-picker";
+import { OBJECTIVE_TRACKS } from "@/lib/objective";
 
 export const metadata: Metadata = { title: "Question bank" };
 
@@ -15,7 +17,7 @@ export default async function QuestionBank() {
   const actor = await requireTeacherActor();
   const admin = createAdminClient();
 
-  const [{ data: mine }, { count: platformCount }] = await Promise.all([
+  const [{ data: mine }, { count: platformCount }, { data: myAptitude }] = await Promise.all([
     admin
       .from("cases")
       .select("id, slug, title, domain, difficulty, format, is_published, created_at")
@@ -27,7 +29,14 @@ export default async function QuestionBank() {
       .select("id", { count: "exact", head: true })
       .eq("visibility", "platform")
       .eq("is_published", true),
+    admin
+      .from("objective_questions")
+      .select("id, track, topic, difficulty, stem, created_at")
+      .eq("created_by", actor.id)
+      .order("created_at", { ascending: false })
+      .limit(200),
   ]);
+  const trackLabel = new Map(OBJECTIVE_TRACKS.map((t) => [t.value, t.label]));
 
   return (
     <div>
@@ -40,7 +49,7 @@ export default async function QuestionBank() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/teacher/questions/new">Write a question</Link>
+          <Link href="/teacher/questions/new">Add a question</Link>
         </Button>
       </div>
 
@@ -56,18 +65,23 @@ export default async function QuestionBank() {
           <Button asChild variant="outline" size="sm" className="mt-3">
             <Link href="/cases">Browse the library</Link>
           </Button>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Tick anything in the library — cases, paths, SQL, Excel or aptitude
+            questions — and use &ldquo;Add to batch&rdquo; to assign it.
+          </p>
         </CardContent>
       </Card>
 
       <h2 className="mt-8 text-sm font-semibold text-foreground">
-        Your questions
+        Your case and written questions
       </h2>
 
       {!mine || mine.length === 0 ? (
         <Card className="mt-3">
           <CardContent className="p-6 text-sm text-muted-foreground">
-            You have not written any questions yet. Yours stay private to the
-            batch you write them for — they never appear in the public library.
+            You have not written any yet. Your questions stay private to you
+            and the batches you assign them to — they never appear in the
+            public library.
           </CardContent>
         </Card>
       ) : (
@@ -77,7 +91,8 @@ export default async function QuestionBank() {
               key={q.id}
               className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3"
             >
-              <span className="font-medium">{q.title}</span>
+              {q.is_published ? <PickToggle kind="case" id={q.id} title={q.title} /> : null}
+              <Link href={`/cases/${q.slug}`} className="font-medium hover:underline">{q.title}</Link>
               <Badge variant="outline">{DOMAIN_LABEL[q.domain as Domain]}</Badge>
               <span className={cn("text-xs", DIFFICULTY_CLASS[q.difficulty as Difficulty])}>
                 {q.difficulty}
@@ -87,6 +102,42 @@ export default async function QuestionBank() {
               <span className="ml-auto text-xs text-muted-foreground">
                 {timeAgo(q.created_at)}
               </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2 className="mt-8 text-sm font-semibold text-foreground">
+        Your aptitude questions
+      </h2>
+      {!myAptitude || myAptitude.length === 0 ? (
+        <Card className="mt-3">
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            None yet.{" "}
+            <Link href="/teacher/questions/new?type=aptitude" className="underline underline-offset-4">
+              Add an aptitude question
+            </Link>{" "}
+            and tick it — with any platform questions — into a quiz for a batch.
+          </CardContent>
+        </Card>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {myAptitude.map((q) => (
+            <li
+              key={q.id}
+              className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3"
+            >
+              <PickToggle
+                kind="aptitude"
+                id={q.id}
+                title={q.stem.length > 90 ? `${q.stem.slice(0, 87)}…` : q.stem}
+              />
+              <span className="min-w-0 flex-1 truncate">{q.stem}</span>
+              <Badge variant="outline">{trackLabel.get(q.track) ?? q.track}</Badge>
+              <span className={cn("text-xs", DIFFICULTY_CLASS[q.difficulty as Difficulty])}>
+                {q.difficulty}
+              </span>
+              <span className="text-xs text-muted-foreground">{timeAgo(q.created_at)}</span>
             </li>
           ))}
         </ul>

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, Send, Timer, X } from "lucide-react";
 import { toast } from "sonner";
@@ -44,7 +45,18 @@ interface Results {
  * locking the tab would be theatre, and the student who looks up an answer
  * only fools their own accuracy chart.
  */
-export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
+export function ObjectiveRunner({
+  track,
+  assignment,
+}: {
+  track: ObjectiveTrackMeta;
+  /**
+   * A quiz a teacher set for the student's batch: a fixed paper of their
+   * picked questions instead of a random set from the track. Handing it in
+   * attaches the result to the assignment.
+   */
+  assignment?: { id: string; title: string; count: number; classroomId: string };
+}) {
   const router = useRouter();
   const [questions, setQuestions] = React.useState<ObjectiveQuestionForStudent[] | null>(null);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
@@ -86,11 +98,15 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
       const response = await fetch("/api/practice/objective/start", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          track: track.value,
-          difficulty,
-          count: OBJECTIVE_SET_SIZE.default,
-        }),
+        body: JSON.stringify(
+          assignment
+            ? { assignment_id: assignment.id }
+            : {
+                track: track.value,
+                difficulty,
+                count: OBJECTIVE_SET_SIZE.default,
+              },
+        ),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -153,6 +169,33 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
   }
 
   // ---- not started --------------------------------------------------------
+  if (!questions && assignment) {
+    return (
+      <Card>
+        <CardContent className="space-y-4 p-8 text-center">
+          <h2 className="text-lg font-medium">{assignment.title}</h2>
+          <p className="mx-auto max-w-md text-sm text-muted-foreground">
+            {assignment.count} question{assignment.count === 1 ? "" : "s"} set by
+            your teacher, marked instantly with a worked explanation for every
+            one. Your score goes to your teacher when you submit.
+          </p>
+          <p className="mx-auto max-w-md text-xs text-muted-foreground">
+            Answered under exam conditions: the page goes fullscreen, the
+            camera stays on, and switching tabs or leaving the window ends the
+            test.
+          </p>
+          <CameraStep camera={proctor.camera} />
+          <div className="flex flex-wrap justify-center gap-2 pt-2">
+            <Button onClick={() => start()} disabled={busy || !cameraReady(proctor.camera)}>
+              {busy ? <Loader2 className="animate-spin" /> : null}
+              Start quiz
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!questions) {
     return (
       <Card>
@@ -208,10 +251,16 @@ export function ObjectiveRunner({ track }: { track: ObjectiveTrackMeta }) {
                   : "—"}
               </p>
             </div>
-            <Button onClick={handleAnotherSet} disabled={busy}>
-              {busy ? <Loader2 className="animate-spin" /> : null}
-              Another set
-            </Button>
+            {assignment ? (
+              <Button asChild variant="outline">
+                <Link href={`/classrooms/${assignment.classroomId}`}>Back to your batch</Link>
+              </Button>
+            ) : (
+              <Button onClick={handleAnotherSet} disabled={busy}>
+                {busy ? <Loader2 className="animate-spin" /> : null}
+                Another set
+              </Button>
+            )}
           </CardContent>
         </Card>
 

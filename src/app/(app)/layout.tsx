@@ -6,6 +6,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { AppSidebar } from "@/components/app-sidebar";
 import { OwnerViewingBanner } from "@/components/owner-viewing-banner";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
+import { LibraryPickerBar } from "@/components/teacher/library-picker";
 
 export default async function AppLayout({
   children,
@@ -73,6 +74,12 @@ export default async function AppLayout({
             isInstitutionStaff={isInstitutionStaff}
           />
           <main className="min-w-0 flex-1">{children}</main>
+          {/*
+            What a teacher has ticked in the library, on whatever page they are
+            on, ready to add to a batch. Renders nothing until something is
+            ticked, and never for students.
+          */}
+          {(profile.role === "teacher" || profile.role === "admin") && <LibraryPickerBar />}
         </div>
       ) : (
         <main className="flex-1">{children}</main>

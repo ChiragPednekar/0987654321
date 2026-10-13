@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ArrowRight, InfinityIcon } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { OBJECTIVE_TRACKS } from "@/lib/objective";
@@ -33,6 +33,8 @@ export default async function PracticePage() {
   );
 
   const groups = ["Aptitude", "Domain"] as const;
+  const profile = await getCurrentUser();
+  const canAssign = profile?.role === "teacher" || profile?.role === "admin";
 
   return (
     <div className="mx-auto w-full max-w-4xl">
@@ -54,6 +56,13 @@ export default async function PracticePage() {
           the AI, so they never use your grading allowance.
         </p>
       </div>
+
+      {canAssign && (
+        <p className="mt-4 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+          Open a track to see its questions with answers, tick the ones you want,
+          and add them to a batch as a quiz.
+        </p>
+      )}
 
       {groups.map((group) => (
         <section key={group} className="mt-8">

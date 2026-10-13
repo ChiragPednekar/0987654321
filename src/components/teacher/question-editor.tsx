@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
 import { DOMAINS, DIFFICULTIES } from "@/lib/constants";
 import { QuestionUpload, type ParsedQuestion } from "@/components/teacher/question-upload";
 import { cn } from "@/lib/utils";
@@ -112,7 +111,8 @@ export function QuestionEditor({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           title: String(f.get("title") ?? ""),
-          classroom_id: String(f.get("classroom_id") ?? ""),
+          // Blank means "just me": usable in any batch the teacher teaches.
+          classroom_id: String(f.get("classroom_id") ?? "") || null,
           domain: String(f.get("domain") ?? "consulting"),
           difficulty: String(f.get("difficulty") ?? "medium"),
           format: String(f.get("format") ?? "full_case"),
@@ -142,17 +142,6 @@ export function QuestionEditor({
     }
   }
 
-  if (batches.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-sm text-muted-foreground">
-          You need a batch before you can write a question — a question belongs
-          to the batch it was written for.
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <QuestionUpload onParsed={applyParsed} />
@@ -172,15 +161,16 @@ export function QuestionEditor({
           <div>
             <Label htmlFor="classroom_id">Batch</Label>
             <select
-              id="classroom_id" name="classroom_id" required
+              id="classroom_id" name="classroom_id"
               className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
+              <option value="">Just me — assign it to any batch later</option>
               {batches.map((b) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </select>
             <p className="mt-1 text-xs text-muted-foreground">
-              Only this batch can see it.
+              Private either way: only you, and batches you assign it to, can see it.
             </p>
           </div>
           <div>

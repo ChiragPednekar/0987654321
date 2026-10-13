@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { Check, Database } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { PickToggle } from "@/components/teacher/library-picker";
+import { PickHint } from "@/components/teacher/pick-hint";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +20,13 @@ export default async function SqlIndex() {
   if (!user) redirect("/login?next=/sql");
 
   const admin = createAdminClient();
+  // Teachers can tick exercises here and add them to a batch.
+  const profile = await getCurrentUser();
+  const canAssign = profile?.role === "teacher" || profile?.role === "admin";
   const [{ data: exercises }, { data: solved }] = await Promise.all([
     admin
       .from("sql_exercises")
-      .select("slug, title, prompt, topic, difficulty, sort_order")
+      .select("id, slug, title, prompt, topic, difficulty, sort_order")
       .eq("is_published", true)
       .order("sort_order"),
     admin
@@ -60,6 +65,7 @@ export default async function SqlIndex() {
         </CardContent>
       </Card>
 
+      {canAssign && <PickHint noun="exercises" />}
       <p className="mt-6 text-sm text-muted-foreground">
         {plural(done.size, "exercise")} solved of {(exercises ?? []).length}.
       </p>
@@ -71,6 +77,7 @@ export default async function SqlIndex() {
               <CardContent className="flex items-start justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
+                    {canAssign && <PickToggle kind="sql" id={e.id} title={e.title} />}
                     {done.has(e.slug) ? (
                       <Check className="size-4 text-[var(--success)]" />
                     ) : (

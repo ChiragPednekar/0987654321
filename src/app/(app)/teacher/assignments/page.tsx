@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/teacher/empty-state";
 import { formatNumber } from "@/lib/utils";
 import type { ClassroomAssignmentStatsRow } from "@/lib/types/database";
+import { ASSIGNMENT_KIND_LABEL } from "@/lib/assignments";
 
 export const metadata: Metadata = { title: "Assignments" };
 
@@ -31,7 +32,7 @@ export default async function AssignmentsPage() {
 
   const { data: assignments } = await admin
     .from("classroom_assignments")
-    .select("id, title, due_at, is_published, max_marks, classroom_id, cases(title), classrooms(name)")
+    .select("id, title, due_at, is_published, max_marks, classroom_id, kind, cases(title), classrooms(name)")
     .in("classroom_id", ids)
     .order("created_at", { ascending: false });
 
@@ -90,8 +91,14 @@ export default async function AssignmentsPage() {
                       {a.title ?? c?.title ?? "Assignment"}
                     </span>
                     <div className="flex items-center gap-2">
+                      {a.kind && a.kind !== "case" ? (
+                        <Badge variant="secondary">{ASSIGNMENT_KIND_LABEL[a.kind]}</Badge>
+                      ) : null}
                       {!a.is_published ? <Badge variant="outline">Draft</Badge> : null}
-                      {pending > 0 ? (
+                      {a.kind && a.kind !== "case" ? (
+                        // Marked by the platform: nothing waits on the teacher.
+                        submitted > 0 ? <Badge variant="outline">{submitted} handed in</Badge> : null
+                      ) : pending > 0 ? (
                         <Badge variant="warning">{pending} to mark</Badge>
                       ) : submitted > 0 ? (
                         <Badge variant="secondary">All marked</Badge>

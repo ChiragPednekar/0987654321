@@ -10,6 +10,7 @@ import { ReviewQueue } from "@/components/teach/review-queue";
 import { formatNumber } from "@/lib/utils";
 import { photosForFindings } from "@/lib/proctor-evidence";
 import type { AssignmentReviewRow } from "@/lib/types/database";
+import { assignmentTarget, type AssignmentTarget } from "@/lib/assignments";
 
 export const metadata: Metadata = { title: "Assignment" };
 
@@ -32,12 +33,30 @@ export default async function AssignmentDetail({
   const { data: assignment } = await admin
     .from("classroom_assignments")
     .select(
-      "id, classroom_id, title, instructions, starts_at, due_at, max_marks, allow_resubmission, max_attempts, is_published, cases(slug, title), classrooms(name)",
+      "id, classroom_id, title, instructions, starts_at, due_at, max_marks, allow_resubmission, max_attempts, is_published, kind, question_ids, cases(slug, title), sql_exercises(slug, title), excel_exercises(slug, title), classrooms(name)",
     )
     .eq("id", id)
     .maybeSingle();
 
   if (!assignment) notFound();
+
+  // SQL, Excel and aptitude work is marked by the platform, not read and
+  // graded, so it gets a results table instead of the case review queue.
+  const target = assignmentTarget(assignment);
+  if (target.kind !== "case") {
+    const roomRow = Array.isArray(assignment.classrooms) ? assignment.classrooms[0] : assignment.classrooms;
+    return (
+      <AutoMarkedAssignment
+        id={id}
+        title={assignment.title ?? target.itemTitle}
+        roomName={(roomRow as { name?: string } | null)?.name ?? ""}
+        dueAt={assignment.due_at}
+        instructions={assignment.instructions}
+        isPublished={assignment.is_published}
+        target={target}
+      />
+    );
+  }
 
   const { data } = await admin.rpc("assignment_review_queue", { p_assignment: id });
   const queue = (data ?? []) as AssignmentReviewRow[];
@@ -253,6 +272,139 @@ export default async function AssignmentDetail({
           rows={rows}
         />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Results for work the platform marks itself: a solved SQL or Excel exercise,
+ * or an aptitude quiz scored against its key. No answer to read and no AI
+ * grade, so the page is who has done it, how they scored, and who has not
+ * started.
+ */
+async function AutoMarkedAssignment({
+  id,
+  title,
+  roomName,
+  dueAt,
+  instructions,
+  isPublished,
+  target,
+}: {
+  id: string;
+  title: string;
+  roomName: string;
+  dueAt: string | null;
+  instructions: string | null;
+  isPublished: boolean;
+  target: AssignmentTarget;
+}) {
+  const admin = createAdminClient();
+  const [{ data: queue }, { data: work }] = await Promise.all([
+    admin.rpc("assignment_review_queue", { p_assignment: id }),
+    admin
+      .from("assignment_submissions")
+      .select("user_id, auto_score, auto_max, attempt_number")
+      .eq("assignment_id", id),
+  ]);
+  const rows = (queue ?? []) as AssignmentReviewRow[];
+  const byUser = new Map((work ?? []).map((w) => [w.user_id, w]));
+  const done = rows.filter((r) => r.submitted_at);
+  const notStarted = rows.filter((r) => !r.submitted_at);
+  const quiz = target.kind === "aptitude";
+  const pcts = done
+    .map((r) => byUser.get(r.user_id))
+    .filter((w): w is NonNullable<typeof w> => Boolean(w?.auto_max))
+    .map((w) => (Number(w.auto_score) / Number(w.auto_max)) * 100);
+  const avg = pcts.length ? pcts.reduce((a, b) => a + b, 0) / pcts.length : null;
+
+  return (
+    <div>
+      <Link href="/teacher/assignments" className="text-sm text-muted-foreground hover:text-foreground">
+        ← Assignments
+      </Link>
+      <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {target.kindLabel}
+            {quiz ? ` · ${target.itemTitle}` : ""}
+            {roomName ? ` · ${roomName}` : ""}
+            {dueAt ? ` · due ${new Date(dueAt).toLocaleString()}` : ""}
+          </p>
+        </div>
+        {!isPublished ? <Badge variant="outline">Draft</Badge> : null}
+      </div>
+
+      {instructions ? (
+        <Card className="mt-4">
+          <CardContent className="p-4 text-sm">{instructions}</CardContent>
+        </Card>
+      ) : null}
+
+      {target.href ? (
+        <Link href={target.href} className="mt-3 inline-block text-sm underline underline-offset-4">
+          {quiz ? "Take the quiz yourself" : "Open the exercise yourself"}
+        </Link>
+      ) : null}
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        {[
+          [quiz ? "Submitted" : "Solved", `${done.length} / ${rows.length}`, `${notStarted.length} not yet`],
+          [quiz ? "Average score" : "Solve rate", quiz ? (avg !== null ? `${avg.toFixed(0)}%` : "—") : rows.length ? `${Math.round((done.length / rows.length) * 100)}%` : "—", quiz ? `${pcts.length} marked` : "of the batch"],
+          ["Marked by", "Platform", quiz ? "against the answer key" : "checked against a hidden dataset"],
+        ].map(([label, value, sub]) => (
+          <Card key={label}>
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground">{label}</p>
+              <p className="mt-1 text-2xl font-semibold tabular">{value}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Students ({formatNumber(rows.length)})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No students in this batch yet.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {rows.map((r) => {
+                const w = byUser.get(r.user_id);
+                return (
+                  <li key={r.user_id} className="flex flex-wrap items-center gap-3 py-2.5 text-sm">
+                    <span className="min-w-0 flex-1 truncate font-medium">{r.full_name ?? r.email}</span>
+                    {r.submitted_at ? (
+                      <>
+                        <span className="tabular">
+                          {quiz && w?.auto_max
+                            ? `${Number(w.auto_score)} / ${Number(w.auto_max)}`
+                            : "Solved"}
+                        </span>
+                        <span className="text-xs text-muted-foreground tabular">
+                          {quiz
+                            ? `attempt ${w?.attempt_number ?? 1}`
+                            : `${w?.attempt_number ?? 1} ${w?.attempt_number === 1 ? "try" : "tries"}`}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(r.submitted_at).toLocaleString()}
+                        </span>
+                        {r.is_late ? <Badge variant="outline">Late</Badge> : null}
+                      </>
+                    ) : (
+                      <Badge variant="outline" className="border-amber-500/40 text-amber-600">Not started</Badge>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

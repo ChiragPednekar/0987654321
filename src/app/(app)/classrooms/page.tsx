@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ClassroomForms } from "@/components/classroom/classroom-forms";
 import { JoinBatchModal } from "@/components/classroom/join-batch-modal";
 import { plural } from "@/lib/utils";
+import { assignmentTarget } from "@/lib/assignments";
 
 export const metadata: Metadata = {
   title: "Classrooms & Batches",
@@ -67,7 +68,7 @@ export default async function ClassroomsPage() {
   const { data: publicAssignments } = await admin
     .from("classroom_assignments")
     .select(
-      "id, title, instructions, created_at, classroom_id, created_by, cases(slug, title, domain, difficulty)",
+      "id, title, instructions, created_at, classroom_id, created_by, kind, question_ids, cases(slug, title, domain, difficulty), sql_exercises(slug, title), excel_exercises(slug, title)",
     )
     .eq("is_public", true)
     .eq("is_published", true)
@@ -297,7 +298,7 @@ export default async function ClassroomsPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 pt-2">
             {(publicAssignments ?? []).map((item) => {
-              const c = Array.isArray(item.cases) ? item.cases[0] : item.cases;
+              const target = assignmentTarget(item);
               const author = teacherMap.get(item.created_by ?? "") ?? "A teacher";
               return (
                 <Card key={item.id} className="p-4">
@@ -305,19 +306,21 @@ export default async function ClassroomsPage() {
                     Shared by {author}
                   </p>
                   <h3 className="mt-1 font-medium">
-                    {item.title ?? c?.title ?? "Shared work"}
+                    {item.title ?? target.itemTitle ?? "Shared work"}
                   </h3>
                   {item.instructions ? (
                     <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">
                       {item.instructions}
                     </p>
                   ) : null}
-                  {c?.slug ? (
+                  {/* An aptitude quiz is sat inside its own batch only, so a shared
+                      one has nothing to open from here. */}
+                  {target.href && target.kind !== "aptitude" ? (
                     <Link
-                      href={`/cases/${c.slug}`}
+                      href={target.href}
                       className="mt-3 inline-block text-sm underline underline-offset-4"
                     >
-                      Open the case
+                      Open the {target.kind === "case" ? "case" : "exercise"}
                     </Link>
                   ) : null}
                 </Card>
