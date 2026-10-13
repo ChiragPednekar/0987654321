@@ -4,6 +4,7 @@ import {
   END_REASON_LABEL,
   END_REASONS,
   endReason,
+  isBlockedWithoutFace,
   isCovered,
   NO_FACE_END_MS,
   observe,
@@ -113,8 +114,17 @@ describe("isCovered", () => {
     return px;
   };
 
-  it("sees a finger over the lens", () => {
+  it("sees a dark covered lens (shutter, dark tape)", () => {
     expect(isCovered(frame(() => 4))).toBe(true);
+  });
+
+  it("sees a finger or skin over the lens in ambient light", () => {
+    expect(isCovered(frame((i) => 35 + (i % 2)))).toBe(true);
+  });
+
+  it("sees tape, post-it notes, or paper over the lens", () => {
+    expect(isCovered(frame(() => 160))).toBe(true);
+    expect(isCovered(frame(() => 200))).toBe(true);
   });
 
   it("does not mistake a dim room for a covered lens", () => {
@@ -122,12 +132,22 @@ describe("isCovered", () => {
     expect(isCovered(frame((i) => (i % 7 === 0 ? 70 : 6)))).toBe(false);
   });
 
-  it("leaves an ordinary frame alone", () => {
-    expect(isCovered(frame(() => 120))).toBe(false);
+  it("leaves an ordinary frame with room contrast alone", () => {
+    expect(isCovered(frame((i) => (i % 2 === 0 ? 140 : 100)))).toBe(false);
   });
 
   it("does not call an empty frame covered", () => {
     expect(isCovered(new Uint8ClampedArray(0))).toBe(false);
+  });
+
+  it("catches loose camera obstruction when face detector confirmed 0 faces", () => {
+    // Loose hand or card held close to hide the face
+    const loose = frame((i) => 40 + Math.floor((i % 32) / 2));
+    expect(isBlockedWithoutFace(loose)).toBe(true);
+
+    // Normal student working/looking down: high natural scene contrast
+    const student = frame((i) => (i % 2 === 0 ? 160 : 60));
+    expect(isBlockedWithoutFace(student)).toBe(false);
   });
 });
 
@@ -157,6 +177,11 @@ describe("endReason", () => {
     expect(endReason(run(two).state)).toBe("multiple_faces");
     const dark = Array.from({ length: 3 }, () => ({ covered: true, faces: 0 }));
     expect(endReason(run(dark).state)).toBe("camera_covered");
+  });
+
+  it("ends the test once the camera is covered for two samples", () => {
+    expect(endReason(run([{ covered: true }]).state)).toBeNull();
+    expect(endReason(run([{ covered: true }, { covered: true }]).state)).toBe("camera_covered");
   });
 
   it("never ends a test for a book — rough work is allowed", () => {

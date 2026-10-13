@@ -35,6 +35,8 @@ const WINDOW = 5;
 const ACTIVATE_AT = 3;
 /** The same, for a phone. See "Why everything is debounced" above. */
 const PHONE_ACTIVATE_AT = 2;
+/** The same, for a covered/blocked lens: 2 hits in 5 samples (~3s). */
+const COVERED_ACTIVATE_AT = 2;
 /** Hits in the window at or below which it switches off again. */
 const RELEASE_AT = 1;
 
@@ -168,7 +170,7 @@ export function observe(
    * the face detector finds nobody, and counting that as "nobody at the desk"
    * as well would report one act twice under two names.
    */
-  const covered = step(state.covered, sample.covered);
+  const covered = step(state.covered, sample.covered, COVERED_ACTIVATE_AT);
   const seeing = !sample.covered;
 
   const noFace = step(state.noFace, seeing && sample.faces === 0);
@@ -268,36 +270,121 @@ export function endReason(state: TrackerState): EndReason | null {
 }
 
 /**
- * Brightness below which a frame counts as covered, on a 0-255 scale.
- *
- * A dim room lit only by the laptop screen still puts a face at roughly 30-60.
- * A finger or tape over the lens reads close to zero and almost perfectly
- * flat, which is why the spread matters as much as the mean: a dark but real
- * scene still has edges in it.
- */
-const COVERED_MEAN_BELOW = 16;
-const COVERED_SPREAD_BELOW = 8;
-
-/**
- * Decides from raw RGBA pixels whether the lens is covered.
+ * Decides from raw RGBA pixels whether the lens is covered or blocked.
  *
  * Takes a tiny frame — the hook scales the video down to 32×24 first — so this
  * costs a few hundred additions, not a pass over a full HD frame.
+ *
+ * Detects:
+ * - Pitch-dark or shadowed lens (shutter closed, dark tape, dark room): low brightness + low spread.
+ * - Hands, fingers, skin pressed against lens: illuminated by the screen/ambient light,
+ *   producing a blurry, flat field with very low spread and near-zero neighbor gradient.
+ * - Tape, stickers, paper, post-it notes, cloth, cards: flat color/brightness field
+ *   with almost zero spread across the frame.
+ * - Overexposed / blinded lens (flashlight, white tape right against sensor).
  */
 export function isCovered(rgba: ArrayLike<number>): boolean {
   const pixels = Math.floor(rgba.length / 4);
-  if (pixels === 0) return false;
+  if (pixels < 16) return false;
 
   let sum = 0;
   let sumSq = 0;
+  let diffSum = 0;
+  let diffCount = 0;
+  const width = 32;
+  const height = 24;
+
+  const luma = new Float32Array(pixels);
   for (let i = 0; i < pixels; i++) {
     const o = i * 4;
     // Rec. 601 luma — what the eye reads as brightness.
     const y = 0.299 * rgba[o] + 0.587 * rgba[o + 1] + 0.114 * rgba[o + 2];
+    luma[i] = y;
     sum += y;
     sumSq += y * y;
   }
+
   const mean = sum / pixels;
   const spread = Math.sqrt(Math.max(0, sumSq / pixels - mean * mean));
-  return mean < COVERED_MEAN_BELOW && spread < COVERED_SPREAD_BELOW;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (idx >= pixels) break;
+      const y0 = luma[idx];
+      if (x + 1 < width && idx + 1 < pixels) {
+        diffSum += Math.abs(luma[idx + 1] - y0);
+        diffCount++;
+      }
+      if (y + 1 < height && idx + width < pixels) {
+        diffSum += Math.abs(luma[idx + width] - y0);
+        diffCount++;
+      }
+    }
+  }
+  const grad = diffCount > 0 ? diffSum / diffCount : 0;
+
+  // 1. Dark (shutter, black tape, dark room) — must be flat (not a face lit by screen in a dark room)
+  if (mean < 35 && spread < 12) return true;
+
+  // 2. Extremely flat (paper, tape, post-it, finger/hand pressed directly over lens)
+  if (spread < 8.0 && grad < 3.0) return true;
+
+  // 3. Low spread with low gradient
+  if (spread < 10.0 && grad < 2.0) return true;
+
+  // 4. Overexposed / blinded (whiteout / flashlight against sensor)
+  if (mean > 240 && spread < 10.0) return true;
+
+  return false;
+}
+
+/**
+ * Checks whether the camera is blocked or obstructed when the face detector
+ * already confirmed that 0 faces are in view.
+ *
+ * Catches looser obstruction (e.g. an object or palm held a few inches in front
+ * of the camera to hide from the detector).
+ */
+export function isBlockedWithoutFace(rgba: ArrayLike<number>): boolean {
+  const pixels = Math.floor(rgba.length / 4);
+  if (pixels < 16) return false;
+
+  let sum = 0;
+  let sumSq = 0;
+  let diffSum = 0;
+  let diffCount = 0;
+  const width = 32;
+  const height = 24;
+
+  const luma = new Float32Array(pixels);
+  for (let i = 0; i < pixels; i++) {
+    const o = i * 4;
+    const y = 0.299 * rgba[o] + 0.587 * rgba[o + 1] + 0.114 * rgba[o + 2];
+    luma[i] = y;
+    sum += y;
+    sumSq += y * y;
+  }
+
+  const mean = sum / pixels;
+  const spread = Math.sqrt(Math.max(0, sumSq / pixels - mean * mean));
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (idx >= pixels) break;
+      const y0 = luma[idx];
+      if (x + 1 < width && idx + 1 < pixels) {
+        diffSum += Math.abs(luma[idx + 1] - y0);
+        diffCount++;
+      }
+      if (y + 1 < height && idx + width < pixels) {
+        diffSum += Math.abs(luma[idx + width] - y0);
+        diffCount++;
+      }
+    }
+  }
+  const grad = diffCount > 0 ? diffSum / diffCount : 0;
+
+  return (spread < 13.0 && grad < 3.5) || (mean < 45 && spread < 15.0);
 }

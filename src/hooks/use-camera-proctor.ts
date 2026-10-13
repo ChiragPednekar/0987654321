@@ -5,6 +5,7 @@ import type { FaceDetector, ObjectDetector } from "@mediapipe/tasks-vision";
 import {
   createTracker,
   endReason,
+  isBlockedWithoutFace,
   isCovered,
   observe,
   SAMPLE_INTERVAL_MS,
@@ -370,7 +371,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, 32, 24);
-    const covered = isCovered(ctx.getImageData(0, 0, 32, 24).data);
+    const imageData = ctx.getImageData(0, 0, 32, 24).data;
+    let covered = isCovered(imageData);
 
     let faces = 0;
     let phone = false;
@@ -393,6 +395,12 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       } catch {
         // A frame the models choke on is skipped, not counted as anything.
         return;
+      }
+
+      // If no face was seen, check if the camera was blocked or obstructed
+      // (e.g. an object or hand held close to hide the face from detection).
+      if (faces === 0 && !phone && !book && isBlockedWithoutFace(imageData)) {
+        covered = true;
       }
     }
 
