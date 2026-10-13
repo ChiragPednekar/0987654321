@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canOpenExercise } from "@/lib/teacher-exercises";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { markFormula, type Grid } from "@/lib/excel/runner";
 import { signalsSchema } from "@/lib/integrity-request";
@@ -52,12 +53,13 @@ export async function POST(request: NextRequest) {
 
   const { data: exercise } = await admin
     .from("excel_exercises")
-    .select("id, grid, hidden_grid, solution_formula, tolerance")
+    .select("id, grid, hidden_grid, solution_formula, tolerance, is_published, created_by")
     .eq("slug", body.slug)
-    .eq("is_published", true)
     .maybeSingle();
 
-  if (!exercise) return NextResponse.json({ error: "Exercise not found." }, { status: 404 });
+  if (!exercise || !(await canOpenExercise(admin, "excel", exercise, user.id))) {
+    return NextResponse.json({ error: "Exercise not found." }, { status: 404 });
+  }
 
   const verdict = markFormula(
     {

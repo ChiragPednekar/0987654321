@@ -4,6 +4,9 @@ import { requireTeacherActor, batchesTaughtBy } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { QuestionEditor } from "@/components/teacher/question-editor";
 import { AptitudeQuestionForm } from "@/components/teacher/aptitude-question-form";
+import { ExerciseForm } from "@/components/teacher/exercise-form";
+import { STORE_SCHEMA_NOTE } from "@/lib/sql/datasets";
+import { EXCEL_DATASETS } from "@/lib/excel/datasets";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Add a question" };
@@ -11,7 +14,11 @@ export const metadata: Metadata = { title: "Add a question" };
 const KINDS = [
   { value: "case", label: "Case or written question", blurb: "Graded by AI against a rubric you write." },
   { value: "aptitude", label: "Aptitude question", blurb: "Multiple choice, marked against your answer key." },
+  { value: "sql", label: "SQL exercise", blurb: "Students write a query; marked by running it." },
+  { value: "excel", label: "Excel exercise", blurb: "Students write a formula; marked by evaluating it." },
 ] as const;
+
+type Kind = (typeof KINDS)[number]["value"];
 
 /**
  * Where any teacher adds their own questions — reached from "Add question" in
@@ -25,7 +32,7 @@ export default async function NewQuestionPage({
   searchParams: Promise<{ type?: string }>;
 }) {
   const { type } = await searchParams;
-  const kind = type === "aptitude" ? "aptitude" : "case";
+  const kind: Kind = KINDS.find((k) => k.value === type)?.value ?? "case";
 
   const actor = await requireTeacherActor();
   const admin = createAdminClient();
@@ -46,7 +53,7 @@ export default async function NewQuestionPage({
         Add them to a batch from the library, like any other question.
       </p>
 
-      <div className="mt-6 grid gap-2 sm:grid-cols-2" role="tablist" aria-label="Kind of question">
+      <div className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="tablist" aria-label="Kind of question">
         {KINDS.map((k) => (
           <Link
             key={k.value}
@@ -69,6 +76,15 @@ export default async function NewQuestionPage({
       <div className="mt-6">
         {kind === "aptitude" ? (
           <AptitudeQuestionForm />
+        ) : kind === "sql" || kind === "excel" ? (
+          <ExerciseForm
+            key={kind}
+            kind={kind}
+            storeSchemaNote={STORE_SCHEMA_NOTE}
+            // Only the sheet students see. The second sheet is the answer key's
+            // other half and never leaves the server.
+            sheets={EXCEL_DATASETS.map((d) => ({ key: d.key, label: d.label, grid: d.grid }))}
+          />
         ) : (
           <QuestionEditor batches={batches ?? []} />
         )}

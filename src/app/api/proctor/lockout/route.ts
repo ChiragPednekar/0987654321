@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { END_REASONS, type EndReason } from "@/lib/camera-proctor";
 import { signalsSchema } from "@/lib/integrity-request";
+import { activeLockout, recordLockout } from "@/lib/exam-lockouts";
 
 export const dynamic = "force-dynamic";
 
@@ -39,17 +40,9 @@ export async function GET(request: NextRequest) {
   const path = pathSchema.safeParse(request.nextUrl.searchParams.get("path"));
   if (!path.success) return NextResponse.json({ error: "Invalid path" }, { status: 400 });
 
-  const { data } = await createAdminClient()
-    .from("exam_lockouts")
-    .select("reason, created_at")
-    .eq("user_id", user.id)
-    .eq("path", path.data)
-    .is("reopened_at", null)
-    .maybeSingle();
-
-  return NextResponse.json(
-    data ? { locked: true, reason: data.reason, at: data.created_at } : { locked: false },
-  );
+  // A lock past its 24 hours answers "not locked": the page opens again.
+  const { state } = await activeLockout(createAdminClient(), user.id, path.data);
+  return NextResponse.json(state ? { locked: true, ...state } : { locked: false });
 }
 
 /**
@@ -61,8 +54,11 @@ export async function GET(request: NextRequest) {
  * freeze survive the obvious reload. The one thing a forged request can do is
  * lock its own sender out, which needs no defending against.
  *
- * Idempotent: an open lock for the same page is a conflict on the partial
- * unique index, and the earliest ending is the one kept.
+ * Each ending is a strike on this page: the first two lock it for 24 hours,
+ * the third for good (see recordLockout). Idempotent while a lock is in
+ * force — a second fire returns the lock it found rather than adding a
+ * strike. The response is the lock, so the ended screen can say when the
+ * student may try again.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -78,18 +74,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const { error } = await createAdminClient().from("exam_lockouts").insert({
-    user_id: user.id,
+  const state = await recordLockout(createAdminClient(), {
+    userId: user.id,
     path: body.path,
     reason: body.reason,
     signals: body.signals,
   });
-
-  // 23505: already locked out of this page, which is the expected path on a
-  // second fire and not a failure.
-  if (error && error.code !== "23505") {
-    console.error("[proctor] lockout failed", error.message);
-    return NextResponse.json({ error: "Could not record" }, { status: 500 });
-  }
-  return NextResponse.json({ ok: true });
+  if (!state) return NextResponse.json({ error: "Could not record" }, { status: 500 });
+  return NextResponse.json({ ok: true, ...state });
 }

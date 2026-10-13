@@ -689,6 +689,8 @@ export type SqlExercisePublic = {
 export type SqlExerciseRow = SqlExercisePublic & {
   hidden_setup_sql: string;
   solution_sql: string;
+  /** The teacher who wrote it; null for the platform's own (068). */
+  created_by: string | null;
 }
 
 export type SqlAttemptRow = {
@@ -898,6 +900,8 @@ export type ExcelExercisePublic = {
 export type ExcelExerciseRow = ExcelExercisePublic & {
   hidden_grid: ExcelCell[][];
   solution_formula: string;
+  /** The teacher who wrote it; null for the platform's own (068). */
+  created_by: string | null;
 }
 
 export type ExcelAttemptRow = {
@@ -2416,6 +2420,10 @@ export type ExamLockoutRow = {
   created_at: string;
   reopened_at: string | null;
   reopened_by: string | null;
+  /** 1 for the first ending on this page, 2 for the next… (068). */
+  strike: number;
+  /** When the lock lifts by itself; null on the strike that locks it for good. */
+  expires_at: string | null;
 };
 
 /** Platform-wide operational totals (public.platform_overview). */

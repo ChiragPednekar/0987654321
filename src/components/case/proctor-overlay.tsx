@@ -280,8 +280,9 @@ function CameraConsent({ camera }: { camera: CameraApi }) {
         The camera must stay on for the whole test. Your test ends at once,
         and cannot be continued, if you switch tabs or leave this window, a
         phone or another person is seen, the camera is covered or switched
-        off, or you are out of view for over a minute. Only your teacher can
-        reopen it.
+        off, or you are out of view for over a minute. The question is then
+        blocked for 24 hours; the third time it is ended, it is blocked for
+        good.
       </p>
       {state && <p className={`mt-1.5 ${state.tone}`}>{state.text}</p>}
     </div>

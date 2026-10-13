@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canOpenExercise } from "@/lib/teacher-exercises";
 import { Badge } from "@/components/ui/badge";
 import { ExcelWorkbench } from "@/components/excel/excel-workbench";
 import { ALLOWED } from "@/lib/excel/functions";
@@ -30,12 +31,11 @@ export default async function ExcelExercisePage({
     // exercise; /api/excel/open hands them over once exam mode is armed. A
     // prop rendered here would travel in the page payload and be readable
     // without pressing Start.
-    .select("id, title, topic, difficulty")
+    .select("id, title, topic, difficulty, is_published, created_by")
     .eq("slug", slug)
-    .eq("is_published", true)
     .maybeSingle();
 
-  if (!exercise) notFound();
+  if (!exercise || !(await canOpenExercise(admin, "excel", exercise, user.id))) notFound();
 
   const { data: attempts } = await admin
     .from("excel_attempts")

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canOpenExercise } from "@/lib/teacher-exercises";
 import { Badge } from "@/components/ui/badge";
 import { SqlWorkbench } from "@/components/sql/sql-workbench";
 
@@ -29,12 +30,11 @@ export default async function SqlExercisePage({
     // the exercise, and they are handed over by /api/sql/open once the student
     // has armed exam mode — a prop rendered here would travel in the page
     // payload and be readable without pressing Start.
-    .select("id, title, topic, difficulty")
+    .select("id, title, topic, difficulty, is_published, created_by")
     .eq("slug", slug)
-    .eq("is_published", true)
     .maybeSingle();
 
-  if (!exercise) notFound();
+  if (!exercise || !(await canOpenExercise(admin, "sql", exercise, user.id))) notFound();
 
   const { data: attempts } = await admin
     .from("sql_attempts")

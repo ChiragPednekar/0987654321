@@ -17,7 +17,13 @@ export default async function QuestionBank() {
   const actor = await requireTeacherActor();
   const admin = createAdminClient();
 
-  const [{ data: mine }, { count: platformCount }, { data: myAptitude }] = await Promise.all([
+  const [
+    { data: mine },
+    { count: platformCount },
+    { data: myAptitude },
+    { data: mySql },
+    { data: myExcel },
+  ] = await Promise.all([
     admin
       .from("cases")
       .select("id, slug, title, domain, difficulty, format, is_published, created_at")
@@ -35,7 +41,23 @@ export default async function QuestionBank() {
       .eq("created_by", actor.id)
       .order("created_at", { ascending: false })
       .limit(200),
+    admin
+      .from("sql_exercises")
+      .select("id, slug, title, topic, difficulty, created_at")
+      .eq("created_by", actor.id)
+      .order("created_at", { ascending: false })
+      .limit(200),
+    admin
+      .from("excel_exercises")
+      .select("id, slug, title, topic, difficulty, created_at")
+      .eq("created_by", actor.id)
+      .order("created_at", { ascending: false })
+      .limit(200),
   ]);
+  const myExercises = [
+    ...(mySql ?? []).map((e) => ({ ...e, kind: "sql" as const })),
+    ...(myExcel ?? []).map((e) => ({ ...e, kind: "excel" as const })),
+  ].sort((a, b) => b.created_at.localeCompare(a.created_at));
   const trackLabel = new Map(OBJECTIVE_TRACKS.map((t) => [t.value, t.label]));
 
   return (
@@ -138,6 +160,43 @@ export default async function QuestionBank() {
                 {q.difficulty}
               </span>
               <span className="text-xs text-muted-foreground">{timeAgo(q.created_at)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2 className="mt-8 text-sm font-semibold text-foreground">
+        Your SQL and Excel exercises
+      </h2>
+      {myExercises.length === 0 ? (
+        <Card className="mt-3">
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            None yet. Write an{" "}
+            <Link href="/teacher/questions/new?type=sql" className="underline underline-offset-4">
+              SQL exercise
+            </Link>{" "}
+            or an{" "}
+            <Link href="/teacher/questions/new?type=excel" className="underline underline-offset-4">
+              Excel exercise
+            </Link>
+            , on the platform&apos;s data or your own.
+          </CardContent>
+        </Card>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {myExercises.map((e) => (
+            <li
+              key={`${e.kind}:${e.id}`}
+              className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3"
+            >
+              <PickToggle kind={e.kind} id={e.id} title={e.title} />
+              <Link href={`/${e.kind}/${e.slug}`} className="font-medium hover:underline">{e.title}</Link>
+              <Badge variant="outline">{e.kind === "sql" ? "SQL" : "Excel"}</Badge>
+              <span className={cn("text-xs", DIFFICULTY_CLASS[e.difficulty as Difficulty])}>
+                {e.difficulty}
+              </span>
+              <span className="text-xs text-muted-foreground">{e.topic}</span>
+              <span className="ml-auto text-xs text-muted-foreground">{timeAgo(e.created_at)}</span>
             </li>
           ))}
         </ul>

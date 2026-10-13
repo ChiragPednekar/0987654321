@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canOpenExercise } from "@/lib/teacher-exercises";
 import { startActivityAttempt } from "@/lib/proctoring";
 import { lockoutResponse } from "@/lib/exam-lockouts";
 
@@ -40,11 +41,11 @@ export async function POST(request: NextRequest) {
 
   const { data: exercise } = await admin
     .from("excel_exercises")
-    .select("id, prompt, grid, answer_label, hint, is_published")
+    .select("id, prompt, grid, answer_label, hint, is_published, created_by")
     .eq("slug", body.slug)
     .maybeSingle();
 
-  if (!exercise || !exercise.is_published) {
+  if (!exercise || !(await canOpenExercise(admin, "excel", exercise, user.id))) {
     return NextResponse.json({ error: "Exercise not found." }, { status: 404 });
   }
 

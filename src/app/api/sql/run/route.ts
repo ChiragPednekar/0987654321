@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canOpenExercise } from "@/lib/teacher-exercises";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { runQuery } from "@/lib/sql/runner";
 import { lockoutResponse } from "@/lib/exam-lockouts";
@@ -48,12 +49,13 @@ export async function POST(request: NextRequest) {
 
   const { data: exercise } = await admin
     .from("sql_exercises")
-    .select("setup_sql")
+    .select("setup_sql, id, is_published, created_by")
     .eq("slug", body.slug)
-    .eq("is_published", true)
     .maybeSingle();
 
-  if (!exercise) return NextResponse.json({ error: "Exercise not found." }, { status: 404 });
+  if (!exercise || !(await canOpenExercise(admin, "sql", exercise, user.id))) {
+    return NextResponse.json({ error: "Exercise not found." }, { status: 404 });
+  }
 
   const run = await runQuery(exercise.setup_sql, body.query);
   if (!run.ok) return NextResponse.json({ error: run.error }, { status: 200 });

@@ -4,7 +4,7 @@ import * as React from "react";
 import { EMPTY_SIGNALS, type ProctorSignals } from "@/lib/integrity";
 import { useCameraProctor, type CameraApi } from "@/hooks/use-camera-proctor";
 import type { EndReason } from "@/lib/camera-proctor";
-import { setEndedTest } from "@/hooks/proctor-ended-store";
+import { setEndedTest, type EndedTest } from "@/hooks/proctor-ended-store";
 
 /**
  * Watches how an answer is being written.
@@ -67,7 +67,7 @@ export interface ProctorState {
    * set, the surface shows the ended screen and nothing can be written or
    * started — see ProctorEnded.
    */
-  ended: { reason: EndReason; at: string } | null;
+  ended: EndedTest | null;
 }
 
 export interface ProctorApi extends ProctorState {
@@ -446,7 +446,9 @@ export function useProctor(enabled: boolean): ProctorApi {
 
   /**
    * A lock from an earlier visit. Without this the freeze would last exactly
-   * until the student pressed reload. Asked once per page; a failed lookup
+   * until the student pressed reload. The server answers "not locked" once a
+   * lock's 24 hours are up, so the page opens again by itself then — under the
+   * same rules, and the next ending is the next strike. Asked once per page; a failed lookup
    * leaves the page unlocked rather than refusing an honest student the test.
    */
   React.useEffect(() => {
@@ -455,10 +457,16 @@ export function useProctor(enabled: boolean): ProctorApi {
     const path = window.location.pathname;
     fetch(`/api/proctor/lockout?path=${encodeURIComponent(path)}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((lock: { locked?: boolean; reason?: EndReason; at?: string } | null) => {
+      .then((lock: ({ locked?: boolean } & Partial<EndedTest>) | null) => {
         if (cancelled || !lock?.locked || !lock.reason) return;
         endedRef.current = true;
-        setEnded({ reason: lock.reason, at: lock.at ?? new Date().toISOString() });
+        setEnded({
+          reason: lock.reason,
+          at: lock.at ?? new Date().toISOString(),
+          until: lock.until ?? null,
+          strike: lock.strike,
+          maxStrikes: lock.maxStrikes,
+        });
         // The lookup can land after a quick Start press.
         if (examRef.current) stop();
       })
@@ -490,7 +498,17 @@ export function useProctor(enabled: boolean): ProctorApi {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path: window.location.pathname, reason, signals: report }),
         keepalive: true,
-      }).catch(() => {});
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        // The server decides which strike this was and when the page opens
+        // again; the ended screen fills that in once it knows.
+        .then((lock: Partial<EndedTest> | null) => {
+          if (!lock?.reason) return;
+          setEnded((prev) =>
+            prev && { ...prev, until: lock.until ?? null, strike: lock.strike, maxStrikes: lock.maxStrikes },
+          );
+        })
+        .catch(() => {});
     },
     [stop],
   );

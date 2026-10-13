@@ -154,13 +154,15 @@ export async function POST(request: NextRequest) {
     const table = kind === "sql" ? "sql_exercises" : "excel_exercises";
     const { data: exercises } = await admin
       .from(table)
-      .select("id, title, is_published")
+      .select("id, title, is_published, created_by")
       .in("id", wanted);
     const byId = new Map((exercises ?? []).map((e) => [e.id, e]));
     const already = kind === "sql" ? assignedSql : assignedExcel;
     for (const id of wanted) {
       const e = byId.get(id);
-      if (!e || !e.is_published) {
+      // Platform exercises are published; a teacher's own is not, and only
+      // its author may assign it.
+      if (!e || !(e.is_published || e.created_by === actor.id)) {
         skipped.push({ title: e?.title ?? `An ${kind.toUpperCase()} exercise`, reason: "is not available" });
       } else if (already.has(id)) {
         skipped.push({ title: e.title, reason: "is already assigned to this batch" });

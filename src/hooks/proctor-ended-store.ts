@@ -16,6 +16,13 @@ import type { EndReason } from "@/lib/camera-proctor";
 export interface EndedTest {
   reason: EndReason;
   at: string;
+  /**
+   * When the page opens again; null when it never will. Undefined until the
+   * server has answered — the freeze does not wait for it.
+   */
+  until?: string | null;
+  strike?: number;
+  maxStrikes?: number;
 }
 
 let current: EndedTest | null = null;

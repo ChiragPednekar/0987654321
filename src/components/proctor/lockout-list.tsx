@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { ReopenTestButton } from "@/components/proctor/reopen-test-button";
 import { END_REASON_LABEL } from "@/lib/camera-proctor";
 import type { LockoutView } from "@/lib/exam-lockouts";
+import { MAX_STRIKES } from "@/lib/exam-lockouts";
 import { timeAgo } from "@/lib/utils";
 
 const PHOTO_LABEL: Record<string, string> = {
@@ -38,14 +39,14 @@ export function LockoutList({ rows, failed }: { rows: LockoutView[]; failed: boo
         <li
           key={row.id}
           className={`flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:justify-between ${
-            row.reopenedAt ? "opacity-60" : ""
+            row.active ? "" : "opacity-60"
           }`}
         >
           <div className="min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <ShieldX className="size-4 text-danger" aria-hidden />
               <span className="text-sm font-medium">{row.student.name}</span>
-              {row.reopenedAt ? <Badge variant="outline">reopened</Badge> : <Badge variant="destructive">ended</Badge>}
+              <LockBadge row={row} />
             </div>
             <p className="text-xs text-muted-foreground">
               {END_REASON_LABEL[row.reason]} · {row.surface} ·{" "}
@@ -77,9 +78,31 @@ export function LockoutList({ rows, failed }: { rows: LockoutView[]; failed: boo
               </div>
             )}
           </div>
-          {!row.reopenedAt && <ReopenTestButton lockoutId={row.id} />}
+          {row.active && <ReopenTestButton lockoutId={row.id} />}
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Where this ending stands. Strikes 1 and 2 lift by themselves after 24 hours;
+ * the third is permanent until someone reopens it.
+ */
+function LockBadge({ row }: { row: LockoutView }) {
+  const strike = `strike ${row.strike} of ${MAX_STRIKES}`;
+  if (row.reopenedAt) return <Badge variant="outline">reopened</Badge>;
+  if (!row.active) return <Badge variant="outline">lifted after 24h · {strike}</Badge>;
+  if (row.expiresAt === null) return <Badge variant="destructive">blocked for good · {strike}</Badge>;
+  return (
+    <Badge variant="destructive">
+      blocked until{" "}
+      {new Date(row.expiresAt).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        dateStyle: "medium",
+        timeStyle: "short",
+      })}{" "}
+      · {strike}
+    </Badge>
   );
 }

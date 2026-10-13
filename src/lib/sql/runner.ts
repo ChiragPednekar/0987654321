@@ -311,3 +311,77 @@ export async function runQuery(setup: string, query: string): Promise<RunResult>
     db?.close();
   }
 }
+
+// ---------------------------------------------------------------------------
+// Teacher datasets
+// ---------------------------------------------------------------------------
+
+/** Words a teacher's setup may not contain, outside string literals. */
+const SETUP_FORBIDDEN = [
+  "select", "with", "recursive", "attach", "detach", "pragma", "trigger",
+  "view", "vacuum", "update", "delete", "drop", "alter", "replace",
+  "load_extension", "randomblob", "zeroblob",
+];
+
+/** Rows across all tables. A dataset is something a student reads. */
+export const MAX_SETUP_ROWS = 2_000;
+
+export interface SetupTable {
+  name: string;
+  columns: string[];
+  rows: number;
+}
+
+/**
+ * Checks a teacher-written dataset: CREATE TABLE and INSERT … VALUES only.
+ *
+ * The setup runs on every Run and Submit a student makes, so it has to be
+ * plain data. A SELECT or a recursive CTE could insert millions of rows and
+ * make every attempt slow; the deny-list keeps it to literals, scanned with
+ * string literals blanked out so a product called 'Select pack' is fine.
+ * Then it is built once, and its tables, columns and size are reported.
+ */
+export async function inspectSetup(
+  setup: string,
+): Promise<{ ok: true; tables: SetupTable[] } | { ok: false; error: string }> {
+  const scanned = setup
+    .replace(/'(?:[^']|'')*'/g, "''")
+    .replace(/--[^\n]*/g, " ")
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .toLowerCase();
+  for (const word of SETUP_FORBIDDEN) {
+    if (new RegExp(`\\b${word}\\b`).test(scanned)) {
+      return {
+        ok: false,
+        error: `${word.toUpperCase()} is not allowed in a dataset — use CREATE TABLE and INSERT … VALUES only.`,
+      };
+    }
+  }
+
+  const SQL = await getSql();
+  let db: Database | null = null;
+  try {
+    db = new SQL.Database();
+    db.run(setup);
+    const names = (db.exec("select name from sqlite_master where type = 'table' order by name")[0]
+      ?.values ?? []).map((v) => String(v[0]));
+    if (names.length === 0) return { ok: false, error: "The dataset creates no tables." };
+
+    const tables: SetupTable[] = names.map((name) => {
+      const quoted = `"${name.replace(/"/g, '""')}"`;
+      const columns = (db!.exec(`select name from pragma_table_info('${name.replace(/'/g, "''")}')`)[0]
+        ?.values ?? []).map((v) => String(v[1] ?? v[0]));
+      const rows = Number(db!.exec(`select count(*) from ${quoted}`)[0]?.values[0]?.[0] ?? 0);
+      return { name, columns, rows };
+    });
+    const total = tables.reduce((n, t) => n + t.rows, 0);
+    if (total > MAX_SETUP_ROWS) {
+      return { ok: false, error: `The dataset has ${total} rows; keep it under ${MAX_SETUP_ROWS}.` };
+    }
+    return { ok: true, tables };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "The dataset failed to load." };
+  } finally {
+    db?.close();
+  }
+}

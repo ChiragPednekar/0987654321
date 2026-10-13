@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canOpenExercise } from "@/lib/teacher-exercises";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { compareResults, runQuery } from "@/lib/sql/runner";
 import { signalsSchema } from "@/lib/integrity-request";
@@ -57,12 +58,13 @@ export async function POST(request: NextRequest) {
 
   const { data: exercise } = await admin
     .from("sql_exercises")
-    .select("id, setup_sql, hidden_setup_sql, solution_sql, order_matters")
+    .select("id, setup_sql, hidden_setup_sql, solution_sql, order_matters, is_published, created_by")
     .eq("slug", body.slug)
-    .eq("is_published", true)
     .maybeSingle();
 
-  if (!exercise) return NextResponse.json({ error: "Exercise not found." }, { status: 404 });
+  if (!exercise || !(await canOpenExercise(admin, "sql", exercise, user.id))) {
+    return NextResponse.json({ error: "Exercise not found." }, { status: 404 });
+  }
 
   /**
    * Integrity is assessed once, on the attempt that solves the exercise.

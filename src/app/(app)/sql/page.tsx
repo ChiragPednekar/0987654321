@@ -23,11 +23,12 @@ export default async function SqlIndex() {
   // Teachers can tick exercises here and add them to a batch.
   const profile = await getCurrentUser();
   const canAssign = profile?.role === "teacher" || profile?.role === "admin";
-  const [{ data: exercises }, { data: solved }] = await Promise.all([
+  const [{ data: rawExercises }, { data: solved }] = await Promise.all([
     admin
       .from("sql_exercises")
-      .select("id, slug, title, prompt, topic, difficulty, sort_order")
-      .eq("is_published", true)
+      .select("id, slug, title, prompt, topic, difficulty, sort_order, created_by")
+      // A teacher also sees the exercises they wrote, which are not published.
+      .or(canAssign ? `is_published.eq.true,created_by.eq.${user.id}` : "is_published.eq.true")
       .order("sort_order"),
     admin
       .from("sql_attempts")
@@ -35,6 +36,10 @@ export default async function SqlIndex() {
       .eq("user_id", user.id)
       .eq("correct", true),
   ]);
+  // Their own first, so a teacher who has just written one finds it.
+  const exercises = (rawExercises ?? []).sort(
+    (a, b) => Number(b.created_by === user.id) - Number(a.created_by === user.id),
+  );
 
   const { data: ids } = await admin.from("sql_exercises").select("id, slug");
   const slugOf = new Map((ids ?? []).map((e) => [e.id, e.slug]));
@@ -66,6 +71,14 @@ export default async function SqlIndex() {
       </Card>
 
       {canAssign && <PickHint noun="exercises" />}
+      {canAssign && (
+        <p className="mt-3 text-sm">
+          <Link href="/teacher/questions/new?type=sql" className="underline underline-offset-4">
+            Write your own SQL exercise
+          </Link>
+          <span className="text-muted-foreground"> — it stays private to you and the batches you add it to.</span>
+        </p>
+      )}
       <p className="mt-6 text-sm text-muted-foreground">
         {plural(done.size, "exercise")} solved of {(exercises ?? []).length}.
       </p>
@@ -86,6 +99,7 @@ export default async function SqlIndex() {
                     <p className="font-medium">{e.title}</p>
                     <Badge variant="outline">{e.difficulty}</Badge>
                     <Badge variant="secondary">{e.topic}</Badge>
+                    {e.created_by === user.id && <Badge variant="outline">Yours</Badge>}
                   </div>
                   <p className="mt-1.5 text-sm text-muted-foreground">{e.prompt}</p>
                 </div>
