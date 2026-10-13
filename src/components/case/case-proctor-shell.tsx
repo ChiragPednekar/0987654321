@@ -52,24 +52,31 @@ export function CaseProctorShell({
   const proctor = useProctor(enabled);
 
   const [tab, setTab] = React.useState(defaultTab);
+  const [prevDefaultTab, setPrevDefaultTab] = React.useState(defaultTab);
   const [completed, setCompleted] = React.useState(hasSubmissionParam);
+  const [prevHasSubmission, setPrevHasSubmission] = React.useState(hasSubmissionParam);
   const [startedAt, setStartedAt] = React.useState(() => Date.now());
   const [elapsed, setElapsed] = React.useState(0);
 
   // Sync tab when navigating to `?submission=...#review` after submitting.
-  React.useEffect(() => {
+  if (prevDefaultTab !== defaultTab) {
+    setPrevDefaultTab(defaultTab);
     setTab(defaultTab);
+  }
+  if (prevHasSubmission !== hasSubmissionParam) {
+    setPrevHasSubmission(hasSubmissionParam);
     if (hasSubmissionParam) setCompleted(true);
-  }, [defaultTab, hasSubmissionParam]);
+  }
 
-  // Reset and stamp the start clock when exam mode begins.
+  const handleStart = React.useCallback(async () => {
+    setCompleted(false);
+    setStartedAt(Date.now());
+    setElapsed(0);
+    await proctor.start();
+  }, [proctor]);
+
   React.useEffect(() => {
     if (!enabled || !proctor.examMode) return;
-    const now = Date.now();
-    setCompleted(false);
-    setStartedAt(now);
-    setElapsed(0);
-
     void fetch("/api/attempts/start", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -114,7 +121,7 @@ export function CaseProctorShell({
       <ProctorGate
         camera={proctor.camera}
         starting={proctor.starting}
-        onStart={proctor.start}
+        onStart={handleStart}
       />
     );
   }
