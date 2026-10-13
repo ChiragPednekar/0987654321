@@ -32,8 +32,9 @@ import {
   type ModelCell,
 } from "@/components/case/model-workspace";
 import { CaseChat } from "@/components/case/case-chat";
+import { CaseProctorShell } from "@/components/case/case-proctor-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
 import { cn, initials, plural, timeAgo, truncate } from "@/lib/utils";
@@ -438,7 +439,13 @@ export default async function CaseDetailPage({
         </div>
       </div>
 
-      <Tabs defaultValue={query.submission ? "review" : "problem"}>
+      <CaseProctorShell
+        caseId={caseData.id}
+        signedIn={Boolean(profile)}
+        entitled={entitled}
+        defaultTab={query.submission ? "review" : "problem"}
+        hasSubmissionParam={Boolean(query.submission && selectedScore)}
+      >
         <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
           <TabsTrigger value="problem">Problem</TabsTrigger>
           <TabsTrigger value="solution">My Solution</TabsTrigger>
@@ -601,7 +608,7 @@ export default async function CaseDetailPage({
         </TabsContent>
 
         {/* --------------------------------------------------- solution --- */}
-        <TabsContent value="solution">
+        <TabsContent value="solution" forceMount className="data-[state=inactive]:hidden">
           {caseData.format === "drill" && drillQuestions.length > 0 ? (
             <div className="mt-4 max-w-3xl">
               <DrillRunner
@@ -828,7 +835,7 @@ export default async function CaseDetailPage({
             </Card>
           )}
         </TabsContent>
-      </Tabs>
+      </CaseProctorShell>
     </div>
   );
 }

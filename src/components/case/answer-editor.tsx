@@ -20,6 +20,7 @@ import { useProctor } from "@/hooks/use-proctor";
 import { ProctorGate, ProctorOverlay } from "./proctor-overlay";
 import { CameraPreview } from "@/components/proctor/camera-preview";
 import { readStoredOnce } from "@/hooks/use-browser-state";
+import { useCaseProctor } from "./case-proctor-shell";
 
 interface AnswerEditorProps {
   caseId: string;
@@ -86,6 +87,7 @@ export function AnswerEditor({
   storageKey,
 }: AnswerEditorProps) {
   const router = useRouter();
+  const sharedProctor = useCaseProctor();
   // The saved draft seeds the editor once, as it first renders. The page keys
   // this component by the draft, so another case is a fresh mount with its own
   // draft rather than this one's state carried across.
@@ -94,24 +96,21 @@ export function AnswerEditor({
   const [sections, setSections] = React.useState<SectionState>(draft.sections);
   const [freeText, setFreeText] = React.useState(draft.freeText);
   const [submitting, setSubmitting] = React.useState(false);
-  const [elapsed, setElapsed] = React.useState(0);
+  const [localElapsed, setLocalElapsed] = React.useState(0);
   // Read once, at mount, never again: a lazy initialiser, so re-renders cannot
   // move the start of the clock.
-  const [startedAt] = React.useState(() => Date.now());
+  const [localStartedAt] = React.useState(() => Date.now());
 
-  const proctor = useProctor(signedIn);
+  const fallbackProctor = useProctor(signedIn && !sharedProctor);
+  const proctor = sharedProctor ? sharedProctor.proctor : fallbackProctor;
+  const startedAt = sharedProctor ? sharedProctor.startedAt : localStartedAt;
+  const elapsed = sharedProctor ? sharedProctor.elapsed : localElapsed;
 
   /**
-   * Stamp the start server-side.
-   *
-   * The on-screen timer runs off `startedAt` and always will, but that number
-   * lives in the student's browser. This tells the server when the case was
-   * opened so the integrity check has a clock nobody can wind back. Fired once
-   * per mount; the route keeps the earliest stamp, so a reload never shortens
-   * the recorded attempt.
+   * Stamp the start server-side (when not already handled by CaseProctorShell).
    */
   React.useEffect(() => {
-    if (!signedIn) return;
+    if (!signedIn || sharedProctor) return;
     void fetch("/api/attempts/start", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -120,8 +119,7 @@ export function AnswerEditor({
       // Best effort. A missing stamp means the speed check is skipped for this
       // attempt, which is the lenient outcome and the right one.
     });
-  }, [signedIn, caseId]);
-
+  }, [signedIn, sharedProctor, caseId]);
 
   const answer = mode === "structured" ? composeAnswer(sections) : freeText;
 
@@ -141,12 +139,13 @@ export function AnswerEditor({
   }, [answer, mode, sections, freeText, storageKey]);
 
   React.useEffect(() => {
+    if (sharedProctor) return;
     const timer = setInterval(
-      () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
+      () => setLocalElapsed(Math.floor((Date.now() - localStartedAt) / 1000)),
       1000,
     );
     return () => clearInterval(timer);
-  }, [startedAt]);
+  }, [sharedProctor, localStartedAt]);
 
   const wordCount = answer.trim() ? answer.trim().split(/\s+/).length : 0;
   const tooShort = answer.trim().length < MIN_ANSWER_CHARS;
@@ -199,10 +198,13 @@ export function AnswerEditor({
       }
 
       window.localStorage.removeItem(storageKey);
+      setSections(EMPTY_SECTIONS);
+      setFreeText("");
       // Release the beforeunload guard and fullscreen before navigating, or the
       // router push below trips the very dialog meant to deter abandoning an
       // attempt.
-      proctor.stop();
+      if (sharedProctor) sharedProctor.finishAttempt();
+      else proctor.stop();
 
       if (payload.integrity?.blocked) {
         toast.error(payload.integrity.warning, { duration: 30_000 });
@@ -258,8 +260,8 @@ export function AnswerEditor({
         student alt-tabs to their calculator would teach them to resent the
         feature rather than to stay put.
       */}
-      {proctor.examMode && <CameraPreview camera={proctor.camera} />}
-      {proctor.examMode && proctor.needsAcknowledgement && (
+      {!sharedProctor && proctor.examMode && <CameraPreview camera={proctor.camera} />}
+      {!sharedProctor && proctor.examMode && proctor.needsAcknowledgement && (
         <ProctorOverlay
           count={proctor.signals.blurCount}
           onResume={proctor.acknowledge}

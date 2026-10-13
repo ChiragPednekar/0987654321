@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn, formatDuration } from "@/lib/utils";
 import type { ModelResult } from "@/app/api/model/submit/route";
+import { useCaseProctor } from "./case-proctor-shell";
 
 export interface ModelCell {
   id: string;
@@ -38,23 +39,25 @@ export function ModelWorkspace({
   signedIn: boolean;
   caseSlug: string;
 }) {
+  const sharedProctor = useCaseProctor();
   const [values, setValues] = React.useState<Record<string, string>>({});
-  const [elapsed, setElapsed] = React.useState(0);
+  const [localElapsed, setLocalElapsed] = React.useState(0);
   const [submitting, setSubmitting] = React.useState(false);
   const [result, setResult] = React.useState<ModelResult | null>(null);
   // Read once, at mount, never again: a lazy initialiser, so re-renders cannot
   // move the start of the clock.
-  const [startedAt] = React.useState(() => Date.now());
+  const [localStartedAt] = React.useState(() => Date.now());
+  const elapsed = sharedProctor ? sharedProctor.elapsed : localElapsed;
   const inputs = React.useRef(new Map<string, HTMLInputElement>());
 
   React.useEffect(() => {
-    if (result) return;
+    if (result || sharedProctor) return;
     const timer = setInterval(
-      () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
+      () => setLocalElapsed(Math.floor((Date.now() - localStartedAt) / 1000)),
       1000,
     );
     return () => clearInterval(timer);
-  }, [result, startedAt]);
+  }, [result, sharedProctor, localStartedAt]);
 
   // Group into rows, and work out how wide the grid is, so the header and each
   // row agree on column count even when a row has gaps.
@@ -143,6 +146,7 @@ export function ModelWorkspace({
         toast.error(payload.error ?? "Could not submit the model.");
         return;
       }
+      sharedProctor?.finishAttempt();
       setResult(payload as ModelResult);
     } catch {
       toast.error("Network error.");

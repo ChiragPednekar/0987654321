@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Markdown } from "@/components/markdown";
 import { cn } from "@/lib/utils";
 import type { ChatResponse } from "@/app/api/chat/route";
+import { useCaseProctor } from "./case-proctor-shell";
 
 interface Turn {
   role: "interviewer" | "candidate";
@@ -32,6 +33,7 @@ export function CaseChat({
   /** Pro (or admin). The route enforces this too; this only saves a round trip. */
   isPro: boolean;
 }) {
+  const sharedProctor = useCaseProctor();
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [turns, setTurns] = React.useState<Turn[]>([]);
   const [draft, setDraft] = React.useState("");
@@ -199,7 +201,9 @@ export function CaseChat({
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            onPaste={sharedProctor?.proctor.handlers.onPaste}
             onKeyDown={(e) => {
+              sharedProctor?.proctor.handlers.onKeyDown(e);
               // Enter sends, Shift+Enter breaks the line — the convention
               // everyone already has muscle memory for.
               if (e.key === "Enter" && !e.shiftKey) submit(e);

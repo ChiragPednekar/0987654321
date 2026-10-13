@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn, formatDuration } from "@/lib/utils";
 import type { DrillResult } from "@/app/api/drills/submit/route";
+import { useCaseProctor } from "./case-proctor-shell";
 
 export interface DrillQuestion {
   id: string;
@@ -34,24 +35,27 @@ export function DrillRunner({
   nextCaseSlug?: string | null;
   pathSlug?: string | null;
 }) {
+  const sharedProctor = useCaseProctor();
   const [current, setCurrent] = React.useState(0);
   const [answers, setAnswers] = React.useState<Record<string, string>>({});
   const [flagged, setFlagged] = React.useState<Set<string>>(new Set());
-  const [elapsed, setElapsed] = React.useState(0);
+  const [localElapsed, setLocalElapsed] = React.useState(0);
   const [submitting, setSubmitting] = React.useState(false);
   const [result, setResult] = React.useState<DrillResult | null>(null);
   // Read once, at mount, never again: a lazy initialiser, so re-renders cannot
   // move the start of the clock.
-  const [startedAt] = React.useState(() => Date.now());
+  const [localStartedAt] = React.useState(() => Date.now());
+  const startedAt = sharedProctor ? sharedProctor.startedAt : localStartedAt;
+  const elapsed = sharedProctor ? sharedProctor.elapsed : localElapsed;
 
   React.useEffect(() => {
-    if (result) return;
+    if (result || sharedProctor) return;
     const timer = setInterval(
-      () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
+      () => setLocalElapsed(Math.floor((Date.now() - localStartedAt) / 1000)),
       1000,
     );
     return () => clearInterval(timer);
-  }, [result, startedAt]);
+  }, [result, sharedProctor, localStartedAt]);
 
   const answeredCount = questions.filter((q) =>
     answers[q.id]?.trim(),
@@ -101,6 +105,7 @@ export function DrillRunner({
         return;
       }
 
+      sharedProctor?.finishAttempt();
       setResult(payload);
     } catch {
       toast.error("Network error.");
