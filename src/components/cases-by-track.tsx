@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { CheckCircle2, Circle, CircleDashed } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { Difficulty, Domain } from "@/lib/types/database";
@@ -40,38 +38,32 @@ export function CasesByTrack({
 }) {
   if (tracks.length === 0) {
     return (
-      <Card className="mt-6">
-        <p className="px-4 py-16 text-center text-sm text-muted-foreground">
-          No tracks have cases assigned yet.
-        </p>
-      </Card>
+      <p className="mt-8 border-t border-foreground pt-4 text-sm text-muted-foreground">
+        No tracks have cases assigned yet.
+      </p>
     );
   }
 
+  // Each track is a section of the contents page: its title in the Didone
+  // over an ink rule, then its steps in order — the numbering is real here,
+  // because a track unlocks one step at a time.
   return (
-    <div className="mt-6 space-y-6">
+    <div>
       {tracks.map((track) => {
         const solved = track.cases.filter((c) => solvedIds.has(c.id)).length;
 
         return (
-          <Card key={track.id} className="overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-3">
-              <div className="min-w-0">
-                <Link
-                  href={`/paths/${track.slug}`}
-                  className="truncate text-sm font-semibold hover:underline"
-                >
-                  {track.title}
-                </Link>
-                <div className="mt-0.5 flex items-center gap-2">
-                  <Badge variant="secondary" className="text-[10px]">
-                    {DOMAIN_LABEL[track.domain as Domain]}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground tabular">
-                    {solved}/{track.cases.length} solved
-                  </span>
-                </div>
-              </div>
+          <section key={track.id} className="mt-10">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-foreground pb-2">
+              <Link
+                href={`/paths/${track.slug}`}
+                className="font-editorial text-[1.6rem] leading-tight hover:italic"
+              >
+                {track.title}
+              </Link>
+              <span className="font-mono text-xs text-muted-foreground tabular">
+                {DOMAIN_LABEL[track.domain as Domain]} · {solved}/{track.cases.length} solved
+              </span>
             </div>
 
             <ul className="divide-y divide-border">
@@ -83,35 +75,26 @@ export function CasesByTrack({
                   <li key={item.id}>
                     <Link
                       href={`/cases/${item.slug}`}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-accent/40"
+                      className="group flex items-baseline gap-4 py-3"
                     >
-                      <span className="w-6 shrink-0 text-xs text-muted-foreground tabular">
-                        {item.step_order}
+                      <span className="w-6 shrink-0 font-mono text-xs text-muted-foreground tabular">
+                        {String(item.step_order).padStart(2, "0")}
                       </span>
                       <span className="shrink-0">
                         {isSolved ? (
-                          <CheckCircle2
-                            className="size-4 text-[var(--success)]"
-                            aria-label="Solved"
-                          />
+                          <CheckCircle2 className="size-3.5 translate-y-0.5 text-success" aria-label="Solved" />
                         ) : isAttempted ? (
-                          <CircleDashed
-                            className="size-4 text-[var(--warning)]"
-                            aria-label="Attempted"
-                          />
+                          <CircleDashed className="size-3.5 translate-y-0.5 text-warning" aria-label="Attempted" />
                         ) : (
-                          <Circle
-                            className="size-4 text-muted-foreground/40"
-                            aria-label="Not started"
-                          />
+                          <Circle className="size-3.5 translate-y-0.5 text-muted-foreground/30" aria-label="Not started" />
                         )}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-sm">
+                      <span className="min-w-0 flex-1 truncate font-editorial text-[1.1rem] group-hover:italic">
                         {item.title}
                       </span>
                       <span
                         className={cn(
-                          "shrink-0 text-xs font-medium capitalize",
+                          "shrink-0 font-mono text-xs capitalize",
                           DIFFICULTY_CLASS[item.difficulty as Difficulty],
                         )}
                       >
@@ -122,7 +105,7 @@ export function CasesByTrack({
                 );
               })}
             </ul>
-          </Card>
+          </section>
         );
       })}
     </div>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CheckCircle2, CircleDashed, Clock, Circle } from "lucide-react";
+import { CheckCircle2, CircleDashed, Circle } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { PickToggle } from "@/components/teacher/library-picker";
 import { PickHint } from "@/components/teacher/pick-hint";
@@ -9,9 +9,6 @@ import {
   CasesByTrack,
   type TrackGroup,
 } from "@/components/cases-by-track";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   CASES_PER_PAGE,
   CASE_FORMAT_LABEL,
@@ -218,40 +215,49 @@ export default async function CasesPage({
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Case library</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {count ?? 0} cases · pick one and commit to a recommendation.
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6">
+      {/* A casebook's contents page: the title in the Didone, the count in
+          small capitals, and the list ruled on the page — no box around it. */}
+      <header>
+        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+          The library · {count ?? 0} cases
+        </p>
+        <h1 className="mt-4 font-editorial text-[2.8rem] font-normal leading-[0.98] tracking-[-0.02em] sm:text-[3.8rem]">
+          Case <em className="italic">library</em>
+        </h1>
+        <p className="mt-4 text-sm text-muted-foreground">
+          Pick one and commit to a recommendation.
+        </p>
+      </header>
       {canAssign && <PickHint noun="cases" />}
 
-      <div className="mt-6 inline-flex rounded-lg bg-muted p-1 text-sm">
+      <nav className="mt-10 flex gap-6 border-b border-border text-sm" aria-label="Library view">
         {(
           [
-            ["list", "List"],
-            ["tracks", "By Track"],
+            ["list", "Every case"],
+            ["tracks", "By track"],
           ] as const
-        ).map(([value, label]) => (
-          <Link
-            key={value}
-            href={value === "tracks" ? "/cases?view=tracks" : "/cases"}
-            className={cn(
-              "rounded-md px-3 py-1 transition-colors",
-              (value === "tracks") === byTrack
-                ? "bg-background font-medium shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
+        ).map(([value, label]) => {
+          const active = (value === "tracks") === byTrack;
+          return (
+            <Link
+              key={value}
+              href={value === "tracks" ? "/cases?view=tracks" : "/cases"}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "-mb-px border-b pb-2.5 transition-colors",
+                active
+                  ? "border-foreground text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
 
-      <div className="mt-4">
+      <div className="mt-5">
         <CaseFilters
           companyTracks={[...COMPANY_TRACKS]}
           signedIn={Boolean(profile)}
@@ -265,100 +271,83 @@ export default async function CasesPage({
           attemptedIds={attemptedCaseIds}
         />
       ) : (
-      <Card className="mt-6 overflow-hidden">
-        {/* Column headers — hidden on mobile where rows become cards. */}
-        <div className="hidden items-center gap-4 border-b border-border bg-muted/40 px-4 py-2.5 text-xs font-medium text-muted-foreground sm:flex">
-          <span className="w-6" />
-          <span className="flex-1">Title</span>
+      <div className="mt-8">
+        {/* Column headers — hidden on mobile, where each row stacks. */}
+        <div className="hidden items-center gap-4 border-b border-foreground pb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground sm:flex">
+          <span className={cn("w-5", canAssign && "ml-9")} />
+          <span className="flex-1">Case</span>
           <span className="w-36">Domain</span>
-          <span className="w-24">Difficulty</span>
-          <span className="w-20 text-right">Time</span>
-          <span className="w-24 text-right">Solve rate</span>
+          <span className="w-20">Level</span>
+          <span className="w-16 text-right">Time</span>
+          <span className="w-20 text-right">Solve rate</span>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="px-4 py-16 text-center">
-            <p className="text-sm text-muted-foreground">
-              No cases match those filters.
-            </p>
-            <Button variant="outline" size="sm" className="mt-4" asChild>
-              <Link href="/cases">Clear filters</Link>
-            </Button>
+          <div className="border-b border-border py-14">
+            <p className="font-editorial text-2xl">No cases match those filters.</p>
+            <Link href="/cases" className="mt-3 inline-block text-sm underline underline-offset-4">
+              Clear filters
+            </Link>
           </div>
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="divide-y divide-border border-b border-border">
             {filtered.map((item) => {
               const best = bestByCase.get(item.id);
               const solved = best !== undefined && best >= 60;
               const attempted = attemptedCaseIds.has(item.id);
 
               return (
-                <li key={item.id} className={cn(canAssign && "flex items-center gap-1 pl-3")}>
+                <li key={item.id} className={cn(canAssign && "flex items-center gap-3")}>
                   {canAssign && <PickToggle kind="case" id={item.id} title={item.title} />}
                   <Link
                     href={`/cases/${item.slug}`}
-                    className="flex min-w-0 flex-1 flex-col gap-2 px-4 py-3 transition-colors hover:bg-accent/50 sm:flex-row sm:items-center sm:gap-4"
+                    className="group flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-1 py-3.5 sm:flex-nowrap sm:gap-4"
                   >
-                    <span className="w-6 shrink-0">
+                    <span className="hidden w-5 shrink-0 sm:block">
                       {solved ? (
-                        <CheckCircle2
-                          className="size-4 text-[var(--success)]"
-                          aria-label="Solved"
-                        />
+                        <CheckCircle2 className="size-3.5 translate-y-0.5 text-success" aria-label="Solved" />
                       ) : attempted ? (
-                        <CircleDashed
-                          className="size-4 text-[var(--warning)]"
-                          aria-label="Attempted"
-                        />
+                        <CircleDashed className="size-3.5 translate-y-0.5 text-warning" aria-label="Attempted" />
                       ) : (
-                        <Circle
-                          className="size-4 text-muted-foreground/40"
-                          aria-label="Not started"
-                        />
+                        <Circle className="size-3.5 translate-y-0.5 text-muted-foreground/30" aria-label="Not started" />
                       )}
                     </span>
 
-                    <span className="flex-1 truncate text-sm font-medium">
-                      {item.title}
-                      {item.is_pro && (
-                        <Badge
-                          className="ml-2 align-middle bg-[var(--warning)] text-[10px] text-black"
-                          title="Requires a paid plan"
-                        >
-                          PRO
-                        </Badge>
-                      )}
-                      {item.format !== "full_case" && (
-                        <Badge variant="outline" className="ml-2 align-middle">
-                          {CASE_FORMAT_LABEL[item.format as CaseFormat]}
-                        </Badge>
-                      )}
-                      {item.company_track && (
-                        <Badge variant="secondary" className="ml-2 align-middle">
-                          {item.company_track}
-                        </Badge>
+                    <span className="w-full min-w-0 sm:w-auto sm:flex-1">
+                      <span className="font-editorial text-[1.15rem] leading-snug group-hover:italic">
+                        {item.title}
+                      </span>
+                      {(item.is_pro || item.format !== "full_case" || item.company_track) && (
+                        <span className="ml-2 font-mono text-[11px] text-muted-foreground">
+                          {[
+                            item.company_track,
+                            item.format !== "full_case" ? CASE_FORMAT_LABEL[item.format as CaseFormat] : null,
+                            item.is_pro ? "Pro" : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
                       )}
                     </span>
 
-                    <span className="w-36 shrink-0 text-xs text-muted-foreground">
+                    <span className="shrink-0 text-xs text-muted-foreground sm:w-36">
                       {DOMAIN_LABEL[item.domain as Domain]}
                     </span>
 
                     <span
                       className={cn(
-                        "w-24 shrink-0 text-xs font-medium capitalize",
+                        "shrink-0 font-mono text-xs capitalize sm:w-20",
                         DIFFICULTY_CLASS[item.difficulty as Difficulty],
                       )}
                     >
                       {item.difficulty}
                     </span>
 
-                    <span className="flex w-20 shrink-0 items-center gap-1 text-xs text-muted-foreground sm:justify-end">
-                      <Clock className="size-3" />
-                      {item.estimated_minutes}m
+                    <span className="shrink-0 font-mono text-xs text-muted-foreground sm:w-16 sm:text-right">
+                      {item.estimated_minutes} min
                     </span>
 
-                    <span className="w-24 shrink-0 text-xs text-muted-foreground tabular sm:text-right">
+                    <span className="hidden shrink-0 font-mono text-xs text-muted-foreground tabular sm:inline sm:w-20 sm:text-right">
                       {item.total_submissions > 0
                         ? `${(Number(item.completion_rate) * 100).toFixed(0)}%`
                         : "—"}
@@ -369,7 +358,7 @@ export default async function CasesPage({
             })}
           </ul>
         )}
-      </Card>
+      </div>
       )}
 
       {!byTrack && !showAll && totalPages > 1 && (
@@ -377,32 +366,27 @@ export default async function CasesPage({
           className="mt-6 flex items-center justify-between"
           aria-label="Pagination"
         >
-          <Button variant="outline" size="sm" disabled={page <= 1} asChild={page > 1}>
-            {page > 1 ? <Link href={pageHref(page - 1)}>Previous</Link> : <span>Previous</span>}
-          </Button>
+          {page > 1 ? (
+            <Link href={pageHref(page - 1)} className="text-sm underline underline-offset-4">← Previous</Link>
+          ) : (
+            <span className="text-sm text-subtle-foreground">← Previous</span>
+          )}
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground tabular">
-              Page {page} of {totalPages}
+            <span className="font-mono text-xs text-muted-foreground tabular">
+              page {page} of {totalPages}
             </span>
             <Link
               href="/cases?all=1"
-              className="text-xs text-primary underline underline-offset-4 hover:opacity-80"
+              className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
             >
               Show all cases
             </Link>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages}
-            asChild={page < totalPages}
-          >
-            {page < totalPages ? (
-              <Link href={pageHref(page + 1)}>Next</Link>
-            ) : (
-              <span>Next</span>
-            )}
-          </Button>
+          {page < totalPages ? (
+            <Link href={pageHref(page + 1)} className="text-sm underline underline-offset-4">Next →</Link>
+          ) : (
+            <span className="text-sm text-subtle-foreground">Next →</span>
+          )}
         </nav>
       )}
 
@@ -411,7 +395,7 @@ export default async function CasesPage({
           <span>Showing all {plural(filtered.length, "case")}</span>
           <Link
             href="/cases?page=1"
-            className="text-primary underline underline-offset-4 hover:opacity-80"
+            className="underline underline-offset-4 hover:text-foreground"
           >
             Switch to paginated view (20 per page)
           </Link>

@@ -6,10 +6,8 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Download,
   FileText,
-  Users,
 } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
@@ -110,7 +108,7 @@ export default async function CaseDetailPage({
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-6">
         <Badge variant="warning">Pro</Badge>
-        <h1 className="mt-4 text-2xl font-semibold tracking-tight">
+        <h1 className="mt-4 font-editorial text-[2.4rem] font-normal leading-[1.08] tracking-[-0.015em]">
           {caseData.title}
         </h1>
         <p className="mt-3 text-sm text-muted-foreground">
@@ -380,7 +378,7 @@ export default async function CaseDetailPage({
               </Button>
             )}
             {nextCase && (
-              <Button size="sm" asChild className="gap-1.5 shadow-sm">
+              <Button size="sm" variant="ink" asChild className="gap-1.5">
                 <Link
                   href={`/cases/${nextCase.slug}${query.path ? `?path=${query.path}` : ""}`}
                   title={nextCase.title}
@@ -394,33 +392,19 @@ export default async function CaseDetailPage({
 
         <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="font-editorial text-[2.1rem] font-normal leading-[1.08] tracking-[-0.015em] sm:text-[2.7rem]">
               {caseData.title}
             </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-              <Badge variant="secondary">
-                {DOMAIN_LABEL[caseData.domain as Domain]}
-              </Badge>
-              <span
-                className={cn(
-                  "font-medium capitalize",
-                  DIFFICULTY_CLASS[caseData.difficulty as Difficulty],
-                )}
-              >
+            {/* The facts as one quiet line under the title, not a row of
+                badges and icons. */}
+            <p className="mt-3 font-mono text-xs text-muted-foreground">
+              {DOMAIN_LABEL[caseData.domain as Domain]} ·{" "}
+              <span className={cn("capitalize", DIFFICULTY_CLASS[caseData.difficulty as Difficulty])}>
                 {caseData.difficulty}
-              </span>
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <Clock className="size-3" />
-                {caseData.estimated_minutes} min
-              </span>
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <Users className="size-3" />
-                {plural(caseData.total_submissions, "submission")}
-              </span>
-              {caseData.company_track && (
-                <Badge variant="outline">{caseData.company_track}</Badge>
-              )}
-            </div>
+              </span>{" "}
+              · {caseData.estimated_minutes} min · {plural(caseData.total_submissions, "submission")}
+              {caseData.company_track ? ` · ${caseData.company_track}` : ""}
+            </p>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
