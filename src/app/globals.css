@@ -293,6 +293,11 @@
   --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
   --font-editorial: var(--font-bodoni), var(--font-source-serif), ui-serif, Georgia, serif;
 
+  /* NB: `@theme inline` does not declare these as CSS variables — they exist
+     only inside the font-* utilities. Plain CSS below must use the next/font
+     variables themselves (--font-plex-sans, --font-schibsted, --font-bodoni,
+     --font-source-serif, --font-plex-mono), which layout.tsx sets on <body>. */
+
   /* Plex is drawn with open spacing; the template habit of pulling every
      heading tight makes it look cramped. Tighten only slightly. */
   --tracking-tight: -0.011em;
@@ -354,7 +359,7 @@
      noise rather than voice. */
   h1,
   h2 {
-    font-family: var(--font-display);
+    font-family: var(--font-schibsted), var(--font-plex-sans), ui-sans-serif, sans-serif;
     letter-spacing: -0.018em;
   }
 
@@ -389,12 +394,12 @@
 /* The case brief itself, set as a document (see the serif in layout.tsx).
    Opt-in: chat, feedback and hints share .prose-case and stay sans. */
 .prose-document {
-  font-family: var(--font-serif);
+  font-family: var(--font-source-serif), ui-serif, Georgia, serif;
   font-size: 1.0625rem;
   line-height: 1.68;
 }
 .prose-document table {
-  font-family: var(--font-sans);
+  font-family: var(--font-plex-sans), ui-sans-serif, sans-serif;
 }
 .prose-case > * + * {
   margin-top: 1rem;
@@ -402,7 +407,7 @@
 .prose-case h1,
 .prose-case h2,
 .prose-case h3 {
-  font-family: var(--font-display);
+  font-family: var(--font-schibsted), var(--font-plex-sans), ui-sans-serif, sans-serif;
   font-weight: 600;
   letter-spacing: -0.01em;
   margin-top: 1.75rem;
@@ -423,7 +428,7 @@
   padding: 0.1rem 0.35rem;
   border-radius: var(--radius-sm);
   font-size: 0.875em;
-  font-family: var(--font-mono);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
 }
 .prose-case pre {
   background: var(--muted);
@@ -457,4 +462,46 @@
   border-left: 3px solid var(--border);
   padding-left: 1rem;
   color: var(--muted-foreground);
+}
+
+/* ------------------------------------------------------------ auth forms ---
+   Sign-in, sign-up and password pages, scoped by .auth-form in the auth
+   layout. Fields are a single underline rather than a box, labels are small
+   capitals, and titles are set in the Didone — the same quiet, editorial
+   register as the panel beside them. Unlayered on purpose, so it wins over
+   the utility classes the shared Input and Label carry. */
+.auth-form h1 {
+  font-family: var(--font-bodoni), ui-serif, Georgia, serif;
+  font-weight: 400;
+  font-size: 2.9rem;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.auth-form label {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.auth-form input:not([type="checkbox"]):not([type="radio"]) {
+  height: 2.75rem;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+  font-size: 0.95rem;
+  box-shadow: none;
+}
+/* Keyboard focus stays obvious: the underline thickens to ink. */
+.auth-form input:not([type="checkbox"]):not([type="radio"]):focus-visible {
+  outline: none;
+  border-bottom-color: var(--foreground);
+  box-shadow: 0 1px 0 var(--foreground);
+}
+.auth-form input:not([type="checkbox"]):not([type="radio"])[aria-invalid="true"] {
+  border-bottom-color: var(--danger);
+  box-shadow: 0 1px 0 var(--danger);
 }

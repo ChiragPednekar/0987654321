@@ -11,12 +11,15 @@ export default async function SignupPage() {
   const googleEnabled = await googleSignInEnabled();
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Create your account
+      <div className="space-y-3">
+        <h1>
+          Create your <em className="italic">account</em>.
         </h1>
+        {/* Access is through a college licence (invite-only), so this does
+            not promise "free to start": use the address you were invited with. */}
         <p className="text-sm text-muted-foreground">
-          {MARKETED_CASE_FLOOR}+ cases. Rubric-based AI feedback. Free to start.
+          {MARKETED_CASE_FLOOR}+ cases, marked against a rubric. Use the email
+          address your college invited.
         </p>
       </div>
 
@@ -24,9 +27,9 @@ export default async function SignupPage() {
 
       <SignupForm />
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-foreground hover:underline">
+        <Link href="/login" className="text-foreground underline underline-offset-4">
           Log in
         </Link>
       </p>

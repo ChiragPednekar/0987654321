@@ -20,20 +20,22 @@ export default async function LoginPage({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+      <div className="space-y-3">
+        <h1>
+          Welcome <em className="italic">back</em>.
+        </h1>
         <p className="text-sm text-muted-foreground">
           Log in to keep your streak alive.
         </p>
       </div>
 
       {profile && (
-        <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 border-l-2 border-foreground/40 bg-card/60 px-4 py-3 text-sm">
           <div className="min-w-0">
             <p className="font-medium truncate">Already signed in</p>
             <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
           </div>
-          <Button size="sm" asChild>
+          <Button size="sm" variant="ink" asChild>
             <Link href={next}>Go to {next === "/dashboard" ? "Dashboard" : "Page"}</Link>
           </Button>
         </div>
@@ -42,7 +44,7 @@ export default async function LoginPage({
       {params.error && (
         <div
           role="alert"
-          className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          className="border-l-2 border-danger bg-danger-surface/60 px-4 py-2.5 text-sm text-danger"
         >
           {params.error}
         </div>
@@ -52,9 +54,9 @@ export default async function LoginPage({
 
       <LoginForm next={next} />
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         No account?{" "}
-        <Link href="/signup" className="font-medium text-foreground hover:underline">
+        <Link href="/signup" className="text-foreground underline underline-offset-4">
           Sign up
         </Link>
       </p>

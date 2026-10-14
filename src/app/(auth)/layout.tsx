@@ -5,7 +5,9 @@ import { Logo } from "@/components/logo";
  * Sign-in, sign-up and password pages.
  *
  * The right half carries the same line as the landing hero, set in the same
- * Didone, and nothing else — so the two front pages read as one piece.
+ * Didone, and nothing else — so the two front pages read as one piece. The
+ * forms on the left are styled by `.auth-form` (globals.css): underlined
+ * fields, small-capital labels, titles in the Didone.
  */
 export default function AuthLayout({
   children,
@@ -19,7 +21,7 @@ export default function AuthLayout({
           <Logo />
         </Link>
         <div className="flex flex-1 items-center justify-center py-10">
-          <div className="w-full max-w-sm">{children}</div>
+          <div className="auth-form w-full max-w-sm">{children}</div>
         </div>
       </div>
 

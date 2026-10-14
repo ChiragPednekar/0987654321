@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, MailCheck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -62,8 +62,7 @@ export function SignupForm() {
 
   if (pendingEmail) {
     return (
-      <div className="space-y-4 rounded-lg border border-border bg-muted/30 p-5 text-center">
-        <MailCheck className="mx-auto size-8 text-primary" />
+      <div className="space-y-4 border-l-2 border-foreground/40 bg-card/60 px-5 py-4">
         <div className="space-y-1.5">
           <p className="font-medium">Confirm your email</p>
           <p className="text-sm text-muted-foreground">
@@ -79,7 +78,7 @@ export function SignupForm() {
         <Button
           type="button"
           variant="outline"
-          className="w-full"
+          className="h-11 w-full rounded-none border-foreground/30 bg-transparent"
           onClick={() => setPendingEmail(null)}
         >
           Use a different email
@@ -129,7 +128,7 @@ export function SignupForm() {
         </p>
       </div>
 
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button type="submit" variant="ink" className="h-11 w-full" disabled={loading}>
         {loading && <Loader2 className="animate-spin" />}
         Create account
       </Button>

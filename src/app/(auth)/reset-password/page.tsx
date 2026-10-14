@@ -49,7 +49,7 @@ export default function ResetPasswordPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Set a new password</h1>
+        <h1>Set a new password</h1>
         <p className="text-sm text-muted-foreground">
           Choose something you don&apos;t use anywhere else.
         </p>
@@ -78,7 +78,7 @@ export default function ResetPasswordPage() {
             required
           />
         </div>
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" variant="ink" className="h-11 w-full" disabled={loading}>
           {loading && <Loader2 className="animate-spin" />}
           Update password
         </Button>

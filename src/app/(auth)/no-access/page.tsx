@@ -18,7 +18,7 @@ export default async function NoAccessPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1>
           This account does not have access yet
         </h1>
         <p className="text-sm text-muted-foreground">

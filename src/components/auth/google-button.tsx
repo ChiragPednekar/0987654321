@@ -36,7 +36,7 @@ export function GoogleButton({ next = "/dashboard" }: { next?: string }) {
       <Button
         type="button"
         variant="outline"
-        className="w-full"
+        className="h-11 w-full rounded-none border-foreground/30 bg-transparent"
         onClick={signInWithGoogle}
         disabled={loading}
       >
@@ -65,8 +65,8 @@ export function GoogleButton({ next = "/dashboard" }: { next?: string }) {
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t border-border" />
         </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">or</span>
+        <div className="relative flex justify-center font-mono text-[11px] uppercase tracking-[0.14em]">
+          <span className="bg-background px-3 text-muted-foreground">or</span>
         </div>
       </div>
     </>

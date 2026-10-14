@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Loader2, MailCheck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -38,14 +38,13 @@ export default function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div className="space-y-4 text-center">
-        <MailCheck className="mx-auto size-10 text-[var(--success)]" />
-        <h1 className="text-2xl font-semibold tracking-tight">Check your email</h1>
+      <div className="space-y-4">
+        <h1>Check your email</h1>
         <p className="text-sm text-muted-foreground">
           If that address has an account, we&apos;ve sent a reset link. It expires
           in one hour.
         </p>
-        <Button variant="outline" className="w-full" asChild>
+        <Button variant="outline" className="h-11 w-full rounded-none border-foreground/30 bg-transparent" asChild>
           <Link href="/login">Back to log in</Link>
         </Button>
       </div>
@@ -55,7 +54,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Reset password</h1>
+        <h1>Reset password</h1>
         <p className="text-sm text-muted-foreground">
           We&apos;ll email you a link to set a new one.
         </p>
@@ -66,14 +65,14 @@ export default function ForgotPasswordPage() {
           <Label htmlFor="email">Email</Label>
           <Input id="email" name="email" type="email" autoComplete="email" required />
         </div>
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" variant="ink" className="h-11 w-full" disabled={loading}>
           {loading && <Loader2 className="animate-spin" />}
           Send reset link
         </Button>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground">
-        <Link href="/login" className="font-medium text-foreground hover:underline">
+      <p className="text-sm text-muted-foreground">
+        <Link href="/login" className="text-foreground underline underline-offset-4">
           Back to log in
         </Link>
       </p>

@@ -97,7 +97,7 @@ export function LoginForm({ next }: { next: string }) {
         />
       </div>
 
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button type="submit" variant="ink" className="h-11 w-full" disabled={loading}>
         {loading && <Loader2 className="animate-spin" />}
         Log in
       </Button>
