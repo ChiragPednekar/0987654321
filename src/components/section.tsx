@@ -1,14 +1,15 @@
 import { cn } from "@/lib/utils";
 
 /**
- * A section of a teacher page: a heading ruled in ink, then its content on the
- * page itself.
+ * A section of an app page: a title in the editorial serif over an ink rule,
+ * then its content on the page itself.
  *
- * The teacher pages were a stack of identical white cards, each with a small
+ * The dashboards were stacks of identical white cards, each with a small
  * title in its corner — every section boxed whether or not it needed a box,
- * which is what made them read as a template. This is the same structure the
+ * which is what made them read as a template. This is the structure the
  * landing page uses: the rule says where a section starts, and the paper does
- * the rest. Rows inside are separated by hairlines (`SectionList`).
+ * the rest. Rows inside are separated by hairlines (`SectionList`). Shared by
+ * the student and teacher dashboards.
  */
 export function Section({
   title,
@@ -30,7 +31,7 @@ export function Section({
   return (
     <section className={cn("mt-10", className)}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-foreground pb-2">
-        <h2 className="text-lg font-semibold">
+        <h2 className="font-editorial text-[1.6rem] font-normal leading-tight tracking-[-0.01em]">
           {title}
           {count !== undefined && (
             <span className="ml-2 font-mono text-sm font-normal text-muted-foreground tabular">

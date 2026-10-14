@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { AuthzError, requireBatchTeacher } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Section, SectionEmpty, SectionList } from "@/components/teacher/section";
+import { Section, SectionEmpty, SectionList } from "@/components/section";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
@@ -149,7 +149,7 @@ export default async function BatchDetail({
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{batch.name}</h1>
+          <h1 className="font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">{batch.name}</h1>
           {batch.description ? (
             <p className="mt-1 text-sm text-muted-foreground">{batch.description}</p>
           ) : null}
@@ -170,7 +170,7 @@ export default async function BatchDetail({
         </div>
       </div>
 
-      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
         <StatCard label="Students" value={formatNumber(roster.length)} />
         <StatCard
           label={`Active in ${STALE_DAYS}d`}

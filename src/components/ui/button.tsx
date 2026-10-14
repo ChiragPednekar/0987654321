@@ -28,6 +28,13 @@ const buttonVariants = cva(
         ghost:
           "text-muted-foreground hover:bg-brand-surface hover:text-brand active:bg-[color-mix(in_oklch,var(--brand-surface)_88%,var(--brand))]",
         link: "text-brand underline decoration-brand/30 underline-offset-4 hover:decoration-brand",
+        /**
+         * Ink: square, black on paper (paper on ink in dark mode). The primary
+         * action on the editorial pages — landing, dashboards — where the only
+         * colour is the type.
+         */
+        ink:
+          "rounded-none bg-foreground text-background hover:bg-foreground/85 active:bg-foreground/75",
       },
       size: {
         default: "h-9 px-4 py-2",

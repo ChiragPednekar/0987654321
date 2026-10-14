@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { GraduationCap } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Section } from "@/components/section";
 import { Progress } from "@/components/ui/progress";
 import { formatNumber } from "@/lib/utils";
 
@@ -26,21 +24,16 @@ export function TargetSchoolCard({
 }) {
   if (!standing) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-start gap-3 p-5">
-          <GraduationCap className="size-5 text-muted-foreground" />
-          <div className="space-y-1">
-            <p className="text-sm font-medium">Add your school</p>
-            <p className="text-sm text-muted-foreground">
-              Campus leaderboards rank you against people at your own school,
-              not the whole platform.
-            </p>
-          </div>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/settings">Add it in settings</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <Section title="Your campus">
+        <p className="pt-3 text-sm text-muted-foreground">
+          Campus leaderboards rank you against people at your own school,
+          not the whole platform.{" "}
+          <Link href="/settings" className="text-foreground underline underline-offset-4">
+            Add your school in settings
+          </Link>
+          .
+        </p>
+      </Section>
     );
   }
 
@@ -51,41 +44,38 @@ export function TargetSchoolCard({
     : null;
 
   return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-center gap-2">
-          <GraduationCap className="size-4 text-muted-foreground" />
-          <p className="truncate text-sm font-medium">{university}</p>
-        </div>
-
+    <Section
+      title="Your campus"
+      action={
+        <Link
+          href={`/leaderboard?uni=${encodeURIComponent(university)}`}
+          className="text-xs text-muted-foreground hover:text-foreground"
+        >
+          Campus board
+        </Link>
+      }
+    >
+      <div className="pt-4">
+        <p className="truncate font-mono text-xs text-muted-foreground">{university}</p>
         {meaningful ? (
           <>
-            <p className="mt-3 text-2xl font-semibold tracking-tight tabular">
+            <p className="mt-2 font-editorial text-[2.6rem] leading-none tracking-[-0.02em] tabular">
               #{formatNumber(rank)}
-              <span className="ml-1.5 text-sm font-normal text-muted-foreground">
-                of {formatNumber(cohortSize)}
+              <span className="ml-2 font-sans text-sm text-muted-foreground">
+                of {formatNumber(cohortSize)} · top {topPct}%
               </span>
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Top {topPct}% at your school
-            </p>
             {/* Filled from the top, so a better rank shows a fuller bar. */}
-            <Progress value={100 - (topPct ?? 0)} className="mt-3" />
+            <Progress value={100 - (topPct ?? 0)} className="mt-4 h-1" />
           </>
         ) : (
-          <p className="mt-3 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-muted-foreground">
             {cohortSize <= 1
               ? "You're the first here. Solve a case and your classmates will have something to chase."
               : "Solve a case to take a place on your campus board."}
           </p>
         )}
-
-        <Button variant="ghost" size="sm" className="mt-3 px-0" asChild>
-          <Link href={`/leaderboard?uni=${encodeURIComponent(university)}`}>
-            View campus board →
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </Section>
   );
 }

@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { AuthzError, requireAssignmentTeacher } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { StatCard } from "@/components/stat-card";
-import { Note, Section, SectionEmpty } from "@/components/teacher/section";
+import { Note, Section, SectionEmpty } from "@/components/section";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ReviewQueue } from "@/components/teach/review-queue";
@@ -176,7 +176,7 @@ export default async function AssignmentDetail({
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">
             {assignment.title ?? c?.title ?? "Assignment"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -200,7 +200,7 @@ export default async function AssignmentDetail({
         </Link>
       ) : null}
 
-      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
         {[
           ["Submitted", `${submitted.length} / ${rows.length}`, `${notStarted.length} not started`],
           ["Awaiting review", String(awaiting.length), `${reviewed.length} marked`],
@@ -301,7 +301,7 @@ async function AutoMarkedAssignment({
       </Link>
       <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">{title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {target.kindLabel}
             {quiz ? ` · ${target.itemTitle}` : ""}

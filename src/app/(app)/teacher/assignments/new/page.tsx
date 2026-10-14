@@ -39,7 +39,7 @@ export default async function NewAssignmentPage() {
       <Link href="/teacher/assignments" className="text-sm text-muted-foreground hover:text-foreground">
         ← Assignments
       </Link>
-      <h1 className="mt-4 text-2xl font-semibold tracking-tight">New assignment</h1>
+      <h1 className="mt-4 font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">New assignment</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Students solve it the normal way — their submission attaches here by
         itself.

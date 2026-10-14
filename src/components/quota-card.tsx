@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { Section } from "@/components/section";
 import { Progress } from "@/components/ui/progress";
 import { cn, formatNumber } from "@/lib/utils";
 import { QUOTA } from "@/lib/constants";
@@ -36,20 +36,21 @@ export function QuotaCard({ quota }: { quota: QuotaStatus }) {
   const anyLow = rows.some((r) => r.limit > 0 && r.left / r.limit < 0.15);
 
   return (
-    <Card className={cn(anyLow && "border-amber-500/40")}>
-      <CardContent className="space-y-4 p-4">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-sm font-medium">Your allowance</p>
-          <p className="text-xs text-muted-foreground">
-            rolling {QUOTA.windowDays} days
-          </p>
-        </div>
+    <Section
+      title="Your allowance"
+      action={
+        <span className={cn("font-mono text-xs", anyLow ? "text-warning" : "text-muted-foreground")}>
+          rolling {QUOTA.windowDays} days
+        </span>
+      }
+    >
+      <div className="space-y-4 pt-4">
 
         {rows.map((row) => (
           <div key={row.label}>
             <div className="flex items-baseline justify-between gap-2 text-sm">
               <span className="text-muted-foreground">{row.label}</span>
-              <span className="tabular">
+              <span className="font-mono tabular">
                 {formatNumber(row.left)} left
                 <span className="text-muted-foreground">
                   {" "}of {formatNumber(row.limit)}
@@ -75,7 +76,7 @@ export function QuotaCard({ quota }: { quota: QuotaStatus }) {
             {QUOTA.windowDays} days, which frees allowance back up.
           </p>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </Section>
   );
 }

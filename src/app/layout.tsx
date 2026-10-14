@@ -42,11 +42,11 @@ const display = Schibsted_Grotesk({
 });
 
 /**
- * The front door only: the landing hero and the sign-in panel. A Didone with
- * an optical-size axis, so at headline size it gets its display cut — fine
- * hairlines, a confident italic — which is what makes those two pages feel
- * composed rather than assembled. Not preloaded: no page inside the app uses
- * it, and every one of them would otherwise download it.
+ * The editorial face: the landing hero, the sign-in panel, and page and
+ * section titles on the dashboards. A Didone with an optical-size axis, so at
+ * headline size it gets its display cut — fine hairlines, a confident italic.
+ * Preloaded, because a dashboard title flashing from the fallback serif on
+ * every visit would undo the point of it.
  */
 const editorial = Bodoni_Moda({
   variable: "--font-bodoni",
@@ -55,7 +55,6 @@ const editorial = Bodoni_Moda({
   style: ["normal", "italic"],
   axes: ["opsz"],
   display: "swap",
-  preload: false,
 });
 
 /**

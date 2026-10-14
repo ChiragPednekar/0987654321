@@ -38,7 +38,7 @@ export function StatCard({
   return (
     <div className={cn("border-t-2 pb-1 pt-3", rules[tone])}>
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-2 font-display text-[2.1rem] font-semibold leading-none tracking-[-0.025em] tabular">
+      <p className="mt-2.5 font-editorial text-[2.2rem] font-normal leading-none tracking-[-0.02em] tabular sm:text-[2.6rem]">
         {value}
       </p>
       {sublabel && (

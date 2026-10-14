@@ -1,5 +1,3 @@
-import { Quote } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { utcDayIndex } from "@/lib/daily-case";
 
 /**
@@ -73,18 +71,16 @@ const QUOTES: { text: string; author: string; role: string }[] = [
 export function QuoteCard() {
   const quote = QUOTES[utcDayIndex() % QUOTES.length];
 
+  // A pull quote, set like one: the words in the serif italic, the source in
+  // small capitals. No card and no quotation-mark icon.
   return (
-    <Card>
-      <CardContent className="p-5">
-        <Quote className="size-4 text-muted-foreground/50" />
-        <blockquote className="mt-2.5 text-sm leading-relaxed">
-          {quote.text}
-        </blockquote>
-        <figcaption className="mt-3 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{quote.author}</span> ·{" "}
-          {quote.role}
-        </figcaption>
-      </CardContent>
-    </Card>
+    <figure className="border-t border-foreground pt-6">
+      <blockquote className="font-editorial text-[1.65rem] italic leading-snug tracking-[-0.005em]">
+        &ldquo;{quote.text}&rdquo;
+      </blockquote>
+      <figcaption className="mt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+        {quote.author} · {quote.role}
+      </figcaption>
+    </figure>
   );
 }

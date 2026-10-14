@@ -47,7 +47,7 @@ export default async function NewQuestionPage({
       <Link href="/teacher/questions" className="text-sm text-muted-foreground hover:text-foreground">
         ← Question bank
       </Link>
-      <h1 className="mt-4 text-2xl font-semibold tracking-tight">Add a question</h1>
+      <h1 className="mt-4 font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">Add a question</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Your questions stay private to you and the batches you assign them to.
         Add them to a batch from the library, like any other question.

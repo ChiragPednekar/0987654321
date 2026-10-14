@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/teacher/empty-state";
-import { Note, Section, SectionEmpty, SectionList } from "@/components/teacher/section";
+import { Note, Section, SectionEmpty, SectionList } from "@/components/section";
 import { DOMAIN_LABEL } from "@/lib/constants";
 import { formatDay, formatNumber, plural } from "@/lib/utils";
 import type { Domain } from "@/lib/types/database";
@@ -135,7 +135,7 @@ export default async function TeacherDashboard() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <h1 className="font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">Dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {formatNumber(uniqueStudents.size)}{" "}
             {uniqueStudents.size === 1 ? "student" : "students"} across{" "}
@@ -144,16 +144,16 @@ export default async function TeacherDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="rounded-none">
             <Link href="/teacher/questions/new">New question</Link>
           </Button>
-          <Button asChild>
+          <Button variant="ink" asChild>
             <Link href="/teacher/assignments/new">New assignment</Link>
           </Button>
         </div>
       </div>
 
-      <div className="mt-8 grid gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
         <StatCard
           label="Students"
           value={formatNumber(uniqueStudents.size)}

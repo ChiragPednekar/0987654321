@@ -1,19 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import {
-  Award,
-  CheckCircle2,
-  Flame,
-  Target,
-  TrendingUp,
-} from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import { getQuotaStatus, type QuotaStatus } from "@/lib/quota";
 import { QuotaCard } from "@/components/quota-card";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Section, SectionEmpty, SectionList } from "@/components/section";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
@@ -268,280 +260,255 @@ export default async function DashboardPage() {
   const quotaAdmin = createAdminClientOrNull();
   if (quotaAdmin) quota = await getQuotaStatus(quotaAdmin, profile.id);
 
+  // The greeting is worked out in IST: the page is rendered on a server in
+  // another timezone, and "Good evening" at 9 a.m. would be worse than none.
+  const now = new Date();
+  const hourIst = Number(
+    now.toLocaleString("en-IN", { hour: "numeric", hour12: false, timeZone: "Asia/Kolkata" }),
+  );
+  const greeting = hourIst < 12 ? "Good morning" : hourIst < 17 ? "Good afternoon" : "Good evening";
+  const today = now.toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Asia/Kolkata",
+  });
+  // Only a word that reads as a name goes in the headline. Accounts created
+  // from an email address can carry a handle like "jdoe-2024", and set at
+  // 60px in italic that is worse than no name at all.
+  const firstWord = profile.full_name?.trim().split(/\s+/)[0] ?? "";
+  const firstName = /^[\p{L}][\p{L}'’.-]{0,19}$/u.test(firstWord) ? firstWord : null;
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6">
+      {/* --------------------------------------------------- greeting --- */}
+      <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {profile.full_name?.split(" ")[0] ?? "Welcome"}
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            {today}
+          </p>
+          <h1 className="mt-4 font-editorial text-[2.8rem] font-normal leading-[0.98] tracking-[-0.02em] sm:text-[3.8rem]">
+            {greeting}
+            {firstName ? (
+              <>
+                , <em className="italic">{firstName}</em>
+              </>
+            ) : null}
+            .
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-4 text-sm text-muted-foreground">
             {profile.cases_solved === 0
               ? "Your first case is the hardest. Start with an easy one."
               : `${formatNumber(profile.cases_solved)} cases solved · Level ${profile.level}`}
           </p>
         </div>
-        <Button asChild>
+        <Button variant="ink" size="lg" asChild>
           <Link href="/cases">Solve a case</Link>
         </Button>
-      </div>
+      </header>
 
       {dailyCase && (
-        <div className="mt-6">
+        <div className="mt-10">
           <DailyCaseCard dailyCase={dailyCase} solved={dailySolved} />
         </div>
       )}
 
       {/* ------------------------------------------------------- stats --- */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-10 grid grid-cols-2 gap-6 lg:grid-cols-4">
         <StatCard
           label="Cases solved"
           value={formatNumber(profile.cases_solved)}
           sublabel={`${formatNumber(profile.cases_attempted)} attempted`}
-          icon={CheckCircle2}
         />
         <StatCard
           label="Average score"
           value={accuracy > 0 ? `${accuracy.toFixed(0)}%` : "—"}
           sublabel="Across all solved cases"
-          icon={Target}
         />
         <StatCard
           label="Current streak"
           value={profile.current_streak}
           sublabel={`Longest ${profile.longest_streak}`}
-          icon={Flame}
-          accent={profile.current_streak > 0 ? "text-[var(--warning)]" : undefined}
         />
         <StatCard
           label="Global rank"
           value={rank?.rank ? `#${formatNumber(rank.rank)}` : "—"}
           sublabel={`${formatNumber(profile.total_score)} points`}
-          icon={TrendingUp}
         />
       </div>
 
       {/* --------------------------------------------- effort over time --- */}
-      {/* Paired rather than stacked: both answer "how much have I been doing
-          lately", and side by side they compare instead of scrolling past each
-          other. This is what took four full-width bands down to two. */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Points by week</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Last 8 weeks. Points come from graded cases.
-            </p>
-          </CardHeader>
-          <CardContent>
+      {/* Paired: both answer "how much have I been doing lately", and side by
+          side they compare instead of scrolling past each other. */}
+      <div className="grid gap-x-12 lg:grid-cols-2">
+        <Section title="Points by week" description="Last 8 weeks. Points come from graded cases.">
+          <div className="pt-4">
             <WeeklyPointsLazy data={weekly} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Last 8 weeks</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Consistency beats intensity. Every square is a day.
-            </p>
-          </CardHeader>
-          <CardContent>
+          </div>
+        </Section>
+        <Section title="Every day" description="The last 8 weeks, one square a day. Consistency beats intensity.">
+          <div className="pt-4">
             <SubmissionHeatmap counts={heatmapCounts} />
-          </CardContent>
-        </Card>
+          </div>
+        </Section>
       </div>
 
-      {quota ? (
-        <div className="mt-6">
-          <QuotaCard quota={quota} />
-        </div>
-      ) : null}
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-x-12 lg:grid-cols-3">
         {/* -------------------------------------------------- radar --- */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Skill radar</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Average score by domain. The dents are your homework.
-            </p>
-          </CardHeader>
-          <CardContent>
+        <Section
+          title="Skill radar"
+          description="Average score by domain. The dents are your homework."
+          className="lg:col-span-2"
+        >
+          <div className="pt-4">
             <SkillRadarLazy data={radarData} />
-
-            <div className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
-              {DOMAINS.map((domain) => {
-                const row = byDomain.get(domain.value);
-                const score = Number(row?.avg_percentage ?? 0);
-                return (
+          </div>
+          <SectionList className="mt-4 border-t border-border">
+            {DOMAINS.map((domain) => {
+              const row = byDomain.get(domain.value);
+              const score = Number(row?.avg_percentage ?? 0);
+              return (
+                <li key={domain.value}>
                   <Link
-                    key={domain.value}
                     href={`/cases?domain=${domain.value}`}
-                    className="group space-y-1.5"
+                    className="group flex items-center gap-4 py-2.5"
                   >
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground group-hover:text-foreground">
-                        {domain.label}
-                      </span>
-                      <span className="tabular text-xs text-muted-foreground">
-                        {row?.cases_solved ?? 0} solved
-                        {score > 0 && ` · ${score.toFixed(0)}%`}
-                      </span>
-                    </div>
-                    <Progress value={score} />
+                    <span className="w-36 shrink-0 font-editorial text-lg group-hover:italic sm:w-56">
+                      {domain.label}
+                    </span>
+                    <Progress value={score} className="h-1 flex-1" />
+                    <span className="w-28 shrink-0 text-right font-mono text-xs text-muted-foreground tabular">
+                      {row?.cases_solved ?? 0} solved{score > 0 && ` · ${score.toFixed(0)}%`}
+                    </span>
                   </Link>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                </li>
+              );
+            })}
+          </SectionList>
+        </Section>
 
         {/* ---------------------------------------------- level + ce --- */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Level {profile.level}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Progress value={Math.min(100, Math.max(0, levelProgress))} />
-              <p className="text-xs text-muted-foreground tabular">
+        <div>
+          <Section title={`Level ${profile.level}`}>
+            <div className="space-y-3 pt-4">
+              <Progress value={Math.min(100, Math.max(0, levelProgress))} className="h-1" />
+              <p className="font-mono text-xs text-muted-foreground tabular">
                 {formatNumber(profile.ce)} CE ·{" "}
                 {formatNumber(Math.max(0, nextLevelCe - profile.ce))} to level{" "}
                 {profile.level + 1}
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </Section>
 
-          <Card>
-            <CardHeader className="flex-row items-center justify-between">
-              <CardTitle className="text-base">Badges</CardTitle>
-              <Award className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {achievements && achievements.length > 0 ? (
-                <ul className="space-y-3">
-                  {achievements.map((achievement, index) => {
-                    const badge = achievement.badges as unknown as {
-                      name: string;
-                      description: string;
-                      tier: string;
-                    } | null;
-                    if (!badge) return null;
-                    return (
-                      <li key={index} className="flex items-start gap-3">
-                        <Award className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium">{badge.name}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {badge.description}
-                          </p>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No badges yet. Solving one case earns your first.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <Section title="Badges" count={achievements?.length ?? 0}>
+            {achievements && achievements.length > 0 ? (
+              <SectionList>
+                {achievements.map((achievement, index) => {
+                  const badge = achievement.badges as unknown as {
+                    name: string;
+                    description: string;
+                    tier: string;
+                  } | null;
+                  if (!badge) return null;
+                  return (
+                    <li key={index} className="py-2.5">
+                      <p className="text-sm font-medium">{badge.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {badge.description}
+                      </p>
+                    </li>
+                  );
+                })}
+              </SectionList>
+            ) : (
+              <SectionEmpty>No badges yet. Solving one case earns your first.</SectionEmpty>
+            )}
+          </Section>
+        </div>
+      </div>
+
+      {quota ? <QuotaCard quota={quota} /> : null}
+
+      <div className="grid gap-x-12 lg:grid-cols-2">
+        <TargetSchoolCard standing={standing} />
+        <div className="mt-10">
+          <QuoteCard />
         </div>
       </div>
 
       {/* ---------------------------------------------------- activity --- */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <TargetSchoolCard standing={standing} />
-        <QuoteCard />
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Recent activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {activity && activity.length > 0 ? (
-              <ul className="divide-y divide-border">
-                {activity.map((item) => {
-                  const caseRef = item.cases as unknown as {
-                    title: string;
-                    slug: string;
-                  } | null;
-                  const metadata = item.metadata as Record<string, unknown>;
-                  return (
-                    <li
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 py-2.5 text-sm"
-                    >
-                      <div className="min-w-0">
-                        <span className="text-muted-foreground">
-                          {ACTIVITY_COPY[item.type]}
-                        </span>{" "}
-                        {caseRef ? (
-                          <Link
-                            href={`/cases/${caseRef.slug}`}
-                            className="font-medium hover:underline"
-                          >
-                            {caseRef.title}
-                          </Link>
-                        ) : (
-                          <span className="font-medium">
-                            {String(
-                              metadata.badge_name ??
-                                (metadata.level ? `Level ${metadata.level}` : ""),
-                            )}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        {item.ce_delta > 0 && (
-                          <Badge variant="secondary" className="tabular">
-                            +{item.ce_delta}
-                          </Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          {timeAgo(item.created_at)}
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Nothing here yet. Solve a case and it&apos;ll show up.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Pick up where you left off</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y divide-border">
-              {(recommended ?? []).map((item) => (
-                <li key={item.id} className="py-2.5">
-                  <Link
-                    href={`/cases/${item.slug}`}
-                    className="flex items-center justify-between gap-3 text-sm hover:underline"
+      <div className="grid gap-x-12 lg:grid-cols-2">
+        <Section title="Recent activity">
+          {activity && activity.length > 0 ? (
+            <SectionList>
+              {activity.map((item) => {
+                const caseRef = item.cases as unknown as {
+                  title: string;
+                  slug: string;
+                } | null;
+                const metadata = item.metadata as Record<string, unknown>;
+                return (
+                  <li
+                    key={item.id}
+                    className="flex items-baseline justify-between gap-3 py-2.5 text-sm"
                   >
-                    <span className="truncate font-medium">{item.title}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {item.estimated_minutes}m
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <Button variant="outline" size="sm" className="mt-4 w-full" asChild>
-              <Link href="/cases">Browse all cases</Link>
-            </Button>
-          </CardContent>
-        </Card>
+                    <div className="min-w-0">
+                      <span className="text-muted-foreground">
+                        {ACTIVITY_COPY[item.type]}
+                      </span>{" "}
+                      {caseRef ? (
+                        <Link
+                          href={`/cases/${caseRef.slug}`}
+                          className="font-medium hover:underline"
+                        >
+                          {caseRef.title}
+                        </Link>
+                      ) : (
+                        <span className="font-medium">
+                          {String(
+                            metadata.badge_name ??
+                              (metadata.level ? `Level ${metadata.level}` : ""),
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-baseline gap-3 font-mono text-xs text-muted-foreground">
+                      {item.ce_delta > 0 && <span className="tabular text-foreground">+{item.ce_delta}</span>}
+                      <span>{timeAgo(item.created_at)}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </SectionList>
+          ) : (
+            <SectionEmpty>Nothing here yet. Solve a case and it&apos;ll show up.</SectionEmpty>
+          )}
+        </Section>
+
+        <Section
+          title="Pick up where you left off"
+          action={
+            <Link href="/cases" className="text-xs text-muted-foreground hover:text-foreground">
+              All cases
+            </Link>
+          }
+        >
+          <SectionList>
+            {(recommended ?? []).map((item) => (
+              <li key={item.id}>
+                <Link
+                  href={`/cases/${item.slug}`}
+                  className="flex items-baseline justify-between gap-3 py-2.5 text-sm hover:underline"
+                >
+                  <span className="truncate font-medium">{item.title}</span>
+                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                    {item.estimated_minutes} min
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </SectionList>
+        </Section>
       </div>
     </div>
   );

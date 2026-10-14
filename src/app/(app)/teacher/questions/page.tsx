@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireTeacherActor } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Note, Section, SectionEmpty, SectionList } from "@/components/teacher/section";
+import { Note, Section, SectionEmpty, SectionList } from "@/components/section";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
@@ -64,7 +64,7 @@ export default async function QuestionBank() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Question bank</h1>
+          <h1 className="font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">Question bank</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Your own questions, plus {formatNumber(platformCount ?? 0)} platform
             cases you can assign as they are.

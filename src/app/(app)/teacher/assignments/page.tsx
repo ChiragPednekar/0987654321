@@ -52,7 +52,7 @@ export default async function AssignmentsPage() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Assignments</h1>
+          <h1 className="font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">Assignments</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Everything you have set, and how much is waiting to be marked.
           </p>
