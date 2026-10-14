@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Schibsted_Grotesk, Source_Serif_4 } from "next/font/google";
+import { Bodoni_Moda, IBM_Plex_Mono, IBM_Plex_Sans, Schibsted_Grotesk, Source_Serif_4 } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ProctorEndedHost } from "@/components/proctor/proctor-ended";
@@ -39,6 +39,23 @@ const display = Schibsted_Grotesk({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   display: "swap",
+});
+
+/**
+ * The front door only: the landing hero and the sign-in panel. A Didone with
+ * an optical-size axis, so at headline size it gets its display cut — fine
+ * hairlines, a confident italic — which is what makes those two pages feel
+ * composed rather than assembled. Not preloaded: no page inside the app uses
+ * it, and every one of them would otherwise download it.
+ */
+const editorial = Bodoni_Moda({
+  variable: "--font-bodoni",
+  subsets: ["latin"],
+  weight: "variable",
+  style: ["normal", "italic"],
+  axes: ["opsz"],
+  display: "swap",
+  preload: false,
 });
 
 /**
@@ -91,7 +108,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${plexSans.variable} ${plexMono.variable} ${display.variable} ${documentSerif.variable} min-h-screen font-sans antialiased`}
+        className={`${plexSans.variable} ${plexMono.variable} ${display.variable} ${documentSerif.variable} ${editorial.variable} min-h-screen font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"

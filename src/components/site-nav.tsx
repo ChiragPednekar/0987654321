@@ -214,7 +214,9 @@ export function SiteNav({
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/login">Log in</Link>
               </Button>
-              <Button size="sm" asChild>
+              {/* Ink, not brand blue: on the front pages the only colour is
+                  the type, and this matches the hero's primary action. */}
+              <Button size="sm" asChild className="rounded-none bg-foreground text-background shadow-none hover:bg-foreground/85 active:bg-foreground/75">
                 <Link href="/signup">Sign up</Link>
               </Button>
             </div>

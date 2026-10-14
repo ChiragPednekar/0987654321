@@ -3,20 +3,18 @@ import { ArrowRight } from "lucide-react";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SiteNav } from "@/components/site-nav";
-import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
-import { MarkedSheet } from "@/components/marked-sheet";
 import { DOMAINS } from "@/lib/constants";
 import { roleHome } from "@/lib/role-home";
 
 /**
  * The front page.
  *
- * Built around one image — an answer, marked (MarkedSheet) — because marking
- * is the thing CaseCode does that a casebook cannot. Everything else is kept
- * plain: a left-aligned argument, the marking process in the order it
+ * Editorial and quiet: a hero that is only type — the headline in a Didone,
+ * a hairline, one sentence — then the marking process in the order it
  * happens, the library as a casebook's contents page with real counts, and a
- * short note for the placement cells who license it.
+ * short note for the placement cells who license it. Section titles share the
+ * hero's serif so the page reads as one piece.
  *
  * Access is through a college licence (invite-only), so the page never offers
  * a free sign-up it cannot honour.
@@ -73,53 +71,52 @@ export default async function LandingPage() {
 
       <main className="flex-1">
         {/* ------------------------------------------------------- hero --- */}
-        <section className="mx-auto grid max-w-6xl gap-14 px-4 pb-20 pt-14 sm:px-6 sm:pt-20 lg:grid-cols-[1fr_minmax(0,30rem)] lg:items-center lg:gap-16">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.1em] text-muted-foreground">
-              {caseClaim}+ business cases · {DOMAINS.length} domains
+        {/* Type and space, nothing else: one line in the Didone, one hairline,
+            one sentence and two ways in. The restraint is the point. */}
+        <section className="mx-auto max-w-6xl px-4 pb-24 pt-20 sm:px-6 sm:pb-32 sm:pt-32">
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+            Case practice for MBA placements
+          </p>
+          <h1 className="mt-10 font-editorial text-[3.6rem] font-normal leading-[0.92] tracking-[-0.025em] sm:text-[7.5rem]">
+            Every case,
+            <br />
+            <em className="italic">rehearsed.</em>
+          </h1>
+
+          <div className="mt-14 grid gap-10 border-t border-border pt-8 md:grid-cols-[minmax(0,26rem)_1fr] md:items-end">
+            <p className="text-[15px] leading-relaxed text-muted-foreground">
+              {caseClaim}+ finance, consulting and product cases, solved under
+              interview conditions and marked against a rubric — criterion by
+              criterion.
             </p>
-            <h1 className="mt-5 text-[2.6rem] font-semibold leading-[1.04] sm:text-6xl">
-              Pick a number. Defend it. See where you{" "}
-              <span className="underline decoration-mark decoration-wavy decoration-2 underline-offset-[10px]">
-                lost marks
-              </span>
-              .
-            </h1>
-            <p className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground">
-              Case practice for MBA placements. Solve finance, consulting and
-              product cases under interview conditions, and every answer comes
-              back marked against that case&apos;s rubric — criterion by
-              criterion, with the reasoning you skipped.
-            </p>
-            <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <Button size="lg" asChild>
-                <Link href={primary.href}>
-                  {primary.label}
-                  <ArrowRight />
-                </Link>
-              </Button>
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-4 md:justify-end">
+              <Link
+                href={primary.href}
+                className="inline-flex h-11 items-center gap-2 bg-foreground px-6 text-sm font-medium text-background transition-opacity hover:opacity-85"
+              >
+                {primary.label}
+                <ArrowRight className="size-4" />
+              </Link>
               <Link
                 href="/cases"
-                className="text-sm font-medium underline decoration-border underline-offset-4 hover:decoration-foreground"
+                className="text-sm underline decoration-border underline-offset-[6px] transition-colors hover:decoration-foreground"
               >
-                Browse the case library
+                Browse the library
               </Link>
             </div>
-            {!profile && (
-              <p className="mt-5 text-sm text-subtle-foreground">
-                Access comes through your college. Use the address you were
-                invited with.
-              </p>
-            )}
           </div>
-
-          <MarkedSheet className="lg:rotate-[0.6deg]" />
+          {!profile && (
+            <p className="mt-6 text-xs text-subtle-foreground md:text-right">
+              Access comes through your college — sign in with the address you
+              were invited with.
+            </p>
+          )}
         </section>
 
         {/* -------------------------------------------- how it's marked --- */}
         <section className="border-t border-border bg-surface-sunken/60">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-            <h2 className="max-w-md text-3xl font-semibold leading-tight">
+            <h2 className="max-w-md font-editorial text-4xl font-normal leading-tight tracking-[-0.015em]">
               How an answer is marked
             </h2>
             <ol className="mt-12 grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
@@ -128,7 +125,7 @@ export default async function LandingPage() {
                   <span className="font-mono text-xs text-muted-foreground">
                     Step {i + 1}
                   </span>
-                  <h3 className="mt-2 font-display text-lg font-semibold">{step.title}</h3>
+                  <h3 className="mt-2 font-editorial text-[1.35rem] leading-snug">{step.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     {step.body}
                   </p>
@@ -141,7 +138,7 @@ export default async function LandingPage() {
         {/* -------------------------------------------------- the library --- */}
         <section className="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-[18rem_1fr]">
           <div>
-            <h2 className="text-3xl font-semibold leading-tight">In the library</h2>
+            <h2 className="font-editorial text-4xl font-normal leading-tight tracking-[-0.015em]">In the library</h2>
             <p className="mt-3 text-muted-foreground">
               Every case is tagged by domain, so your progress shows which kind
               of question to practise next.
@@ -154,7 +151,7 @@ export default async function LandingPage() {
                   href={`/cases?domain=${domain.value}`}
                   className="group flex items-baseline gap-4 py-4 transition-colors hover:bg-card/70 sm:px-2"
                 >
-                  <span className="w-52 shrink-0 font-display text-lg font-semibold group-hover:text-brand">
+                  <span className="w-52 shrink-0 font-editorial text-xl group-hover:italic">
                     {domain.label}
                   </span>
                   <span className="hidden min-w-0 text-sm text-muted-foreground sm:block">
@@ -173,7 +170,7 @@ export default async function LandingPage() {
         {/* -------------------------------------------- placement cells --- */}
         <section className="border-t border-border">
           <div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-[18rem_1fr]">
-            <h2 className="text-3xl font-semibold leading-tight">For placement cells</h2>
+            <h2 className="font-editorial text-4xl font-normal leading-tight tracking-[-0.015em]">For placement cells</h2>
             <div className="max-w-2xl space-y-5 text-[17px] leading-relaxed">
               <p>
                 Set cases, SQL and Excel exercises and aptitude quizzes for a

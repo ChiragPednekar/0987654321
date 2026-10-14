@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { MarkedSheet } from "@/components/marked-sheet";
 
 /**
  * Sign-in, sign-up and password pages.
  *
- * The right half used to carry an unattributed testimonial and a row of three
- * big stats — the stock furniture of a generated auth page. It now shows what
- * the account is for: an answer, marked.
+ * The right half carries the same line as the landing hero, set in the same
+ * Didone, and nothing else — so the two front pages read as one piece.
  */
 export default function AuthLayout({
   children,
@@ -25,11 +23,18 @@ export default function AuthLayout({
         </div>
       </div>
 
-      <aside className="hidden flex-col justify-center gap-8 border-l border-border bg-surface-sunken/70 px-12 py-12 lg:flex xl:px-20">
-        <MarkedSheet compact className="max-w-lg -rotate-[0.6deg]" />
-        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-          Every answer comes back like this: marked against the case&apos;s own
-          rubric, with the step you skipped written in the margin.
+      <aside className="hidden flex-col justify-between border-l border-border bg-surface-sunken/70 px-14 py-12 lg:flex xl:px-20">
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+          Case practice for MBA placements
+        </p>
+        <p className="font-editorial text-[5.5rem] leading-[0.92] tracking-[-0.025em]">
+          Every case,
+          <br />
+          <em className="italic">rehearsed.</em>
+        </p>
+        <p className="max-w-sm border-t border-border pt-6 text-sm leading-relaxed text-muted-foreground">
+          Finance, consulting and product cases, solved under interview
+          conditions and marked against a rubric — criterion by criterion.
         </p>
       </aside>
     </div>

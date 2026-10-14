@@ -291,6 +291,7 @@
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
   --font-display: var(--font-schibsted), var(--font-plex-sans), ui-sans-serif, sans-serif;
   --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
+  --font-editorial: var(--font-bodoni), var(--font-source-serif), ui-serif, Georgia, serif;
 
   /* Plex is drawn with open spacing; the template habit of pulling every
      heading tight makes it look cramped. Tighten only slightly. */
