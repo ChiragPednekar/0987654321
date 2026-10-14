@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireTeacherActor } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Card, CardContent } from "@/components/ui/card";
+import { Note, Section, SectionEmpty, SectionList } from "@/components/teacher/section";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
@@ -75,102 +75,81 @@ export default async function QuestionBank() {
         </Button>
       </div>
 
-      <Card className="mt-6">
-        <CardContent className="p-4">
-          <p className="text-sm">
-            <span className="font-medium">Platform library</span>{" "}
-            <span className="text-muted-foreground">
-              — {formatNumber(platformCount ?? 0)} cases with rubrics, hints and
-              worked answers, ready to assign.
-            </span>
-          </p>
-          <Button asChild variant="outline" size="sm" className="mt-3">
-            <Link href="/cases">Browse the library</Link>
-          </Button>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Tick anything in the library — cases, paths, SQL, Excel or aptitude
-            questions — and use &ldquo;Add to batch&rdquo; to assign it.
-          </p>
-        </CardContent>
-      </Card>
+      <Note className="mt-6" title={`Platform library — ${formatNumber(platformCount ?? 0)} cases with rubrics, hints and worked answers`}>
+        Tick anything in the library — cases, paths, SQL, Excel or aptitude
+        questions — and use &ldquo;Add to batch&rdquo; to assign it.{" "}
+        <Link href="/cases" className="text-foreground underline underline-offset-4">
+          Browse the library
+        </Link>
+      </Note>
 
-      <h2 className="mt-8 text-sm font-semibold text-foreground">
-        Your case and written questions
-      </h2>
+      <Section
+        title="Your cases and written questions"
+        count={mine?.length ?? 0}
+        description="Private to you and the batches you assign them to — never in the public library."
+      >
+        {!mine || mine.length === 0 ? (
+          <SectionEmpty>
+            None yet.{" "}
+            <Link href="/teacher/questions/new" className="underline underline-offset-4">
+              Write a case
+            </Link>
+            .
+          </SectionEmpty>
+        ) : (
+          <SectionList>
+            {mine.map((q) => (
+              <li key={q.id} className="flex flex-wrap items-center gap-3 py-3">
+                {q.is_published ? <PickToggle kind="case" id={q.id} title={q.title} /> : null}
+                <Link href={`/cases/${q.slug}`} className="font-medium hover:underline">{q.title}</Link>
+                <Badge variant="outline">{DOMAIN_LABEL[q.domain as Domain]}</Badge>
+                <span className={cn("text-xs", DIFFICULTY_CLASS[q.difficulty as Difficulty])}>
+                  {q.difficulty}
+                </span>
+                <span className="text-xs text-muted-foreground">{q.format}</span>
+                {!q.is_published ? <Badge variant="outline">Draft</Badge> : null}
+                <span className="ml-auto font-mono text-xs text-muted-foreground">
+                  {timeAgo(q.created_at)}
+                </span>
+              </li>
+            ))}
+          </SectionList>
+        )}
+      </Section>
 
-      {!mine || mine.length === 0 ? (
-        <Card className="mt-3">
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            You have not written any yet. Your questions stay private to you
-            and the batches you assign them to — they never appear in the
-            public library.
-          </CardContent>
-        </Card>
-      ) : (
-        <ul className="mt-3 space-y-2">
-          {mine.map((q) => (
-            <li
-              key={q.id}
-              className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3"
-            >
-              {q.is_published ? <PickToggle kind="case" id={q.id} title={q.title} /> : null}
-              <Link href={`/cases/${q.slug}`} className="font-medium hover:underline">{q.title}</Link>
-              <Badge variant="outline">{DOMAIN_LABEL[q.domain as Domain]}</Badge>
-              <span className={cn("text-xs", DIFFICULTY_CLASS[q.difficulty as Difficulty])}>
-                {q.difficulty}
-              </span>
-              <span className="text-xs text-muted-foreground">{q.format}</span>
-              {!q.is_published ? <Badge variant="outline">Draft</Badge> : null}
-              <span className="ml-auto text-xs text-muted-foreground">
-                {timeAgo(q.created_at)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <h2 className="mt-8 text-sm font-semibold text-foreground">
-        Your aptitude questions
-      </h2>
-      {!myAptitude || myAptitude.length === 0 ? (
-        <Card className="mt-3">
-          <CardContent className="p-6 text-sm text-muted-foreground">
+      <Section title="Your aptitude questions" count={myAptitude?.length ?? 0}>
+        {!myAptitude || myAptitude.length === 0 ? (
+          <SectionEmpty>
             None yet.{" "}
             <Link href="/teacher/questions/new?type=aptitude" className="underline underline-offset-4">
               Add an aptitude question
             </Link>{" "}
             and tick it — with any platform questions — into a quiz for a batch.
-          </CardContent>
-        </Card>
-      ) : (
-        <ul className="mt-3 space-y-2">
-          {myAptitude.map((q) => (
-            <li
-              key={q.id}
-              className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3"
-            >
-              <PickToggle
-                kind="aptitude"
-                id={q.id}
-                title={q.stem.length > 90 ? `${q.stem.slice(0, 87)}…` : q.stem}
-              />
-              <span className="min-w-0 flex-1 truncate">{q.stem}</span>
-              <Badge variant="outline">{trackLabel.get(q.track) ?? q.track}</Badge>
-              <span className={cn("text-xs", DIFFICULTY_CLASS[q.difficulty as Difficulty])}>
-                {q.difficulty}
-              </span>
-              <span className="text-xs text-muted-foreground">{timeAgo(q.created_at)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+          </SectionEmpty>
+        ) : (
+          <SectionList>
+            {myAptitude.map((q) => (
+              <li key={q.id} className="flex flex-wrap items-center gap-3 py-3">
+                <PickToggle
+                  kind="aptitude"
+                  id={q.id}
+                  title={q.stem.length > 90 ? `${q.stem.slice(0, 87)}…` : q.stem}
+                />
+                <span className="min-w-0 flex-1 truncate">{q.stem}</span>
+                <Badge variant="outline">{trackLabel.get(q.track) ?? q.track}</Badge>
+                <span className={cn("text-xs", DIFFICULTY_CLASS[q.difficulty as Difficulty])}>
+                  {q.difficulty}
+                </span>
+                <span className="font-mono text-xs text-muted-foreground">{timeAgo(q.created_at)}</span>
+              </li>
+            ))}
+          </SectionList>
+        )}
+      </Section>
 
-      <h2 className="mt-8 text-sm font-semibold text-foreground">
-        Your SQL and Excel exercises
-      </h2>
-      {myExercises.length === 0 ? (
-        <Card className="mt-3">
-          <CardContent className="p-6 text-sm text-muted-foreground">
+      <Section title="Your SQL and Excel exercises" count={myExercises.length}>
+        {myExercises.length === 0 ? (
+          <SectionEmpty>
             None yet. Write an{" "}
             <Link href="/teacher/questions/new?type=sql" className="underline underline-offset-4">
               SQL exercise
@@ -180,27 +159,24 @@ export default async function QuestionBank() {
               Excel exercise
             </Link>
             , on the platform&apos;s data or your own.
-          </CardContent>
-        </Card>
-      ) : (
-        <ul className="mt-3 space-y-2">
-          {myExercises.map((e) => (
-            <li
-              key={`${e.kind}:${e.id}`}
-              className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3"
-            >
-              <PickToggle kind={e.kind} id={e.id} title={e.title} />
-              <Link href={`/${e.kind}/${e.slug}`} className="font-medium hover:underline">{e.title}</Link>
-              <Badge variant="outline">{e.kind === "sql" ? "SQL" : "Excel"}</Badge>
-              <span className={cn("text-xs", DIFFICULTY_CLASS[e.difficulty as Difficulty])}>
-                {e.difficulty}
-              </span>
-              <span className="text-xs text-muted-foreground">{e.topic}</span>
-              <span className="ml-auto text-xs text-muted-foreground">{timeAgo(e.created_at)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+          </SectionEmpty>
+        ) : (
+          <SectionList>
+            {myExercises.map((e) => (
+              <li key={`${e.kind}:${e.id}`} className="flex flex-wrap items-center gap-3 py-3">
+                <PickToggle kind={e.kind} id={e.id} title={e.title} />
+                <Link href={`/${e.kind}/${e.slug}`} className="font-medium hover:underline">{e.title}</Link>
+                <Badge variant="outline">{e.kind === "sql" ? "SQL" : "Excel"}</Badge>
+                <span className={cn("text-xs", DIFFICULTY_CLASS[e.difficulty as Difficulty])}>
+                  {e.difficulty}
+                </span>
+                <span className="text-xs text-muted-foreground">{e.topic}</span>
+                <span className="ml-auto font-mono text-xs text-muted-foreground">{timeAgo(e.created_at)}</span>
+              </li>
+            ))}
+          </SectionList>
+        )}
+      </Section>
     </div>
   );
 }

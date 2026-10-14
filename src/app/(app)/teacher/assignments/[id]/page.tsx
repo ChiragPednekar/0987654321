@@ -3,11 +3,12 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { AuthzError, requireAssignmentTeacher } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/stat-card";
+import { Note, Section, SectionEmpty } from "@/components/teacher/section";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ReviewQueue } from "@/components/teach/review-queue";
-import { formatNumber } from "@/lib/utils";
+import { formatDayTime, formatNumber } from "@/lib/utils";
 import { photosForFindings } from "@/lib/proctor-evidence";
 import type { AssignmentReviewRow } from "@/lib/types/database";
 import { assignmentTarget, type AssignmentTarget } from "@/lib/assignments";
@@ -180,7 +181,7 @@ export default async function AssignmentDetail({
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {room?.name}
-            {assignment.due_at ? ` · due ${new Date(assignment.due_at).toLocaleString()}` : ""}
+            {assignment.due_at ? ` · due ${formatDayTime(assignment.due_at)}` : ""}
             {assignment.max_marks ? ` · out of ${assignment.max_marks}` : " · practice, no marks"}
           </p>
         </div>
@@ -188,9 +189,9 @@ export default async function AssignmentDetail({
       </div>
 
       {assignment.instructions ? (
-        <Card className="mt-4">
-          <CardContent className="p-4 text-sm">{assignment.instructions}</CardContent>
-        </Card>
+        <p className="mt-5 max-w-2xl whitespace-pre-line border-l-2 border-foreground/40 pl-4 text-sm leading-relaxed">
+          {assignment.instructions}
+        </p>
       ) : null}
 
       {c?.slug ? (
@@ -199,7 +200,7 @@ export default async function AssignmentDetail({
         </Link>
       ) : null}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {[
           ["Submitted", `${submitted.length} / ${rows.length}`, `${notStarted.length} not started`],
           ["Awaiting review", String(awaiting.length), `${reviewed.length} marked`],
@@ -207,61 +208,36 @@ export default async function AssignmentDetail({
           ["Your average", avgMark !== null ? avgMark.toFixed(1) : "—",
             assignment.max_marks ? `out of ${assignment.max_marks}` : "no marks set"],
         ].map(([label, value, sub]) => (
-          <Card key={label}>
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{label}</p>
-              <p className="mt-1 text-2xl font-semibold tabular">{value}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
-            </CardContent>
-          </Card>
+          <StatCard key={label} label={label} value={value} sublabel={sub} />
         ))}
       </div>
 
       {resub.length > 0 ? (
-        <Card className="mt-4">
-          <CardContent className="p-4 text-sm">
-            <p className="font-medium">{resub.length} awaiting resubmission</p>
-            <p className="mt-0.5 text-muted-foreground">
-              You sent these back. They return to the queue when handed in again.
-            </p>
-          </CardContent>
-        </Card>
+        <Note className="mt-6" title={`${resub.length} awaiting resubmission`}>
+          You sent these back. They return to the queue when handed in again.
+        </Note>
       ) : null}
 
       {aiScored.length > 0 ? (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="text-base">Score distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
+        <Section title="Score distribution" description="The AI's marks, in bands of 20%.">
+            <ul className="space-y-2 pt-3">
               {buckets.map((n, i) => (
                 <li key={i} className="flex items-center gap-3 text-sm">
                   <span className="w-16 shrink-0 text-muted-foreground tabular">
                     {i * 20}–{i * 20 + 19}%
                   </span>
                   <Progress value={(n / maxBucket) * 100} className="flex-1" />
-                  <span className="w-8 shrink-0 text-right tabular">{n}</span>
+                  <span className="w-8 shrink-0 text-right font-mono tabular">{n}</span>
                 </li>
               ))}
             </ul>
-          </CardContent>
-        </Card>
+        </Section>
       ) : null}
 
       {notStarted.length > 0 ? (
-        <Card className="mt-6 border-amber-500/40">
-          <CardHeader>
-            <CardTitle className="text-base">
-              Not started ({formatNumber(notStarted.length)})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {notStarted.map((r) => r.full_name ?? r.email).join(", ")}
-            </p>
-          </CardContent>
-        </Card>
+        <Note tone="warning" className="mt-8" title={`Not started (${formatNumber(notStarted.length)})`}>
+          {notStarted.map((r) => r.full_name ?? r.email).join(", ")}
+        </Note>
       ) : null}
 
       <div className="mt-6">
@@ -330,16 +306,16 @@ async function AutoMarkedAssignment({
             {target.kindLabel}
             {quiz ? ` · ${target.itemTitle}` : ""}
             {roomName ? ` · ${roomName}` : ""}
-            {dueAt ? ` · due ${new Date(dueAt).toLocaleString()}` : ""}
+            {dueAt ? ` · due ${formatDayTime(dueAt)}` : ""}
           </p>
         </div>
         {!isPublished ? <Badge variant="outline">Draft</Badge> : null}
       </div>
 
       {instructions ? (
-        <Card className="mt-4">
-          <CardContent className="p-4 text-sm">{instructions}</CardContent>
-        </Card>
+        <p className="mt-5 max-w-2xl whitespace-pre-line border-l-2 border-foreground/40 pl-4 text-sm leading-relaxed">
+          {instructions}
+        </p>
       ) : null}
 
       {target.href ? (
@@ -348,29 +324,19 @@ async function AutoMarkedAssignment({
         </Link>
       ) : null}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid gap-6 sm:grid-cols-3">
         {[
           [quiz ? "Submitted" : "Solved", `${done.length} / ${rows.length}`, `${notStarted.length} not yet`],
           [quiz ? "Average score" : "Solve rate", quiz ? (avg !== null ? `${avg.toFixed(0)}%` : "—") : rows.length ? `${Math.round((done.length / rows.length) * 100)}%` : "—", quiz ? `${pcts.length} marked` : "of the batch"],
           ["Marked by", "Platform", quiz ? "against the answer key" : "checked against a hidden dataset"],
         ].map(([label, value, sub]) => (
-          <Card key={label}>
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{label}</p>
-              <p className="mt-1 text-2xl font-semibold tabular">{value}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
-            </CardContent>
-          </Card>
+          <StatCard key={label} label={label} value={value} sublabel={sub} />
         ))}
       </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Students ({formatNumber(rows.length)})</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Section title="Students" count={rows.length}>
           {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No students in this batch yet.</p>
+            <SectionEmpty>No students in this batch yet.</SectionEmpty>
           ) : (
             <ul className="divide-y divide-border">
               {rows.map((r) => {
@@ -380,7 +346,7 @@ async function AutoMarkedAssignment({
                     <span className="min-w-0 flex-1 truncate font-medium">{r.full_name ?? r.email}</span>
                     {r.submitted_at ? (
                       <>
-                        <span className="tabular">
+                        <span className="font-mono tabular">
                           {quiz && w?.auto_max
                             ? `${Number(w.auto_score)} / ${Number(w.auto_max)}`
                             : "Solved"}
@@ -390,21 +356,20 @@ async function AutoMarkedAssignment({
                             ? `attempt ${w?.attempt_number ?? 1}`
                             : `${w?.attempt_number ?? 1} ${w?.attempt_number === 1 ? "try" : "tries"}`}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(r.submitted_at).toLocaleString()}
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {formatDayTime(r.submitted_at)}
                         </span>
                         {r.is_late ? <Badge variant="outline">Late</Badge> : null}
                       </>
                     ) : (
-                      <Badge variant="outline" className="border-amber-500/40 text-amber-600">Not started</Badge>
+                      <Badge variant="warning">Not started</Badge>
                     )}
                   </li>
                 );
               })}
             </ul>
           )}
-        </CardContent>
-      </Card>
+      </Section>
     </div>
   );
 }

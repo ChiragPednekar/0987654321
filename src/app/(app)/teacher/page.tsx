@@ -1,18 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import {
-  AlertTriangle, ClipboardCheck, GraduationCap, TrendingDown, Users,
-} from "lucide-react";
 import { requireTeacherActor, batchesTaughtBy } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/teacher/empty-state";
+import { Note, Section, SectionEmpty, SectionList } from "@/components/teacher/section";
 import { DOMAIN_LABEL } from "@/lib/constants";
-import { formatNumber, plural } from "@/lib/utils";
+import { formatDay, formatNumber, plural } from "@/lib/utils";
 import type { Domain } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Teacher dashboard" };
@@ -28,7 +24,6 @@ export default async function TeacherDashboard() {
   if (batchIds.length === 0) {
     return (
       <EmptyState
-        icon={GraduationCap}
         title="No batches yet"
         body="Create your first batch to start assigning cases. Students join with a six-character code — no invites, no spreadsheets."
         action={{ href: "/teacher/batches", label: "Create a batch" }}
@@ -158,19 +153,17 @@ export default async function TeacherDashboard() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Students"
           value={formatNumber(uniqueStudents.size)}
           sublabel={`${formatNumber(activeIds.size)} active in ${STALE_DAYS} days`}
-          icon={Users}
         />
         <StatCard
           label="Awaiting review"
           value={formatNumber(awaitingReview.length)}
           sublabel={`${formatNumber(reviewed.length)} already marked`}
-          icon={ClipboardCheck}
-          accent={awaitingReview.length > 0 ? "text-amber-500" : undefined}
+          tone={awaitingReview.length > 0 ? "warning" : "default"}
         />
         <StatCard
           label="Active assignments"
@@ -178,150 +171,131 @@ export default async function TeacherDashboard() {
           sublabel={
             overdue.length > 0 ? `${overdue.length} past due` : "none overdue"
           }
-          icon={GraduationCap}
+          tone={overdue.length > 0 ? "warning" : "default"}
         />
         <StatCard
           label="Class average"
           value={classAverage !== null ? `${classAverage.toFixed(1)}%` : "—"}
           sublabel={`${formatNumber(graded.length)} graded submissions`}
-          icon={TrendingDown}
         />
       </div>
 
-      {neverStarted.length > 0 ? (
-        <Card className="mt-6 border-amber-500/40">
-          <CardContent className="flex items-start gap-3 p-4 text-sm">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" />
-            <div>
-              <p className="font-medium">
-                {neverStarted.length}{" "}
-                {neverStarted.length === 1 ? "student has" : "students have"} not
-                submitted anything yet
-              </p>
-              <p className="mt-0.5 text-muted-foreground">
-                They are enrolled but have never handed in. Worth a nudge before
-                the term narrows.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      {neverStarted.length > 0 || needsResubmission.length > 0 ? (
+        <div className="mt-8 space-y-3">
+          {neverStarted.length > 0 && (
+            <Note
+              tone="warning"
+              title={`${neverStarted.length} ${neverStarted.length === 1 ? "student has" : "students have"} not submitted anything yet`}
+            >
+              They are enrolled but have never handed in. Worth a nudge before
+              the term narrows.
+            </Note>
+          )}
+          {needsResubmission.length > 0 && (
+            <Note title={`${needsResubmission.length} awaiting resubmission`}>
+              You asked these students to try again. They reappear here once
+              they hand in.
+            </Note>
+          )}
+        </div>
       ) : null}
 
-      {needsResubmission.length > 0 ? (
-        <Card className="mt-4">
-          <CardContent className="p-4 text-sm">
-            <p className="font-medium">
-              {needsResubmission.length} awaiting resubmission
-            </p>
-            <p className="mt-0.5 text-muted-foreground">
-              You asked these students to try again. They reappear here once they
-              hand in.
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Upcoming deadlines</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {upcoming.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nothing due. {published.length === 0 ? "No assignments published yet." : ""}
-              </p>
-            ) : (
-              <ul className="space-y-3">
-                {upcoming.map((a) => {
-                  const c = Array.isArray(a.cases) ? a.cases[0] : a.cases;
-                  const mine = subs.filter((s) => s.assignment_id === a.id);
-                  return (
-                    <li key={a.id}>
-                      <Link
-                        href={`/teacher/assignments/${a.id}`}
-                        className="group flex items-center justify-between gap-3"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm group-hover:underline">
-                            {a.title ?? c?.title ?? "Assignment"}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            due {new Date(a.due_at!).toLocaleDateString()}
-                          </span>
-                        </span>
-                        <span className="shrink-0 text-xs text-muted-foreground tabular">
-                          {mine.length} in
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Weakest domains</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {weakest.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No graded work yet — this fills in once students start
-                submitting.
-              </p>
-            ) : (
-              <ul className="space-y-3">
-                {weakest.slice(0, 6).map((row) => (
-                  <li key={row.domain} className="flex items-center gap-3">
-                    <span className="w-36 shrink-0 truncate text-sm">
-                      {DOMAIN_LABEL[row.domain as Domain]}
-                    </span>
-                    <Progress value={row.avg} className="flex-1" />
-                    <span className="w-12 shrink-0 text-right text-sm tabular">
-                      {row.avg.toFixed(0)}%
-                    </span>
+      <div className="grid gap-x-12 lg:grid-cols-2">
+        <Section
+          title="Upcoming deadlines"
+          action={
+            <Link href="/teacher/assignments" className="text-xs text-muted-foreground hover:text-foreground">
+              All assignments
+            </Link>
+          }
+        >
+          {upcoming.length === 0 ? (
+            <SectionEmpty>
+              Nothing due. {published.length === 0 ? "No assignments published yet." : ""}
+            </SectionEmpty>
+          ) : (
+            <SectionList>
+              {upcoming.map((a) => {
+                const c = Array.isArray(a.cases) ? a.cases[0] : a.cases;
+                const mine = subs.filter((s) => s.assignment_id === a.id);
+                return (
+                  <li key={a.id}>
+                    <Link
+                      href={`/teacher/assignments/${a.id}`}
+                      className="group flex items-baseline gap-4 py-3"
+                    >
+                      <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
+                        {formatDay(a.due_at!)}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm group-hover:underline">
+                        {a.title ?? c?.title ?? "Assignment"}
+                      </span>
+                      <span className="shrink-0 font-mono text-xs text-muted-foreground tabular">
+                        {mine.length} handed in
+                      </span>
+                    </Link>
                   </li>
-                ))}
-              </ul>
-            )}
-            <p className="mt-4 text-xs text-muted-foreground">
-              Weakest first — the list to build revision around.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+                );
+              })}
+            </SectionList>
+          )}
+        </Section>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Your batches</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-3">
-            {(batches ?? []).map((b) => {
-              const count = students.filter((s) => s.classroom_id === b.id).length;
-              return (
-                <li key={b.id} className="flex flex-wrap items-center justify-between gap-2">
-                  <Link
-                    href={`/teacher/batches/${b.id}`}
-                    className="font-medium hover:underline"
-                  >
-                    {b.name}
-                  </Link>
-                  <span className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="tabular">{plural(count, "student")}</span>
-                    <Badge variant="outline" className="font-mono">
-                      {b.join_code}
-                    </Badge>
+        <Section title="Weakest domains" description="Weakest first — the list to build revision around.">
+          {weakest.length === 0 ? (
+            <SectionEmpty>
+              No graded work yet — this fills in once students start
+              submitting.
+            </SectionEmpty>
+          ) : (
+            <SectionList>
+              {weakest.slice(0, 6).map((row) => (
+                <li key={row.domain} className="flex items-center gap-3 py-3">
+                  <span className="w-36 shrink-0 truncate text-sm">
+                    {DOMAIN_LABEL[row.domain as Domain]}
+                  </span>
+                  <Progress value={row.avg} className="flex-1" />
+                  <span className="w-12 shrink-0 text-right font-mono text-sm tabular">
+                    {row.avg.toFixed(0)}%
                   </span>
                 </li>
-              );
-            })}
-          </ul>
-        </CardContent>
-      </Card>
+              ))}
+            </SectionList>
+          )}
+        </Section>
+      </div>
+
+      <Section
+        title="Your batches"
+        count={(batches ?? []).length}
+        action={
+          <Link href="/teacher/batches" className="text-xs text-muted-foreground hover:text-foreground">
+            Manage batches
+          </Link>
+        }
+      >
+        <SectionList>
+          {(batches ?? []).map((b) => {
+            const count = students.filter((s) => s.classroom_id === b.id).length;
+            return (
+              <li key={b.id} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
+                <Link
+                  href={`/teacher/batches/${b.id}`}
+                  className="font-medium hover:underline"
+                >
+                  {b.name}
+                </Link>
+                <span className="flex items-baseline gap-4 text-xs text-muted-foreground">
+                  <span className="tabular">{plural(count, "student")}</span>
+                  <span className="font-mono">
+                    code <span className="text-foreground">{b.join_code}</span>
+                  </span>
+                </span>
+              </li>
+            );
+          })}
+        </SectionList>
+      </Section>
     </div>
   );
 }

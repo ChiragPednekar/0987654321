@@ -4,7 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Camera, CheckCircle2, ChevronDown, Clock, Loader2, RotateCcw, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -119,12 +118,10 @@ export function ReviewQueue({
 
   if (rows.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-6 text-sm text-muted-foreground">
-          Nobody has joined this batch yet. Share the join code with your
-          students.
-        </CardContent>
-      </Card>
+      <p className="border-t-2 border-foreground pt-4 text-sm text-muted-foreground">
+        Nobody has joined this batch yet. Share the join code with your
+        students.
+      </p>
     );
   }
 
@@ -188,14 +185,10 @@ export function ReviewQueue({
       />
 
       {visible.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            Nothing matches this filter.
-          </CardContent>
-        </Card>
+        <p className="py-4 text-sm text-muted-foreground">Nothing matches this filter.</p>
       ) : null}
 
-    <ul className="space-y-3">
+    <ul className="divide-y divide-border border-y border-foreground/80">
       {visible.map((row) => {
         const open = openId === row.user_id;
         const notStarted = !row.submitted_at;
@@ -203,16 +196,15 @@ export function ReviewQueue({
 
         return (
           <li key={row.user_id}>
-            <Card className={cn(notStarted && "opacity-70")}>
-              <CardContent className="p-0">
+            <div className={cn(notStarted && "opacity-70", open && "bg-card")}>
                 <button
                   type="button"
                   disabled={notStarted}
                   onClick={() => setOpenId(open ? null : row.user_id)}
                   aria-expanded={open}
                   className={cn(
-                    "flex w-full items-center gap-3 p-4 text-left",
-                    !notStarted && "hover:bg-accent/40",
+                    "flex w-full items-center gap-3 px-2 py-3.5 text-left",
+                    !notStarted && "hover:bg-card/70",
                   )}
                 >
                   <div className="min-w-0 flex-1">
@@ -257,12 +249,14 @@ export function ReviewQueue({
                   ) : null}
 
                   {reviewed ? (
-                    <Badge variant="secondary" className="shrink-0">
-                      <CheckCircle2 className="mr-1 size-3" />
+                    // The teacher's own mark, in the examiner's pen — the one
+                    // place in the queue where a person has marked the work.
+                    <span className="flex shrink-0 items-center gap-1 font-display text-base font-semibold text-mark tabular">
+                      <CheckCircle2 className="size-3.5" />
                       {row.faculty_marks !== null
                         ? `${row.faculty_marks}${maxMarks ? `/${maxMarks}` : ""}`
                         : "reviewed"}
-                    </Badge>
+                    </span>
                   ) : row.status === "resubmission_requested" ? (
                     <Badge variant="outline" className="shrink-0">
                       <RotateCcw className="mr-1 size-3" />
@@ -286,7 +280,7 @@ export function ReviewQueue({
                 </button>
 
                 {open ? (
-                  <div className="border-t border-border p-4">
+                  <div className="border-t border-border px-2 pb-5 pt-4">
                     <p className="mb-2 text-xs font-medium text-muted-foreground">
                       Their answer
                     </p>
@@ -560,8 +554,7 @@ export function ReviewQueue({
                     </form>
                   </div>
                 ) : null}
-              </CardContent>
-            </Card>
+            </div>
           </li>
         );
       })}

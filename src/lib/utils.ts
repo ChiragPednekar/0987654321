@@ -38,6 +38,29 @@ export function timeAgo(date: string | Date): string {
   return d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
 }
 
+/**
+ * "19 Oct", or "19 Oct 2027" outside the current year — day before month, as
+ * dates are read in India. Pinned to IST so a server render in UTC and the
+ * browser agree on the day near midnight.
+ */
+export function formatDay(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    ...(sameYear ? {} : { year: "numeric" }),
+    timeZone: "Asia/Kolkata",
+  });
+}
+
+/** "19 Oct, 5:30 pm" — formatDay with the time, in IST. */
+export function formatDayTime(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const time = d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
+  return `${formatDay(d)}, ${time}`;
+}
+
 export function slugify(input: string): string {
   return input
     .toLowerCase()

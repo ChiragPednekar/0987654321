@@ -1,10 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Users } from "lucide-react";
 import { requireTeacherActor, batchesTaughtBy } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { CreateBatchForm } from "@/components/teacher/create-batch-form";
 import { formatNumber } from "@/lib/utils";
 
@@ -42,40 +39,42 @@ export default async function BatchesPage() {
       </div>
 
       {!batches || batches.length === 0 ? (
-        <Card className="mt-6">
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            No batches yet. Create one and share its join code with your
-            students.
-          </CardContent>
-        </Card>
+        <p className="mt-8 border-t-2 border-foreground pt-4 text-sm text-muted-foreground">
+          No batches yet. Create one and share its join code with your
+          students.
+        </p>
       ) : (
-        <ul className="mt-6 grid gap-4 sm:grid-cols-2">
-          {batches.map((b) => (
-            <li key={b.id}>
-              <Link href={`/teacher/batches/${b.id}`} className="block">
-                <Card className="h-full transition-colors hover:border-foreground/25">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <h2 className="font-medium">{b.name}</h2>
-                      <Badge variant="outline" className="shrink-0 font-mono">
-                        {b.join_code}
-                      </Badge>
-                    </div>
+        <div className="mt-8">
+          <div className="hidden grid-cols-[1fr_7rem_8rem] gap-4 border-b border-foreground pb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground sm:grid">
+            <span>Batch</span>
+            <span className="text-right">Students</span>
+            <span className="text-right">Join code</span>
+          </div>
+          <ul className="divide-y divide-border border-b border-border">
+            {batches.map((b) => (
+              <li key={b.id}>
+                <Link
+                  href={`/teacher/batches/${b.id}`}
+                  className="group grid gap-x-4 gap-y-1 py-4 sm:grid-cols-[1fr_7rem_8rem] sm:items-baseline"
+                >
+                  <span className="min-w-0">
+                    <span className="font-display text-lg font-semibold group-hover:text-brand">{b.name}</span>
                     {b.description ? (
-                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                      <span className="mt-0.5 block line-clamp-1 text-sm text-muted-foreground">
                         {b.description}
-                      </p>
+                      </span>
                     ) : null}
-                    <p className="mt-3 flex items-center gap-1 text-xs text-muted-foreground tabular">
-                      <Users className="size-3.5" />
-                      {formatNumber(counts.get(b.id) ?? 0)} students
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                  </span>
+                  <span className="font-mono text-sm tabular sm:text-right">
+                    {formatNumber(counts.get(b.id) ?? 0)}
+                    <span className="text-muted-foreground sm:hidden"> students</span>
+                  </span>
+                  <span className="font-mono text-sm sm:text-right">{b.join_code}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

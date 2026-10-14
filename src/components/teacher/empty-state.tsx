@@ -6,26 +6,27 @@ import { Button } from "@/components/ui/button";
  * The empty state every teacher section falls back to.
  *
  * A blank table teaches nothing. Each of these says what the section is for and
- * offers the one action that fills it.
+ * offers the one action that fills it. Set left-aligned under an ink rule,
+ * like the start of a fresh page — not a centred icon above a centred line,
+ * which is every generated app's empty state. `icon` is still accepted so no
+ * caller changes; it is no longer drawn.
  */
 export function EmptyState({
-  icon: Icon,
   title,
   body,
   action,
 }: {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   title: string;
   body: string;
   action?: { href: string; label: string };
 }) {
   return (
-    <div className="mx-auto max-w-md py-16 text-center">
-      <Icon className="mx-auto size-8 text-muted-foreground" />
-      <h2 className="mt-4 text-lg font-semibold tracking-tight">{title}</h2>
-      <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+    <div className="max-w-lg border-t-2 border-foreground pt-5 pb-10">
+      <h2 className="text-xl font-semibold">{title}</h2>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
       {action ? (
-        <Button asChild className="mt-6">
+        <Button asChild className="mt-5">
           <Link href={action.href}>{action.label}</Link>
         </Button>
       ) : null}

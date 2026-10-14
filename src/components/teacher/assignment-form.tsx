@@ -99,7 +99,7 @@ export function AssignmentForm({
   return (
     <form onSubmit={(e) => submit(e, true)} className="space-y-8">
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">
+        <h2 className="border-b border-foreground pb-2 text-lg font-semibold">
           What and who
         </h2>
 
@@ -175,7 +175,7 @@ export function AssignmentForm({
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">
+        <h2 className="border-b border-foreground pb-2 text-lg font-semibold">
           Timing and marks
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">

@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { AuthzError, requireTeacherActor } from "@/lib/authz";
-import { TeacherNav } from "@/components/teacher/teacher-nav";
 
 /**
  * Guards the whole teacher area.
@@ -24,9 +23,8 @@ export default async function TeacherLayout({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <TeacherNav />
-      <div className="mt-6">{children}</div>
-    </div>
+    // No tab bar: it repeated the sidebar link for link, and on a phone the
+    // header menu carries the same four.
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{children}</div>
   );
 }

@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Users } from "lucide-react";
 import { AuthzError, requireBatchTeacher } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Section, SectionEmpty, SectionList } from "@/components/teacher/section";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
@@ -13,7 +12,7 @@ import { BatchControls } from "@/components/teacher/batch-controls";
 import { LockoutList } from "@/components/proctor/lockout-list";
 import { loadLockouts } from "@/lib/exam-lockouts";
 import { DOMAIN_LABEL } from "@/lib/constants";
-import { formatNumber } from "@/lib/utils";
+import { formatDay, formatNumber } from "@/lib/utils";
 import type { Domain, InstitutionRosterRow } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Batch" };
@@ -159,9 +158,9 @@ export default async function BatchDetail({
           {batch.archived ? (
             <Badge variant="secondary">Archived</Badge>
           ) : (
-            <Badge variant="outline" className="font-mono text-sm">
-              Join code {batch.join_code}
-            </Badge>
+            <span className="mr-2 font-mono text-sm text-muted-foreground">
+              join code <span className="text-foreground">{batch.join_code}</span>
+            </span>
           )}
           <BatchControls
             classroomId={id}
@@ -171,113 +170,97 @@ export default async function BatchDetail({
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Students" value={formatNumber(roster.length)} icon={Users} />
+      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Students" value={formatNumber(roster.length)} />
         <StatCard
           label={`Active in ${STALE_DAYS}d`}
           value={formatNumber(active)}
           sublabel={roster.length ? `${Math.round((active / roster.length) * 100)}%` : undefined}
-          icon={Users}
         />
         <StatCard
           label="Assignments"
           value={formatNumber((assignments ?? []).filter((a) => a.is_published).length)}
           sublabel={`${(assignments ?? []).filter((a) => !a.is_published).length} draft`}
-          icon={Users}
         />
         <StatCard
           label="Batch average"
           value={avg !== null ? `${avg.toFixed(1)}%` : "—"}
           sublabel={`${formatNumber(graded.length)} graded`}
-          icon={Users}
         />
       </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Assignments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!assignments || assignments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nothing assigned yet. Create an assignment to give this batch
-              something to work on.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {assignments.map((a) => {
-                const c = Array.isArray(a.cases) ? a.cases[0] : a.cases;
-                return (
-                  <li key={a.id} className="flex flex-wrap items-center gap-3">
-                    <Link
-                      href={`/teacher/assignments/${a.id}`}
-                      className="font-medium hover:underline"
-                    >
+      <Section
+        title="Assignments"
+        count={(assignments ?? []).length}
+        action={
+          <Link href="/teacher/assignments/new" className="text-xs text-muted-foreground hover:text-foreground">
+            New assignment
+          </Link>
+        }
+      >
+        {!assignments || assignments.length === 0 ? (
+          <SectionEmpty>
+            Nothing assigned yet. Tick cases, exercises or questions in the
+            library and add them to this batch.
+          </SectionEmpty>
+        ) : (
+          <SectionList>
+            {assignments.map((a) => {
+              const c = Array.isArray(a.cases) ? a.cases[0] : a.cases;
+              return (
+                <li key={a.id}>
+                  <Link
+                    href={`/teacher/assignments/${a.id}`}
+                    className="group flex flex-wrap items-baseline gap-x-4 gap-y-1 py-3"
+                  >
+                    <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground">
+                      {a.due_at ? formatDay(a.due_at) : "no date"}
+                    </span>
+                    <span className="min-w-0 flex-1 text-sm font-medium group-hover:underline">
                       {a.title ?? c?.title ?? "Assignment"}
-                    </Link>
+                    </span>
                     {!a.is_published ? <Badge variant="outline">Draft</Badge> : null}
-                    {a.due_at ? (
-                      <span className="text-xs text-muted-foreground">
-                        due {new Date(a.due_at).toLocaleDateString()}
-                      </span>
-                    ) : null}
                     {a.max_marks ? (
-                      <span className="text-xs text-muted-foreground tabular">
+                      <span className="font-mono text-xs text-muted-foreground tabular">
                         out of {a.max_marks}
                       </span>
                     ) : null}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Ended tests</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <LockoutList rows={lockouts.rows} failed={lockouts.failed} />
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">Performance by domain</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {weakest.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No graded work yet.</p>
-          ) : (
-            <ul className="space-y-3">
-              {weakest.map((row) => (
-                <li key={row.domain} className="flex items-center gap-3">
-                  <span className="w-36 shrink-0 truncate text-sm">
-                    {DOMAIN_LABEL[row.domain as Domain]}
-                  </span>
-                  <Progress value={row.avg} className="flex-1" />
-                  <span className="w-12 shrink-0 text-right text-sm tabular">
-                    {row.avg.toFixed(0)}%
-                  </span>
+                  </Link>
                 </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+              );
+            })}
+          </SectionList>
+        )}
+      </Section>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base">
-            Roster{" "}
-            <span className="text-sm font-normal text-muted-foreground tabular">
-              ({formatNumber(roster.length)})
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Section title="Ended tests" description="Tests the camera or a tab switch ended. Each lifts after 24 hours; the third on one question is final.">
+        <div className="pt-3">
+          <LockoutList rows={lockouts.rows} failed={lockouts.failed} />
+        </div>
+      </Section>
+
+      <Section title="Performance by domain">
+        {weakest.length === 0 ? (
+          <SectionEmpty>No graded work yet.</SectionEmpty>
+        ) : (
+          <SectionList>
+            {weakest.map((row) => (
+              <li key={row.domain} className="flex items-center gap-3 py-3">
+                <span className="w-36 shrink-0 truncate text-sm">
+                  {DOMAIN_LABEL[row.domain as Domain]}
+                </span>
+                <Progress value={row.avg} className="flex-1" />
+                <span className="w-12 shrink-0 text-right font-mono text-sm tabular">
+                  {row.avg.toFixed(0)}%
+                </span>
+              </li>
+            ))}
+          </SectionList>
+        )}
+      </Section>
+
+      <Section title="Roster" count={roster.length}>
+        <div className="pt-3">
           {/* The teacher of this batch may unenrol a student; the placement
               dashboard renders the same table without this prop. */}
           <RosterTable
@@ -285,8 +268,8 @@ export default async function BatchDetail({
             staleDays={STALE_DAYS}
             removeFromClassroomId={id}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
     </div>
   );
 }
