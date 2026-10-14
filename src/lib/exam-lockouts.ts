@@ -12,12 +12,14 @@ type Admin = SupabaseClient<Database>;
  * it for COOLDOWN_HOURS, after which the student may try again under the same
  * rules; the MAX_STRIKES-th locks it for good. See migration 068.
  */
+import type { EndReason } from "@/lib/camera-proctor";
+
 export const COOLDOWN_HOURS = 24;
 export const MAX_STRIKES = 3;
 
 /** What a page's lock looks like to the student it locks. */
 export interface LockState {
-  reason: ExamLockoutRow["reason"];
+  reason: EndReason;
   /** When the test was ended. */
   at: string;
   /** When it opens again. Null when it never will. */
@@ -26,13 +28,17 @@ export interface LockState {
   maxStrikes: number;
 }
 
-type LockRow = Pick<ExamLockoutRow, "id" | "reason" | "created_at" | "strike" | "expires_at">;
+type LockRow = Pick<ExamLockoutRow, "id" | "reason" | "created_at" | "strike" | "expires_at"> & {
+  signals?: Record<string, unknown> | null;
+};
 
-const LOCK_COLUMNS = "id, reason, created_at, strike, expires_at";
+const LOCK_COLUMNS = "id, reason, created_at, strike, expires_at, signals";
 
 function stateOf(row: LockRow): LockState {
+  const sig = (row.signals ?? {}) as Record<string, unknown>;
+  const reason = (sig.violation as EndReason) || (row.reason as EndReason);
   return {
-    reason: row.reason,
+    reason,
     at: row.created_at,
     until: row.expires_at,
     strike: row.strike,
@@ -89,7 +95,7 @@ export async function activeLockout(
  */
 export async function recordLockout(
   admin: Admin,
-  input: { userId: string; path: string; reason: ExamLockoutRow["reason"]; signals: unknown },
+  input: { userId: string; path: string; reason: EndReason; signals: unknown },
 ): Promise<LockState | null> {
   const { rows, error } = await strikesOn(admin, input.userId, input.path);
   if (error) {
@@ -103,13 +109,29 @@ export async function recordLockout(
   const expiresAt =
     strike >= MAX_STRIKES ? null : new Date(Date.now() + COOLDOWN_HOURS * 3_600_000).toISOString();
 
+  // Safe mapping for DB constraint compatibility while keeping exact reason in signals
+  const rawReason = input.reason;
+  let dbReason: ExamLockoutRow["reason"];
+  if (rawReason === "looking_away") {
+    dbReason = "no_face";
+  } else if (rawReason === "voice_detected") {
+    dbReason = "multiple_faces";
+  } else {
+    dbReason = rawReason as ExamLockoutRow["reason"];
+  }
+
+  const payloadSignals = {
+    ...((typeof input.signals === "object" && input.signals !== null ? input.signals : {}) as Record<string, unknown>),
+    violation: rawReason,
+  };
+
   const { data, error: insertError } = await admin
     .from("exam_lockouts")
     .insert({
       user_id: input.userId,
       path: input.path,
-      reason: input.reason,
-      signals: input.signals as ExamLockoutRow["signals"],
+      reason: dbReason,
+      signals: payloadSignals as ExamLockoutRow["signals"],
       strike,
       expires_at: expiresAt,
     })

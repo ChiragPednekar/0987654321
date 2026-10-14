@@ -3,6 +3,7 @@
 import * as React from "react";
 import type { FaceDetector, ObjectDetector } from "@mediapipe/tasks-vision";
 import {
+  checkPoseAndGaze,
   createTracker,
   endReason,
   isBlockedWithoutFace,
@@ -16,29 +17,18 @@ import {
 } from "@/lib/camera-proctor";
 
 /**
- * Watches the webcam during a proctored attempt.
+ * Watches the webcam and microphone during a proctored attempt.
  *
  * ---------------------------------------------------------------------------
  * Nothing leaves the laptop except counters
  * ---------------------------------------------------------------------------
- * Detection runs in the browser on the student's own CPU. No video is
- * streamed or uploaded; what reaches the server is the handful of numbers in
- * CameraCounters, carried with the submission like every other proctor signal.
- * The one exception is a single low-resolution photo at the moment a finding
- * starts — capped per attempt, stored privately, deleted after 30 days — so a
- * reviewer can see what the model saw instead of taking its word for it.
- *
- * That is also why it costs nothing to run: no server, no model API, no
- * per-student spend.
- *
- * ---------------------------------------------------------------------------
- * What it cannot do
- * ---------------------------------------------------------------------------
- * The same as every other browser signal: a student with devtools can stop it
- * or post any numbers they like, and a phone held below the desk is simply not
- * in frame. Turning the camera off or covering it is itself recorded, but none
- * of this is proof, which is why src/lib/integrity.ts lets camera findings put
- * an attempt in front of a reviewer and never lets them move a mark.
+ * Detection runs in the browser on the student's own CPU. No video or audio is
+ * streamed or continuously uploaded; what reaches the server is the handful of
+ * numbers in CameraCounters, carried with the submission like every other proctor
+ * signal. The one exception is a single low-resolution photo or brief audio snippet
+ * at the moment a finding starts — capped per attempt, stored privately, deleted
+ * after 30 days — so a reviewer can see/hear what the model saw instead of taking
+ * its word for it.
  */
 
 export type CameraStatus =
@@ -64,6 +54,13 @@ export interface LiveView {
   /** The model's best phone score this sample, 0 when none — for ?camera-debug. */
   phoneScore: number;
   covered: boolean;
+  /** True when the student is not facing the screen (turned head, looking down, etc.). */
+  lookingAway: boolean;
+  lookingAwayCount: number;
+  lookingAwayReason?: string;
+  /** True when talking or external voice was heard. */
+  voiceDetected: boolean;
+  voiceCount: number;
 }
 
 export interface CameraSignals extends CameraCounters {
@@ -73,6 +70,7 @@ export interface CameraSignals extends CameraCounters {
   cameraUnavailable: boolean;
   cameraLostCount: number;
   detectorFailed: boolean;
+  micGranted: boolean;
 }
 
 export interface CameraApi {
@@ -144,6 +142,7 @@ const EMPTY_STATE_SIGNALS: CameraSignals = {
   cameraUnavailable: false,
   cameraLostCount: 0,
   detectorFailed: false,
+  micGranted: false,
   ...createTracker().counters,
 };
 
@@ -280,6 +279,13 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
   const snapshots = React.useRef({ taken: 0, lastByKind: {} as Partial<Record<SnapshotKind, number>> });
   const countingRef = React.useRef(counting);
 
+  const audioContextRef = React.useRef<AudioContext | null>(null);
+  const analyserRef = React.useRef<AnalyserNode | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const speechRecRef = React.useRef<any>(null);
+  const voiceActivityRef = React.useRef(false);
+  const lastAudioUploadAtRef = React.useRef(0);
+
   React.useEffect(() => {
     // Restart the clock when counting begins, so the first sample does not
     // credit the time spent on the start screen.
@@ -292,7 +298,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     setSignals((s) => ({ ...s, ...p }));
   }, []);
 
-  /** Releases the camera and the models. Safe to call twice. */
+  /** Releases the camera, microphone, audio contexts, and the models. Safe to call twice. */
   const teardown = React.useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = null;
@@ -300,6 +306,17 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     streamRef.current = null;
     videoRef.current?.remove();
     videoRef.current = null;
+    try {
+      speechRecRef.current?.stop();
+    } catch {}
+    speechRecRef.current = null;
+    try {
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        void audioContextRef.current.close().catch(() => {});
+      }
+    } catch {}
+    audioContextRef.current = null;
+    analyserRef.current = null;
     try {
       detectorsRef.current?.face.close();
       detectorsRef.current?.objects.close();
@@ -334,6 +351,10 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     canvas.height = Math.round((video.videoHeight / video.videoWidth) * SNAPSHOT_WIDTH);
     canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+    // Map to DB allowed kinds for proctor_snapshots table
+    const dbKind =
+      kind === "looking_away" ? "no_face" : kind === "voice_detected" ? "multiple_faces" : kind;
+
     canvas.toBlob(
       (blob) => {
         if (!blob) return;
@@ -343,7 +364,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
           void fetch("/api/proctor/snapshot", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ kind, image }),
+            body: JSON.stringify({ kind: dbKind, image }),
           }).catch(() => {});
         };
         reader.readAsDataURL(blob);
@@ -351,6 +372,47 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       "image/jpeg",
       0.6,
     );
+  }, []);
+
+  /** Captures a short audio snippet as verifiable evidence when voice is detected. */
+  const captureAudioSnippet = React.useCallback(() => {
+    const stream = streamRef.current;
+    if (!stream) return;
+    const audioTrack = stream.getAudioTracks()[0];
+    if (!audioTrack || audioTrack.readyState !== "live") return;
+
+    const now = Date.now();
+    if (now - lastAudioUploadAtRef.current < 20_000) return;
+    lastAudioUploadAtRef.current = now;
+
+    try {
+      const mimeType =
+        typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : "";
+      const recorder = new MediaRecorder(new MediaStream([audioTrack]), mimeType ? { mimeType } : undefined);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
+        const reader = new FileReader();
+        reader.onload = () => {
+          const audio = String(reader.result).split(",")[1] ?? "";
+          void fetch("/api/proctor/audio-snapshot", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ audio, format: blob.type }),
+          }).catch(() => {});
+        };
+        reader.readAsDataURL(blob);
+      };
+      recorder.start();
+      setTimeout(() => {
+        if (recorder.state === "recording") recorder.stop();
+      }, 3000);
+    } catch {}
   }, []);
 
   const sample = React.useCallback(() => {
@@ -374,14 +436,48 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     const imageData = ctx.getImageData(0, 0, 32, 24).data;
     let covered = isCovered(imageData);
 
+    // Audio & voice activity check
+    let voiceDetected = voiceActivityRef.current;
+    voiceActivityRef.current = false;
+
+    const analyser = analyserRef.current;
+    if (analyser) {
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(data);
+      let voiceEnergy = 0;
+      let count = 0;
+      for (let i = 3; i < Math.min(36, data.length); i++) {
+        voiceEnergy += data[i];
+        count++;
+      }
+      const avgVoice = count > 0 ? voiceEnergy / count : 0;
+      if (avgVoice > 32) {
+        voiceDetected = true;
+      }
+    }
+
     let faces = 0;
     let phone = false;
     let phoneScore = 0;
     let book = false;
+    let lookingAway = false;
+    let lookingAwayReason: string | undefined;
 
     if (!covered) {
       try {
-        faces = detectors.face.detectForVideo(video, now).detections.length;
+        const faceResult = detectors.face.detectForVideo(video, now);
+        faces = faceResult.detections.length;
+        if (faces === 1) {
+          const keypoints = faceResult.detections[0]?.keypoints;
+          const pose = checkPoseAndGaze(keypoints);
+          if (!pose.facing) {
+            lookingAway = true;
+            lookingAwayReason = pose.reason;
+          }
+        } else if (faces === 0) {
+          lookingAway = true;
+        }
+
         for (const d of detectors.objects.detectForVideo(video, now).detections) {
           const top = d.categories[0];
           const score = top?.score ?? 0;
@@ -404,16 +500,40 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       }
     }
 
-    const { state, started } = observe(trackerRef.current, { faces, phone, book, covered }, elapsed);
+    const { state, started } = observe(
+      trackerRef.current,
+      { faces, phone, book, covered, lookingAway, voiceDetected },
+      elapsed,
+    );
     trackerRef.current = state;
-    setLive({ faces, phone, phoneScore, covered });
+    setLive({
+      faces,
+      phone,
+      phoneScore,
+      covered,
+      lookingAway,
+      lookingAwayCount: state.counters.lookingAwayEvents,
+      lookingAwayReason,
+      voiceDetected,
+      voiceCount: state.counters.voiceEvents,
+    });
     patch({ ...state.counters });
-    // The photo is taken first, from this same frame: it is the evidence for
-    // the ending, and the camera is switched off as soon as the ending lands.
-    for (const kind of started) captureSnapshot(kind);
+
+    // The photo or audio is captured first, from this same moment: it is the evidence for
+    // the ending, and the devices are switched off as soon as the ending lands.
+    for (const kind of started) {
+      if (kind === "voice_detected") {
+        captureAudioSnippet();
+        captureSnapshot("multiple_faces");
+      } else if (kind === "looking_away") {
+        captureSnapshot("no_face");
+      } else {
+        captureSnapshot(kind);
+      }
+    }
     const reason = endReason(state);
     if (reason) setViolation((v) => v ?? reason);
-  }, [patch, captureSnapshot]);
+  }, [patch, captureSnapshot, captureAudioSnippet]);
 
   const request = React.useCallback(async () => {
     if (!enabled) return;
@@ -436,20 +556,22 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     const patience = setTimeout(() => setWaitedTooLong(true), PROMPT_PATIENCE_MS);
 
     let media: MediaStream;
+    let micGranted = false;
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new DOMException("", "NotFoundError");
-      /**
-       * 1280×720, not 640×480. Measured: the same phone scored 0.57 from a
-       * 960px frame, 0.37 from 640px and 0.33 from 480px — so a 640px request
-       * pushed a real phone under the 0.4 threshold. 720p is what laptop
-       * webcams deliver natively, and the extra pixels are nearly free here:
-       * the models downscale internally and only one frame in 1.5s is read.
-       * "ideal", so a camera that cannot do 720p still opens at what it can.
-       */
-      media = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-        audio: false,
-      });
+      try {
+        media = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+          audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: true },
+        });
+        micGranted = true;
+      } catch {
+        media = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+          audio: false,
+        });
+        micGranted = false;
+      }
     } catch (error) {
       clearTimeout(patience);
       const outcome = classify(error);
@@ -468,7 +590,70 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     streamRef.current = media;
     setStream(media);
     setStatus("on");
-    patch({ cameraGranted: true });
+    patch({ cameraGranted: true, micGranted });
+
+    // Setup audio analysis if mic was granted
+    if (micGranted) {
+      try {
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (AudioContextClass) {
+          const audioCtx = new AudioContextClass();
+          const audioTracks = media.getAudioTracks();
+          if (audioTracks.length > 0) {
+            const source = audioCtx.createMediaStreamSource(new MediaStream([audioTracks[0]]));
+            const analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 512;
+            source.connect(analyser);
+            audioContextRef.current = audioCtx;
+            analyserRef.current = analyser;
+          }
+        }
+      } catch {}
+
+      try {
+        type SpeechRecInstance = {
+          continuous: boolean;
+          interimResults: boolean;
+          lang: string;
+          onresult: (() => void) | null;
+          onspeechstart: (() => void) | null;
+          onerror: (() => void) | null;
+          onend: (() => void) | null;
+          start: () => void;
+          stop: () => void;
+        };
+        type SpeechRecConstructor = new () => SpeechRecInstance;
+        const win = window as unknown as {
+          SpeechRecognition?: SpeechRecConstructor;
+          webkitSpeechRecognition?: SpeechRecConstructor;
+        };
+        const SpeechRec = win.SpeechRecognition || win.webkitSpeechRecognition;
+        if (SpeechRec) {
+          const rec = new SpeechRec();
+          rec.continuous = true;
+          rec.interimResults = true;
+          rec.lang = "en-US";
+          rec.onresult = () => {
+            voiceActivityRef.current = true;
+          };
+          rec.onspeechstart = () => {
+            voiceActivityRef.current = true;
+          };
+          rec.onerror = () => {};
+          rec.onend = () => {
+            if (!stopped.current && countingRef.current) {
+              try {
+                rec.start();
+              } catch {}
+            }
+          };
+          try {
+            rec.start();
+          } catch {}
+          speechRecRef.current = rec;
+        }
+      } catch {}
+    }
 
     media.getVideoTracks().forEach((track) => {
       track.addEventListener("ended", () => {

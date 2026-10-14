@@ -37,8 +37,79 @@ const ACTIVATE_AT = 3;
 const PHONE_ACTIVATE_AT = 2;
 /** The same, for a covered/blocked lens: 2 hits in 5 samples (~3s). */
 const COVERED_ACTIVATE_AT = 2;
+/** The same, for looking away: 2 hits in 5 samples (~3s). */
+const LOOKING_AWAY_ACTIVATE_AT = 2;
+/** The same, for voice detection: 2 hits in 5 samples (~3s of speech). */
+const VOICE_ACTIVATE_AT = 2;
 /** Hits in the window at or below which it switches off again. */
 const RELEASE_AT = 1;
+
+/** Benefit of doubt: 5 warnings for looking away; on/after 5, test suspends. */
+export const MAX_LOOKING_AWAY_STRIKES = 5;
+/** Benefit of doubt: 3 warnings for voice; on/after 3, test suspends. */
+export const MAX_VOICE_STRIKES = 3;
+
+/** Normalized landmark keypoint from face detector. */
+export interface FaceKeypoint {
+  x: number;
+  y: number;
+}
+
+export interface PoseCheckResult {
+  facing: boolean;
+  reason?: "looking_left" | "looking_right" | "looking_down" | "looking_up" | "head_tilted";
+}
+
+/**
+ * Calculates head pose and gaze orientation from 2D normalized face keypoints.
+ * BlazeFace short-range delivers 6 keypoints:
+ * 0: right eye, 1: left eye, 2: nose tip, 3: mouth center, 4: right ear, 5: left ear.
+ */
+export function checkPoseAndGaze(keypoints?: FaceKeypoint[] | null): PoseCheckResult {
+  if (!keypoints || keypoints.length < 4) return { facing: true };
+  const rEye = keypoints[0];
+  const lEye = keypoints[1];
+  const nose = keypoints[2];
+  const mouth = keypoints[3];
+  if (!rEye || !lEye || !nose || !mouth) return { facing: true };
+
+  const dx = lEye.x - rEye.x;
+  const dy = lEye.y - rEye.y;
+  const dEyes = Math.hypot(dx, dy);
+  if (dEyes < 0.01) return { facing: true }; // Degenerate / face too small
+
+  const eyeMidX = (rEye.x + lEye.x) / 2;
+  const eyeMidY = (rEye.y + lEye.y) / 2;
+
+  // Horizontal yaw (turning head to left or right)
+  const yawDelta = (nose.x - eyeMidX) / dEyes;
+  const dR = Math.hypot(nose.x - rEye.x, nose.y - rEye.y);
+  const dL = Math.hypot(nose.x - lEye.x, nose.y - lEye.y);
+  const eyeRatio = Math.max(dR, dL) / Math.max(0.001, Math.min(dR, dL));
+
+  // Vertical pitch (looking down at lap/notes vs looking up)
+  const vNose = (nose.y - eyeMidY) / dEyes;
+  const vMouth = (mouth.y - eyeMidY) / dEyes;
+  const vNoseMouth = (mouth.y - nose.y) / dEyes;
+
+  // Head tilt / roll
+  const roll = Math.abs(dy) / dEyes;
+
+  if (roll > 0.40) {
+    return { facing: false, reason: "head_tilted" };
+  }
+  if (Math.abs(yawDelta) > 0.32 || eyeRatio > 2.2) {
+    return { facing: false, reason: yawDelta > 0 ? "looking_left" : "looking_right" };
+  }
+  if (vMouth < 0.52 || vNoseMouth < 0.18) {
+    return { facing: false, reason: "looking_down" };
+  }
+  if (vNose < 0.16) {
+    return { facing: false, reason: "looking_up" };
+  }
+
+  return { facing: true };
+}
 
 /**
  * Time between samples is credited up to this much and no further.
@@ -63,10 +134,14 @@ export interface CameraSample {
    * lens. Measured from pixel brightness, not from a model.
    */
   covered: boolean;
+  /** Whether the face in view is looking away / not facing the screen. */
+  lookingAway?: boolean;
+  /** Whether speaking / talking / voice was heard during this sample interval. */
+  voiceDetected?: boolean;
 }
 
 /** The kinds of moment worth one evidence photo. */
-export type SnapshotKind = "phone" | "multiple_faces" | "no_face" | "book";
+export type SnapshotKind = "phone" | "multiple_faces" | "no_face" | "book" | "looking_away" | "voice_detected";
 
 /** Counters reported with the attempt. Mirrors the camera fields on ProctorSignals. */
 export interface CameraCounters {
@@ -77,6 +152,10 @@ export interface CameraCounters {
   phoneEvents: number;
   bookEvents: number;
   coveredMs: number;
+  lookingAwayEvents: number;
+  lookingAwayMs: number;
+  voiceEvents: number;
+  voiceMs: number;
 }
 
 export const EMPTY_CAMERA_COUNTERS: CameraCounters = {
@@ -87,6 +166,10 @@ export const EMPTY_CAMERA_COUNTERS: CameraCounters = {
   phoneEvents: 0,
   bookEvents: 0,
   coveredMs: 0,
+  lookingAwayEvents: 0,
+  lookingAwayMs: 0,
+  voiceEvents: 0,
+  voiceMs: 0,
 };
 
 interface Condition {
@@ -101,6 +184,8 @@ export interface TrackerState {
   phone: Condition;
   book: Condition;
   covered: Condition;
+  lookingAway: Condition;
+  voice: Condition;
   /**
    * How long nobody has been in frame without a break. Not a counter — it is
    * not reported — but what END_RULES reads: `noFaceMs` adds up every absence,
@@ -108,6 +193,10 @@ export interface TrackerState {
    * total, while a continuous minute away from the desk is a different thing.
    */
   noFaceRunMs: number;
+  /** Continuous time looking away from the screen. */
+  lookingAwayRunMs: number;
+  /** Continuous time talking / voice detected. */
+  voiceRunMs: number;
 }
 
 const fresh = (): Condition => ({ hits: [], active: false });
@@ -120,7 +209,11 @@ export function createTracker(): TrackerState {
     phone: fresh(),
     book: fresh(),
     covered: fresh(),
+    lookingAway: fresh(),
+    voice: fresh(),
     noFaceRunMs: 0,
+    lookingAwayRunMs: 0,
+    voiceRunMs: 0,
   };
 }
 
@@ -177,6 +270,22 @@ export function observe(
   const multiFace = step(state.multiFace, seeing && sample.faces >= 2);
   const phone = step(state.phone, seeing && sample.phone, PHONE_ACTIVATE_AT);
   const book = step(state.book, seeing && sample.book);
+  const lookingAway = step(state.lookingAway, seeing && Boolean(sample.lookingAway), LOOKING_AWAY_ACTIVATE_AT);
+  const voice = step(state.voice, Boolean(sample.voiceDetected), VOICE_ACTIVATE_AT);
+
+  let newLookingAwayRunMs = lookingAway.next.active ? state.lookingAwayRunMs + credit : 0;
+  let extraLookingAwayEvents = 0;
+  if (newLookingAwayRunMs >= 15_000) {
+    extraLookingAwayEvents = Math.floor(newLookingAwayRunMs / 15_000);
+    newLookingAwayRunMs = newLookingAwayRunMs % 15_000;
+  }
+
+  let newVoiceRunMs = voice.next.active ? state.voiceRunMs + credit : 0;
+  let extraVoiceEvents = 0;
+  if (newVoiceRunMs >= 15_000) {
+    extraVoiceEvents = Math.floor(newVoiceRunMs / 15_000);
+    newVoiceRunMs = newVoiceRunMs % 15_000;
+  }
 
   const c = state.counters;
   const counters: CameraCounters = {
@@ -187,6 +296,10 @@ export function observe(
     phoneEvents: c.phoneEvents + (phone.rose ? 1 : 0),
     bookEvents: c.bookEvents + (book.rose ? 1 : 0),
     coveredMs: c.coveredMs + (covered.next.active ? credit : 0),
+    lookingAwayMs: c.lookingAwayMs + (lookingAway.next.active ? credit : 0),
+    lookingAwayEvents: c.lookingAwayEvents + (lookingAway.rose ? 1 : 0) + extraLookingAwayEvents,
+    voiceMs: c.voiceMs + (voice.next.active ? credit : 0),
+    voiceEvents: c.voiceEvents + (voice.rose ? 1 : 0) + extraVoiceEvents,
   };
 
   const started: SnapshotKind[] = [];
@@ -194,6 +307,8 @@ export function observe(
   if (multiFace.rose) started.push("multiple_faces");
   if (noFace.rose) started.push("no_face");
   if (book.rose) started.push("book");
+  if (lookingAway.rose) started.push("looking_away");
+  if (voice.rose) started.push("voice_detected");
 
   return {
     state: {
@@ -203,7 +318,11 @@ export function observe(
       phone: phone.next,
       book: book.next,
       covered: covered.next,
+      lookingAway: lookingAway.next,
+      voice: voice.next,
       noFaceRunMs: noFace.next.active ? state.noFaceRunMs + credit : 0,
+      lookingAwayRunMs: newLookingAwayRunMs,
+      voiceRunMs: newVoiceRunMs,
     },
     started,
   };
@@ -223,7 +342,9 @@ export type EndReason =
   | "camera_covered"
   | "no_face"
   | "camera_off"
-  | "tab_switch";
+  | "tab_switch"
+  | "looking_away"
+  | "voice_detected";
 
 export const END_REASONS: readonly EndReason[] = [
   "phone",
@@ -232,6 +353,8 @@ export const END_REASONS: readonly EndReason[] = [
   "no_face",
   "camera_off",
   "tab_switch",
+  "looking_away",
+  "voice_detected",
 ];
 
 /** Said to the student on the ended screen, and to whoever reviews it. */
@@ -242,6 +365,8 @@ export const END_REASON_LABEL: Record<EndReason, string> = {
   no_face: "You were away from the camera for over a minute",
   camera_off: "The camera was switched off",
   tab_switch: "You left the test window",
+  looking_away: "You looked away from the screen too many times",
+  voice_detected: "Speaking or voice was detected during the test",
 };
 
 /** Continuous time out of frame that ends an attempt. */
@@ -266,6 +391,8 @@ export function endReason(state: TrackerState): EndReason | null {
   if (state.multiFace.active) return "multiple_faces";
   if (state.covered.active) return "camera_covered";
   if (state.noFaceRunMs >= NO_FACE_END_MS) return "no_face";
+  if (state.counters.lookingAwayEvents > MAX_LOOKING_AWAY_STRIKES) return "looking_away";
+  if (state.counters.voiceEvents > MAX_VOICE_STRIKES) return "voice_detected";
   return null;
 }
 

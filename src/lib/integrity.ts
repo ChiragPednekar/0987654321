@@ -87,6 +87,11 @@ export interface ProctorSignals {
   bookEvents: number;
   /** Time the lens was dark or blocked. */
   coveredMs: number;
+  lookingAwayEvents: number;
+  lookingAwayMs: number;
+  voiceEvents: number;
+  voiceMs: number;
+  micGranted: boolean;
 }
 
 export const EMPTY_SIGNALS: ProctorSignals = {
@@ -111,6 +116,11 @@ export const EMPTY_SIGNALS: ProctorSignals = {
   phoneEvents: 0,
   bookEvents: 0,
   coveredMs: 0,
+  lookingAwayEvents: 0,
+  lookingAwayMs: 0,
+  voiceEvents: 0,
+  voiceMs: 0,
+  micGranted: false,
 };
 
 /**

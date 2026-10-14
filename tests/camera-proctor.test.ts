@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  checkPoseAndGaze,
   createTracker,
   END_REASON_LABEL,
   END_REASONS,
@@ -203,4 +204,97 @@ describe("endReason", () => {
   it("every reason has a label the student is shown", () => {
     for (const r of END_REASONS) expect(END_REASON_LABEL[r]).toBeTruthy();
   });
+
+  it("gives 5 warnings for looking away before suspending on the 6th strike", () => {
+    let state = createTracker();
+    const glance = [{ lookingAway: true }, { lookingAway: true }];
+    const back = [{}, {}, {}, {}, {}];
+
+    // Strikes 1 through 5: student gets benefit of doubt
+    for (let i = 1; i <= 5; i++) {
+      const res = run([...glance, ...back], state);
+      state = res.state;
+      expect(state.counters.lookingAwayEvents).toBe(i);
+      expect(endReason(state)).toBeNull();
+    }
+
+    // After 5 times (6th strike): suspended
+    const finalStrike = run(glance, state);
+    expect(finalStrike.state.counters.lookingAwayEvents).toBe(6);
+    expect(endReason(finalStrike.state)).toBe("looking_away");
+    expect(END_REASON_LABEL[endReason(finalStrike.state)!]).toContain("looked away");
+  });
+
+  it("gives 3 warnings for voice/speaking before suspending on the 4th strike", () => {
+    let state = createTracker();
+    const speaking = [{ voiceDetected: true }, { voiceDetected: true }];
+    const silent = [{}, {}, {}, {}, {}];
+
+    // Strikes 1 through 3: student gets benefit of doubt
+    for (let i = 1; i <= 3; i++) {
+      const res = run([...speaking, ...silent], state);
+      state = res.state;
+      expect(state.counters.voiceEvents).toBe(i);
+      expect(endReason(state)).toBeNull();
+    }
+
+    // After 3 times (4th strike): suspended
+    const finalStrike = run(speaking, state);
+    expect(finalStrike.state.counters.voiceEvents).toBe(4);
+    expect(endReason(finalStrike.state)).toBe("voice_detected");
+    expect(END_REASON_LABEL[endReason(finalStrike.state)!]).toContain("voice was detected");
+  });
 });
+
+describe("checkPoseAndGaze", () => {
+  it("detects when student is directly facing the screen", () => {
+    const frontal = [
+      { x: 0.45, y: 0.35 }, // right eye
+      { x: 0.55, y: 0.35 }, // left eye
+      { x: 0.50, y: 0.39 }, // nose
+      { x: 0.50, y: 0.43 }, // mouth
+    ];
+    expect(checkPoseAndGaze(frontal)).toEqual({ facing: true });
+  });
+
+  it("detects when student turns their head to the side", () => {
+    const turned = [
+      { x: 0.47, y: 0.35 },
+      { x: 0.56, y: 0.35 },
+      { x: 0.55, y: 0.39 }, // nose displaced towards left eye
+      { x: 0.53, y: 0.43 },
+    ];
+    const res = checkPoseAndGaze(turned);
+    expect(res.facing).toBe(false);
+    expect(res.reason).toMatch(/looking_/);
+  });
+
+  it("detects when student looks down at desk, lap, or notes", () => {
+    const lookingDown = [
+      { x: 0.45, y: 0.35 },
+      { x: 0.55, y: 0.35 },
+      { x: 0.50, y: 0.37 },
+      { x: 0.50, y: 0.39 }, // mouth foreshortened/compressed upwards towards eyes
+    ];
+    expect(checkPoseAndGaze(lookingDown)).toEqual({ facing: false, reason: "looking_down" });
+  });
+
+  it("detects when student looks up at ceiling or tilts head severely", () => {
+    const lookingUp = [
+      { x: 0.45, y: 0.35 },
+      { x: 0.55, y: 0.35 },
+      { x: 0.50, y: 0.36 }, // nose too high
+      { x: 0.50, y: 0.46 },
+    ];
+    expect(checkPoseAndGaze(lookingUp)).toEqual({ facing: false, reason: "looking_up" });
+
+    const tilted = [
+      { x: 0.45, y: 0.30 },
+      { x: 0.55, y: 0.40 }, // strong vertical eye disparity
+      { x: 0.50, y: 0.42 },
+      { x: 0.50, y: 0.46 },
+    ];
+    expect(checkPoseAndGaze(tilted)).toEqual({ facing: false, reason: "head_tilted" });
+  });
+});
+

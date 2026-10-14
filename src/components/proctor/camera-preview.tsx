@@ -105,8 +105,8 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
       {debug && (
         <p className="border-t px-2 py-1 font-mono text-[10px] text-muted-foreground">
           {camera.detector} · faces {camera.live?.faces ?? "–"} · phone{" "}
-          {camera.live ? camera.live.phoneScore.toFixed(2) : "–"} · events{" "}
-          {camera.signals.phoneEvents}
+          {camera.live ? camera.live.phoneScore.toFixed(2) : "–"} · away{" "}
+          {camera.signals.lookingAwayEvents}/5 · voice {camera.signals.voiceEvents}/3
         </p>
       )}
     </div>,
@@ -135,8 +135,29 @@ function describe(camera: CameraApi): { ok: boolean; text: string } {
   if (!live) return { ok: true, text: "Camera on" };
   if (live.covered) return { ok: false, text: "Camera view is blocked" };
   if (live.phone) return { ok: false, text: "Phone in view — put it away" };
-  if (live.faces === 0) return { ok: false, text: "No face in view" };
   if (live.faces > 1) return { ok: false, text: "More than one person in view" };
-  return { ok: true, text: "Camera on" };
+
+  // Voice detection: 3 warnings before test suspension
+  if (live.voiceDetected || (live.voiceCount > 0 && live.voiceCount <= 3)) {
+    const count = Math.min(3, Math.max(1, live.voiceCount));
+    const prefix = count === 3 ? "Final warning" : `Warning ${count} of 3`;
+    return {
+      ok: false,
+      text: `Voice detected — ${prefix} (Please remain silent)`,
+    };
+  }
+
+  // Looking away / facing screen: 5 warnings before test suspension
+  if (live.lookingAway || (live.lookingAwayCount > 0 && live.lookingAwayCount <= 5)) {
+    const count = Math.min(5, Math.max(1, live.lookingAwayCount));
+    const prefix = count === 5 ? "Final warning" : `Warning ${count} of 5`;
+    return {
+      ok: false,
+      text: `Looking away — ${prefix} (Please face the screen)`,
+    };
+  }
+
+  if (live.faces === 0) return { ok: false, text: "No face in view" };
+  return { ok: true, text: camera.signals.micGranted ? "Camera & mic on" : "Camera on" };
 }
 
