@@ -12,6 +12,7 @@ import {
   SAMPLE_INTERVAL_MS,
   type CameraCounters,
   type EndReason,
+  type PoseBaseline,
   type SnapshotKind,
   type TrackerState,
 } from "@/lib/camera-proctor";
@@ -58,9 +59,12 @@ export interface LiveView {
   lookingAway: boolean;
   lookingAwayCount: number;
   lookingAwayReason?: string;
+  lookingAwayTip?: string;
   /** True when talking or external voice was heard. */
   voiceDetected: boolean;
   voiceCount: number;
+  /** Normalized audio energy 0-100 for live mic feedback. */
+  audioLevel: number;
 }
 
 export interface CameraSignals extends CameraCounters {
@@ -285,6 +289,9 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
   const speechRecRef = React.useRef<any>(null);
   const voiceActivityRef = React.useRef(false);
   const lastAudioUploadAtRef = React.useRef(0);
+  const noiseFloorRef = React.useRef(14);
+  const poseBaselineRef = React.useRef<PoseBaseline | null>(null);
+  const baselineSamplesRef = React.useRef<Array<{ vMouth: number; yawDelta: number; roll: number }>>([]);
 
   React.useEffect(() => {
     // Restart the clock when counting begins, so the first sample does not
@@ -439,19 +446,49 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     // Audio & voice activity check
     let voiceDetected = voiceActivityRef.current;
     voiceActivityRef.current = false;
+    let audioLevel = 0;
 
     const analyser = analyserRef.current;
     if (analyser) {
       const data = new Uint8Array(analyser.frequencyBinCount);
       analyser.getByteFrequencyData(data);
-      let voiceEnergy = 0;
-      let count = 0;
-      for (let i = 3; i < Math.min(36, data.length); i++) {
-        voiceEnergy += data[i];
-        count++;
+
+      let totalEnergy = 0;
+      for (let i = 0; i < data.length; i++) {
+        totalEnergy += data[i];
       }
-      const avgVoice = count > 0 ? voiceEnergy / count : 0;
-      if (avgVoice > 32) {
+      const rawAvg = data.length > 0 ? totalEnergy / data.length : 0;
+      audioLevel = Math.min(100, Math.round((rawAvg / 128) * 100));
+
+      // Voice formant bins (approx 300Hz - 2800Hz) vs high-frequency typing/clack bins (approx 4000Hz - 8000Hz)
+      let voiceEnergy = 0;
+      let voiceBins = 0;
+      for (let i = 2; i < Math.min(16, data.length); i++) {
+        voiceEnergy += data[i];
+        voiceBins++;
+      }
+      const avgVoice = voiceBins > 0 ? voiceEnergy / voiceBins : 0;
+
+      let highEnergy = 0;
+      let highBins = 0;
+      for (let i = 22; i < Math.min(46, data.length); i++) {
+        highEnergy += data[i];
+        highBins++;
+      }
+      const avgHigh = highBins > 0 ? highEnergy / highBins : 0;
+
+      // Adapt ambient noise floor
+      const currentNoise = noiseFloorRef.current;
+      if (rawAvg < currentNoise) {
+        noiseFloorRef.current = currentNoise * 0.85 + rawAvg * 0.15;
+      } else {
+        noiseFloorRef.current = currentNoise * 0.98 + rawAvg * 0.02;
+      }
+
+      // Voice detection criteria:
+      // Exceed adaptive noise floor and speech formant energy dominates typing rattle
+      const dynamicThreshold = Math.max(26, noiseFloorRef.current + 16);
+      if (avgVoice > dynamicThreshold && (avgVoice > avgHigh * 1.15 || avgVoice > 38)) {
         voiceDetected = true;
       }
     }
@@ -469,10 +506,24 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
         faces = faceResult.detections.length;
         if (faces === 1) {
           const keypoints = faceResult.detections[0]?.keypoints;
-          const pose = checkPoseAndGaze(keypoints);
+          const pose = checkPoseAndGaze(keypoints, poseBaselineRef.current);
           if (!pose.facing) {
             lookingAway = true;
             lookingAwayReason = pose.reason;
+          } else if (pose.metrics && baselineSamplesRef.current.length < 5) {
+            // Calibrate resting pose from first 5 frontal facing frames
+            baselineSamplesRef.current.push({
+              vMouth: pose.metrics.pitch,
+              yawDelta: pose.metrics.yaw,
+              roll: pose.metrics.roll,
+            });
+            if (baselineSamplesRef.current.length === 5) {
+              const samples = baselineSamplesRef.current;
+              const avgVMouth = samples.reduce((acc, s) => acc + s.vMouth, 0) / samples.length;
+              const avgYaw = samples.reduce((acc, s) => acc + s.yawDelta, 0) / samples.length;
+              const avgRoll = samples.reduce((acc, s) => acc + s.roll, 0) / samples.length;
+              poseBaselineRef.current = { vMouth: avgVMouth, yawDelta: avgYaw, roll: avgRoll };
+            }
           }
         } else if (faces === 0) {
           lookingAway = true;
@@ -500,6 +551,23 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       }
     }
 
+    let lookingAwayTip: string | undefined;
+    if (lookingAway) {
+      if (faces === 0) {
+        lookingAwayTip = "Face not visible — stay in camera view";
+      } else if (lookingAwayReason === "looking_down") {
+        lookingAwayTip = "Looking down — please face the screen";
+      } else if (lookingAwayReason === "looking_up") {
+        lookingAwayTip = "Looking up — please face the screen";
+      } else if (lookingAwayReason === "looking_left" || lookingAwayReason === "looking_right") {
+        lookingAwayTip = "Head turned away — please face the screen";
+      } else if (lookingAwayReason === "head_tilted") {
+        lookingAwayTip = "Head tilted — please face the screen directly";
+      } else {
+        lookingAwayTip = "Please keep your face centered towards the screen";
+      }
+    }
+
     const { state, started } = observe(
       trackerRef.current,
       { faces, phone, book, covered, lookingAway, voiceDetected },
@@ -514,8 +582,10 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       lookingAway,
       lookingAwayCount: state.counters.lookingAwayEvents,
       lookingAwayReason,
+      lookingAwayTip,
       voiceDetected,
       voiceCount: state.counters.voiceEvents,
+      audioLevel,
     });
     patch({ ...state.counters });
 
@@ -548,6 +618,9 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       lastSampleAt.current = null;
       snapshots.current = { taken: 0, lastByKind: {} };
       setViolation(null);
+      poseBaselineRef.current = null;
+      baselineSamplesRef.current = [];
+      noiseFloorRef.current = 14;
     }
 
     patch({ cameraRequested: true, cameraDenied: false, cameraUnavailable: false });
@@ -723,6 +796,9 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     snapshots.current = { taken: 0, lastByKind: {} };
     setWaitedTooLong(false);
     setViolation(null);
+    poseBaselineRef.current = null;
+    baselineSamplesRef.current = [];
+    noiseFloorRef.current = 14;
   }, [teardown]);
 
   const stop = React.useCallback(() => {

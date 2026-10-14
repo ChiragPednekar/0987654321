@@ -254,7 +254,7 @@ describe("checkPoseAndGaze", () => {
       { x: 0.50, y: 0.39 }, // nose
       { x: 0.50, y: 0.43 }, // mouth
     ];
-    expect(checkPoseAndGaze(frontal)).toEqual({ facing: true });
+    expect(checkPoseAndGaze(frontal)).toMatchObject({ facing: true });
   });
 
   it("detects when student turns their head to the side", () => {
@@ -276,7 +276,7 @@ describe("checkPoseAndGaze", () => {
       { x: 0.50, y: 0.37 },
       { x: 0.50, y: 0.39 }, // mouth foreshortened/compressed upwards towards eyes
     ];
-    expect(checkPoseAndGaze(lookingDown)).toEqual({ facing: false, reason: "looking_down" });
+    expect(checkPoseAndGaze(lookingDown)).toMatchObject({ facing: false, reason: "looking_down" });
   });
 
   it("detects when student looks up at ceiling or tilts head severely", () => {
@@ -286,7 +286,7 @@ describe("checkPoseAndGaze", () => {
       { x: 0.50, y: 0.36 }, // nose too high
       { x: 0.50, y: 0.46 },
     ];
-    expect(checkPoseAndGaze(lookingUp)).toEqual({ facing: false, reason: "looking_up" });
+    expect(checkPoseAndGaze(lookingUp)).toMatchObject({ facing: false, reason: "looking_up" });
 
     const tilted = [
       { x: 0.45, y: 0.30 },
@@ -294,7 +294,46 @@ describe("checkPoseAndGaze", () => {
       { x: 0.50, y: 0.42 },
       { x: 0.50, y: 0.46 },
     ];
-    expect(checkPoseAndGaze(tilted)).toEqual({ facing: false, reason: "head_tilted" });
+    expect(checkPoseAndGaze(tilted)).toMatchObject({ facing: false, reason: "head_tilted" });
+  });
+
+  it("accounts for baseline resting pose calibration", () => {
+    // A student whose laptop is lower than usual might rest with a slightly lower vMouth
+    const restingPose = [
+      { x: 0.45, y: 0.35 },
+      { x: 0.55, y: 0.35 },
+      { x: 0.50, y: 0.39 },
+      { x: 0.50, y: 0.42 }, // vMouth = 0.70 (below default 0.75, but above absolute cutoff 0.52)
+    ];
+    // With calibrated baseline, resting is recognized as facing
+    const baseline = { vMouth: 0.70, yawDelta: 0 };
+    expect(checkPoseAndGaze(restingPose, baseline)).toMatchObject({ facing: true });
+
+    // A further downward drop beyond the baseline triggers looking_down
+    const droppedDown = [
+      { x: 0.45, y: 0.35 },
+      { x: 0.55, y: 0.35 },
+      { x: 0.50, y: 0.38 },
+      { x: 0.50, y: 0.39 }, // vMouth = 0.40 (drop > 0.22)
+    ];
+    expect(checkPoseAndGaze(droppedDown, baseline)).toMatchObject({
+      facing: false,
+      reason: "looking_down",
+    });
+  });
+
+  it("uses ear keypoints for 3D yaw assistance when visible", () => {
+    // Face turned horizontally with ears visible
+    const turnedWithEars = [
+      { x: 0.45, y: 0.35 }, // right eye
+      { x: 0.55, y: 0.35 }, // left eye
+      { x: 0.50, y: 0.39 }, // nose
+      { x: 0.50, y: 0.43 }, // mouth
+      { x: 0.38, y: 0.35 }, // right ear close
+      { x: 0.75, y: 0.35 }, // left ear far (ratio > 2.0)
+    ];
+    const res = checkPoseAndGaze(turnedWithEars);
+    expect(res.facing).toBe(false);
   });
 });
 

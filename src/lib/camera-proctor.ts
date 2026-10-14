@@ -55,22 +55,40 @@ export interface FaceKeypoint {
   y: number;
 }
 
+/** Calibrated natural resting head pose baseline. */
+export interface PoseBaseline {
+  vMouth: number;
+  yawDelta: number;
+  roll?: number;
+}
+
 export interface PoseCheckResult {
   facing: boolean;
   reason?: "looking_left" | "looking_right" | "looking_down" | "looking_up" | "head_tilted";
+  metrics?: {
+    yaw: number;
+    pitch: number;
+    roll: number;
+  };
 }
 
 /**
  * Calculates head pose and gaze orientation from 2D normalized face keypoints.
  * BlazeFace short-range delivers 6 keypoints:
  * 0: right eye, 1: left eye, 2: nose tip, 3: mouth center, 4: right ear, 5: left ear.
+ * Optional baseline calibrates against student's natural resting desk posture.
  */
-export function checkPoseAndGaze(keypoints?: FaceKeypoint[] | null): PoseCheckResult {
+export function checkPoseAndGaze(
+  keypoints?: FaceKeypoint[] | null,
+  baseline?: PoseBaseline | null,
+): PoseCheckResult {
   if (!keypoints || keypoints.length < 4) return { facing: true };
   const rEye = keypoints[0];
   const lEye = keypoints[1];
   const nose = keypoints[2];
   const mouth = keypoints[3];
+  const rEar = keypoints[4];
+  const lEar = keypoints[5];
   if (!rEye || !lEye || !nose || !mouth) return { facing: true };
 
   const dx = lEye.x - rEye.x;
@@ -81,34 +99,63 @@ export function checkPoseAndGaze(keypoints?: FaceKeypoint[] | null): PoseCheckRe
   const eyeMidX = (rEye.x + lEye.x) / 2;
   const eyeMidY = (rEye.y + lEye.y) / 2;
 
-  // Horizontal yaw (turning head to left or right)
+  // 1. Head tilt / roll
+  const roll = Math.abs(dy) / dEyes;
+  if (roll > 0.40) {
+    return { facing: false, reason: "head_tilted", metrics: { yaw: 0, pitch: 0, roll } };
+  }
+
+  // 2. Horizontal yaw (turning head to left or right)
   const yawDelta = (nose.x - eyeMidX) / dEyes;
   const dR = Math.hypot(nose.x - rEye.x, nose.y - rEye.y);
   const dL = Math.hypot(nose.x - lEye.x, nose.y - lEye.y);
   const eyeRatio = Math.max(dR, dL) / Math.max(0.001, Math.min(dR, dL));
 
-  // Vertical pitch (looking down at lap/notes vs looking up)
+  // Ear-assisted 3D yaw if both ears are visible in frame
+  let earYaw = false;
+  if (rEar && lEar && typeof rEar.x === "number" && typeof lEar.x === "number") {
+    const dREar = Math.hypot(rEar.x - eyeMidX, rEar.y - eyeMidY);
+    const dLEar = Math.hypot(lEar.x - eyeMidX, lEar.y - eyeMidY);
+    const earRatio = Math.max(dREar, dLEar) / Math.max(0.001, Math.min(dREar, dLEar));
+    if (earRatio > 2.0) earYaw = true;
+  }
+
+  const baseYaw = baseline?.yawDelta ?? 0;
+  const effectiveYaw = Math.abs(yawDelta - baseYaw);
+
+  if (effectiveYaw > 0.30 || eyeRatio > 2.2 || earYaw) {
+    return {
+      facing: false,
+      reason: yawDelta > 0 ? "looking_left" : "looking_right",
+      metrics: { yaw: yawDelta, pitch: 0, roll },
+    };
+  }
+
+  // 3. Vertical pitch (looking down at lap/notes vs looking up)
   const vNose = (nose.y - eyeMidY) / dEyes;
   const vMouth = (mouth.y - eyeMidY) / dEyes;
   const vNoseMouth = (mouth.y - nose.y) / dEyes;
 
-  // Head tilt / roll
-  const roll = Math.abs(dy) / dEyes;
+  // Calibrated drop from baseline resting position
+  const baseVMouth = baseline?.vMouth ?? 0.75;
+  const pitchDrop = baseVMouth - vMouth;
 
-  if (roll > 0.40) {
-    return { facing: false, reason: "head_tilted" };
-  }
-  if (Math.abs(yawDelta) > 0.32 || eyeRatio > 2.2) {
-    return { facing: false, reason: yawDelta > 0 ? "looking_left" : "looking_right" };
-  }
-  if (vMouth < 0.52 || vNoseMouth < 0.18) {
-    return { facing: false, reason: "looking_down" };
+  if (vMouth < 0.52 || pitchDrop > 0.22 || vNoseMouth < 0.18) {
+    return {
+      facing: false,
+      reason: "looking_down",
+      metrics: { yaw: yawDelta, pitch: vMouth, roll },
+    };
   }
   if (vNose < 0.16) {
-    return { facing: false, reason: "looking_up" };
+    return {
+      facing: false,
+      reason: "looking_up",
+      metrics: { yaw: yawDelta, pitch: vMouth, roll },
+    };
   }
 
-  return { facing: true };
+  return { facing: true, metrics: { yaw: yawDelta, pitch: vMouth, roll } };
 }
 
 /**

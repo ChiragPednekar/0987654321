@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { CameraOff, ChevronDown, ChevronUp } from "lucide-react";
+import { CameraOff, ChevronDown, ChevronUp, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CameraApi } from "@/hooks/use-camera-proctor";
 import { useBrowserValue } from "@/hooks/use-browser-state";
@@ -46,11 +46,14 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
 
   const on = camera.status === "on";
   const note = describe(camera);
+  const audioLevel = camera.live?.audioLevel ?? 0;
+  const hasGazeStrikes = camera.signals.lookingAwayEvents > 0;
+  const hasVoiceStrikes = camera.signals.voiceEvents > 0;
 
   if (!on) {
     return createPortal(
       <div
-        className="fixed bottom-4 right-4 z-40 flex max-w-[16rem] items-center gap-2 rounded-lg border border-warning-border bg-warning-surface px-3 py-2 text-xs text-foreground shadow-sm"
+        className="fixed bottom-4 right-4 z-40 flex max-w-[17rem] items-center gap-2 rounded-xl border border-warning-border bg-warning-surface px-3 py-2 text-xs text-foreground shadow-sm"
         role="status"
       >
         <CameraOff className="size-4 shrink-0 text-warning" aria-hidden />
@@ -65,29 +68,74 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
     );
   }
 
+  const borderClass = !note.ok
+    ? "border-amber-500/60 shadow-md shadow-amber-500/10 ring-1 ring-amber-500/30"
+    : "border-border shadow-sm";
+
   return createPortal(
     <div
-      className="fixed bottom-4 right-4 z-40 w-40 overflow-hidden rounded-lg border bg-card shadow-sm"
+      className={`fixed bottom-4 right-4 z-40 w-48 overflow-hidden rounded-xl border bg-card transition-all duration-200 ${borderClass}`}
       role="status"
-      aria-label="Camera"
+      aria-label="Proctored Camera Preview"
     >
       {open && (
         // Mirrored, because that is how people expect to see themselves.
         // Detection reads the unmirrored stream; this only changes the picture.
-        <video
-          ref={videoRef}
-          muted
-          playsInline
-          autoPlay
-          className="aspect-[4/3] w-full -scale-x-100 bg-muted object-cover"
-        />
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+          <video
+            ref={videoRef}
+            muted
+            playsInline
+            autoPlay
+            className="size-full -scale-x-100 object-cover"
+          />
+          {/* Subtle live recording badge */}
+          <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-medium text-white backdrop-blur-sm">
+            <span className="size-1.5 animate-pulse rounded-full bg-rose-500" />
+            <span>REC</span>
+          </div>
+
+          {/* Audio level indicator over video */}
+          {camera.signals.micGranted && (
+            <div
+              className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] text-white backdrop-blur-sm"
+              title={`Microphone active: ${audioLevel}%`}
+            >
+              <Mic className="size-2.5 text-white/80" />
+              <div className="flex items-center gap-0.5">
+                <span
+                  className={`size-1 rounded-full ${
+                    audioLevel > 12 ? (audioLevel > 45 ? "bg-amber-400" : "bg-emerald-400") : "bg-white/30"
+                  }`}
+                />
+                <span
+                  className={`size-1 rounded-full ${
+                    audioLevel > 30 ? (audioLevel > 60 ? "bg-amber-400" : "bg-emerald-400") : "bg-white/30"
+                  }`}
+                />
+                <span
+                  className={`size-1 rounded-full ${audioLevel > 55 ? "bg-rose-400" : "bg-white/30"}`}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       )}
-      <div className="flex items-center gap-1.5 px-2 py-1.5 text-[11px]">
+
+      {/* Main status header bar */}
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px]">
         <span
-          className={`size-1.5 shrink-0 rounded-full ${note.ok ? "bg-success" : "bg-warning"}`}
+          className={`size-1.5 shrink-0 rounded-full ${note.ok ? "bg-success" : "bg-warning animate-pulse"}`}
           aria-hidden
         />
-        <span className="min-w-0 flex-1 truncate text-muted-foreground">{note.text}</span>
+        <span
+          className={`min-w-0 flex-1 truncate ${
+            note.ok ? "text-muted-foreground" : "font-medium text-amber-600 dark:text-amber-400"
+          }`}
+          title={note.text}
+        >
+          {note.text}
+        </span>
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -97,6 +145,55 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
           {open ? <ChevronDown className="size-3.5" /> : <ChevronUp className="size-3.5" />}
         </button>
       </div>
+
+      {/* Gaze tracking strike meter (5 benefit-of-doubt chances) */}
+      {hasGazeStrikes && (
+        <div className="flex items-center justify-between border-t border-border/40 bg-muted/30 px-2.5 py-1 text-[10px]">
+          <span className="text-muted-foreground">Screen gaze</span>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <span
+                key={i}
+                className={`size-1.5 rounded-full transition-colors ${
+                  i < camera.signals.lookingAwayEvents
+                    ? i >= 4
+                      ? "bg-rose-500 animate-pulse"
+                      : "bg-amber-500"
+                    : "bg-muted-foreground/25"
+                }`}
+              />
+            ))}
+            <span className="ml-1 font-mono text-[9px] text-muted-foreground">
+              {camera.signals.lookingAwayEvents}/5
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Voice tracking strike meter (3 benefit-of-doubt chances) */}
+      {hasVoiceStrikes && (
+        <div className="flex items-center justify-between border-t border-border/40 bg-muted/30 px-2.5 py-1 text-[10px]">
+          <span className="text-muted-foreground">Voice / audio</span>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <span
+                key={i}
+                className={`size-1.5 rounded-full transition-colors ${
+                  i < camera.signals.voiceEvents
+                    ? i >= 2
+                      ? "bg-rose-500 animate-pulse"
+                      : "bg-amber-500"
+                    : "bg-muted-foreground/25"
+                }`}
+              />
+            ))}
+            <span className="ml-1 font-mono text-[9px] text-muted-foreground">
+              {camera.signals.voiceEvents}/3
+            </span>
+          </div>
+        </div>
+      )}
+
       {/*
         Diagnostics, only with ?camera-debug in the address: what the models
         are reporting, sample by sample. For checking a real webcam and room
@@ -106,7 +203,8 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
         <p className="border-t px-2 py-1 font-mono text-[10px] text-muted-foreground">
           {camera.detector} · faces {camera.live?.faces ?? "–"} · phone{" "}
           {camera.live ? camera.live.phoneScore.toFixed(2) : "–"} · away{" "}
-          {camera.signals.lookingAwayEvents}/5 · voice {camera.signals.voiceEvents}/3
+          {camera.signals.lookingAwayEvents}/5 · voice {camera.signals.voiceEvents}/3 · lvl{" "}
+          {audioLevel}
         </p>
       )}
     </div>,
@@ -151,13 +249,13 @@ function describe(camera: CameraApi): { ok: boolean; text: string } {
   if (live.lookingAway || (live.lookingAwayCount > 0 && live.lookingAwayCount <= 5)) {
     const count = Math.min(5, Math.max(1, live.lookingAwayCount));
     const prefix = count === 5 ? "Final warning" : `Warning ${count} of 5`;
+    const tip = live.lookingAwayTip ?? "Please face the screen";
     return {
       ok: false,
-      text: `Looking away — ${prefix} (Please face the screen)`,
+      text: `${tip} (${prefix})`,
     };
   }
 
   if (live.faces === 0) return { ok: false, text: "No face in view" };
   return { ok: true, text: camera.signals.micGranted ? "Camera & mic on" : "Camera on" };
 }
-
