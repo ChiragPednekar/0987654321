@@ -482,7 +482,7 @@ export default async function CaseDetailPage({
                   <CardTitle className="text-base">Scenario</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Markdown>{caseData.scenario}</Markdown>
+                  <Markdown className="prose-document">{caseData.scenario}</Markdown>
                 </CardContent>
               </Card>
 
@@ -502,7 +502,7 @@ export default async function CaseDetailPage({
                   <CardTitle className="text-base">Your task</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Markdown>{caseData.instructions}</Markdown>
+                  <Markdown className="prose-document">{caseData.instructions}</Markdown>
                   {nextCase && (
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
                       <span className="text-xs text-muted-foreground">

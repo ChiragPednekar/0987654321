@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { Flame, LogOut, Menu, Settings, Shield, User as UserIcon, X } from "lucide-react";
@@ -104,11 +105,8 @@ export function SiteNav({
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4 sm:px-6">
-        <Link href={homeHref} className="flex items-center gap-2">
-          <div className="grid size-7 place-items-center rounded-md bg-foreground text-sm font-semibold text-background">
-            C
-          </div>
-          <span className="text-[15px] font-semibold tracking-tight">CaseCode</span>
+        <Link href={homeHref} className="flex items-center" aria-label="CaseCode home">
+          <Logo />
         </Link>
 
         {/* Signed-in users navigate from the sidebar; showing the same links

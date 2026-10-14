@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Schibsted_Grotesk, Source_Serif_4 } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ProctorEndedHost } from "@/components/proctor/proctor-ended";
@@ -29,6 +29,32 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+/**
+ * Headings. A newspaper grotesk with a little bite in the R, G and a — enough
+ * character that a page title reads as a title, without competing with the
+ * interface text set in Plex underneath it.
+ */
+const display = Schibsted_Grotesk({
+  variable: "--font-schibsted",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+});
+
+/**
+ * The case itself. A case is a document — a brief, a set of figures, a model
+ * answer — so it is set like one, in a text serif, and the interface around it
+ * stays sans. The switch in typeface is what tells a student which words are
+ * the problem and which are the tool.
+ */
+const documentSerif = Source_Serif_4({
+  variable: "--font-source-serif",
+  subsets: ["latin"],
+  weight: ["400", "600"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: {
     default: "CaseCode — Practise business cases, get graded by AI",
@@ -54,8 +80,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf9f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#1c1b19" },
+    { media: "(prefers-color-scheme: light)", color: "#f1f3ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#121714" },
   ],
 };
 
@@ -65,11 +91,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${plexSans.variable} ${plexMono.variable} min-h-screen font-sans antialiased`}
+        className={`${plexSans.variable} ${plexMono.variable} ${display.variable} ${documentSerif.variable} min-h-screen font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >

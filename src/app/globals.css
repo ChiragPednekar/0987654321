@@ -4,6 +4,20 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------- tokens ---
+   PAPER, INK AND THE EXAMINER'S PEN (2026-10).
+
+   CaseCode is where an answer gets marked, so the palette is the desk it is
+   marked on: a cool, faintly green sheet of paper, blue-black ink for
+   everything the student reads and presses, and one vermilion pen (--mark)
+   that is used ONLY where marking happens — a circled score, a tick, a note
+   in the margin. Nothing else is vermilion, so the eye learns that colour
+   means "the examiner said this".
+
+   The dark theme is the same desk at night: ink-slate rather than neutral
+   charcoal, the ink lightened to read on it, the pen kept.
+
+   What follows is the earlier note on the status hues, which still holds.
+
    A working tool that is allowed to have a palette.
 
    The previous pass pulled every stray hue onto one desaturated scale, which
@@ -39,35 +53,39 @@
 :root {
   --radius: 0.5rem;
 
-  /* ---- neutral surfaces, page -> elevated ---- */
-  --background: oklch(0.985 0.003 85);
-  --surface-sunken: oklch(0.963 0.005 85);
-  --card: oklch(0.999 0.001 85);
-  --card-foreground: oklch(0.205 0.008 60);
-  --popover: oklch(0.999 0.001 85);
-  --popover-foreground: oklch(0.205 0.008 60);
+  /* ---- neutral surfaces, page -> elevated: sheet paper ---- */
+  --background: oklch(0.958 0.007 125);
+  --surface-sunken: oklch(0.932 0.009 125);
+  --card: oklch(0.987 0.004 120);
+  --card-foreground: oklch(0.215 0.01 155);
+  --popover: oklch(0.994 0.002 120);
+  --popover-foreground: oklch(0.215 0.01 155);
 
-  /* ---- neutral text, strongest -> quietest ---- */
-  --foreground: oklch(0.205 0.008 60);
-  --muted-foreground: oklch(0.505 0.011 70);
-  --subtle-foreground: oklch(0.605 0.012 70);
+  /* ---- neutral text, strongest -> quietest: green-black ink ---- */
+  --foreground: oklch(0.215 0.01 155);
+  --muted-foreground: oklch(0.48 0.013 150);
+  --subtle-foreground: oklch(0.59 0.012 145);
 
   /* ---- neutral fills and lines ---- */
-  --secondary: oklch(0.948 0.006 85);
-  --secondary-foreground: oklch(0.255 0.008 60);
-  --muted: oklch(0.955 0.005 85);
-  --accent: oklch(0.933 0.008 85);
-  --accent-foreground: oklch(0.205 0.008 60);
-  --border: oklch(0.893 0.006 80);
-  --border-subtle: oklch(0.935 0.004 82);
-  --input: oklch(0.855 0.008 80);
+  --secondary: oklch(0.925 0.009 125);
+  --secondary-foreground: oklch(0.25 0.01 155);
+  --muted: oklch(0.937 0.008 125);
+  --accent: oklch(0.912 0.011 125);
+  --accent-foreground: oklch(0.215 0.01 155);
+  --border: oklch(0.86 0.013 125);
+  --border-subtle: oklch(0.905 0.01 125);
+  --input: oklch(0.82 0.015 125);
 
-  /* ---- brand: petrol blue ---- */
-  --brand: oklch(0.45 0.105 222);
-  --brand-foreground: oklch(0.99 0.004 85);
-  --brand-surface: oklch(0.962 0.021 222);
-  --brand-border: oklch(0.878 0.045 222);
-  --brand-hover: oklch(0.39 0.1 222);
+  /* ---- brand: blue-black ink ---- */
+  --brand: oklch(0.385 0.115 266);
+  --brand-foreground: oklch(0.985 0.004 266);
+  --brand-surface: oklch(0.938 0.022 266);
+  --brand-border: oklch(0.83 0.055 266);
+  --brand-hover: oklch(0.32 0.105 266);
+
+  /* ---- mark: the examiner's vermilion pen. Marking only. ---- */
+  --mark: oklch(0.6 0.19 36);
+  --mark-surface: oklch(0.95 0.03 40);
 
   /* ---- info: teal ---- */
   --info: oklch(0.5 0.085 197);
@@ -113,41 +131,44 @@
 
   /* Five genuinely distinct hues, so a five-series chart is readable without
      a legend lookup on every mark. The old scale had two greys in it. */
-  --chart-1: oklch(0.48 0.11 222);
+  --chart-1: oklch(0.45 0.12 266);
   --chart-2: oklch(0.56 0.105 152);
   --chart-3: oklch(0.66 0.12 65);
   --chart-4: oklch(0.6 0.085 197);
   --chart-5: oklch(0.56 0.155 27);
 
-  --shadow-color: oklch(0.2 0.012 60 / 0.07);
+  --shadow-color: oklch(0.22 0.015 155 / 0.08);
 }
 
 .dark {
-  --background: oklch(0.178 0.005 70);
-  --surface-sunken: oklch(0.152 0.004 70);
-  --card: oklch(0.208 0.005 70);
-  --card-foreground: oklch(0.928 0.005 85);
-  --popover: oklch(0.228 0.006 70);
-  --popover-foreground: oklch(0.928 0.005 85);
+  --background: oklch(0.168 0.009 165);
+  --surface-sunken: oklch(0.145 0.008 165);
+  --card: oklch(0.198 0.01 165);
+  --card-foreground: oklch(0.93 0.008 125);
+  --popover: oklch(0.222 0.011 165);
+  --popover-foreground: oklch(0.93 0.008 125);
 
-  --foreground: oklch(0.928 0.005 85);
-  --muted-foreground: oklch(0.715 0.01 80);
-  --subtle-foreground: oklch(0.62 0.01 78);
+  --foreground: oklch(0.93 0.008 125);
+  --muted-foreground: oklch(0.72 0.012 135);
+  --subtle-foreground: oklch(0.615 0.012 140);
 
-  --secondary: oklch(0.252 0.006 70);
-  --secondary-foreground: oklch(0.928 0.005 85);
-  --muted: oklch(0.242 0.005 70);
-  --accent: oklch(0.268 0.007 70);
-  --accent-foreground: oklch(0.928 0.005 85);
-  --border: oklch(0.298 0.007 70);
-  --border-subtle: oklch(0.252 0.005 70);
-  --input: oklch(0.345 0.008 70);
+  --secondary: oklch(0.245 0.01 165);
+  --secondary-foreground: oklch(0.93 0.008 125);
+  --muted: oklch(0.235 0.01 165);
+  --accent: oklch(0.262 0.011 165);
+  --accent-foreground: oklch(0.93 0.008 125);
+  --border: oklch(0.295 0.012 165);
+  --border-subtle: oklch(0.25 0.01 165);
+  --input: oklch(0.345 0.013 165);
 
-  --brand: oklch(0.74 0.09 224);
-  --brand-foreground: oklch(0.17 0.02 230);
-  --brand-surface: oklch(0.262 0.04 224);
-  --brand-border: oklch(0.36 0.06 224);
-  --brand-hover: oklch(0.56 0.105 224);
+  --brand: oklch(0.79 0.08 266);
+  --brand-foreground: oklch(0.18 0.03 266);
+  --brand-surface: oklch(0.265 0.04 266);
+  --brand-border: oklch(0.38 0.065 266);
+  --brand-hover: oklch(0.7 0.095 266);
+
+  --mark: oklch(0.72 0.16 38);
+  --mark-surface: oklch(0.26 0.05 38);
 
   --info: oklch(0.76 0.08 197);
   --info-foreground: oklch(0.16 0.02 200);
@@ -183,11 +204,11 @@
   /* On charcoal the brand has to be light to read as text, which makes a
      button filled with it look pastel. Filled actions keep a deeper petrol
      with light text on it. */
-  --action: oklch(0.5 0.1 224);
-  --action-foreground: oklch(0.98 0.005 85);
-  --action-hover: oklch(0.56 0.105 224);
+  --action: oklch(0.47 0.12 266);
+  --action-foreground: oklch(0.985 0.004 266);
+  --action-hover: oklch(0.53 0.125 266);
 
-  --chart-1: oklch(0.74 0.09 224);
+  --chart-1: oklch(0.79 0.08 266);
   --chart-2: oklch(0.76 0.105 152);
   --chart-3: oklch(0.81 0.11 68);
   --chart-4: oklch(0.76 0.075 197);
@@ -226,6 +247,8 @@
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-surface: var(--brand-surface);
   --color-brand-border: var(--brand-border);
+  --color-mark: var(--mark);
+  --color-mark-surface: var(--mark-surface);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
   --color-info-surface: var(--info-surface);
@@ -266,6 +289,8 @@
 
   --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-display: var(--font-schibsted), var(--font-plex-sans), ui-sans-serif, sans-serif;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
 
   /* Plex is drawn with open spacing; the template habit of pulling every
      heading tight makes it look cramped. Tighten only slightly. */
@@ -323,6 +348,15 @@
     text-wrap: balance;
   }
 
+  /* Page and section titles in the display face. h3 and below stay in Plex:
+     they are labels inside a card, and a second typeface at that size is
+     noise rather than voice. */
+  h1,
+  h2 {
+    font-family: var(--font-display);
+    letter-spacing: -0.018em;
+  }
+
   /* Focus ring: visible for keyboard users, quiet for mouse users. */
   :focus-visible {
     outline: 2px solid var(--ring);
@@ -350,12 +384,24 @@
 .prose-case {
   line-height: 1.7;
 }
+
+/* The case brief itself, set as a document (see the serif in layout.tsx).
+   Opt-in: chat, feedback and hints share .prose-case and stay sans. */
+.prose-document {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.68;
+}
+.prose-document table {
+  font-family: var(--font-sans);
+}
 .prose-case > * + * {
   margin-top: 1rem;
 }
 .prose-case h1,
 .prose-case h2,
 .prose-case h3 {
+  font-family: var(--font-display);
   font-weight: 600;
   letter-spacing: -0.01em;
   margin-top: 1.75rem;

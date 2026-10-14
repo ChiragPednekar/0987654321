@@ -1,50 +1,36 @@
 import Link from "next/link";
-import { DOMAINS, MARKETED_CASE_FLOOR } from "@/lib/constants";
+import { Logo } from "@/components/logo";
+import { MarkedSheet } from "@/components/marked-sheet";
 
+/**
+ * Sign-in, sign-up and password pages.
+ *
+ * The right half used to carry an unattributed testimonial and a row of three
+ * big stats — the stock furniture of a generated auth page. It now shows what
+ * the account is for: an answer, marked.
+ */
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <div className="grid min-h-screen lg:grid-cols-[1fr_1.1fr]">
       <div className="flex flex-col px-6 py-8">
-        <Link href="/" className="flex items-center gap-2 self-start">
-          <div className="grid size-7 place-items-center rounded-md bg-foreground text-sm font-semibold text-background">
-            C
-          </div>
-          <span className="font-semibold tracking-tight">CaseCode</span>
+        <Link href="/" className="self-start" aria-label="CaseCode home">
+          <Logo />
         </Link>
         <div className="flex flex-1 items-center justify-center py-10">
           <div className="w-full max-w-sm">{children}</div>
         </div>
       </div>
 
-      <aside className="hidden flex-col justify-between border-l border-border bg-muted/40 p-12 lg:flex">
-        <div />
-        <blockquote className="space-y-4">
-          <p className="text-2xl font-medium leading-snug tracking-tight">
-            &ldquo;Reading casebooks taught me the frameworks. Solving 80 cases
-            here taught me to actually pick a number and defend it.&rdquo;
-          </p>
-          <footer className="text-sm text-muted-foreground">
-            The gap CaseCode is built to close.
-          </footer>
-        </blockquote>
-        <dl className="grid grid-cols-3 gap-6 border-t border-border pt-8">
-          {[
-            [`${MARKETED_CASE_FLOOR}+`, "cases"],
-            [String(DOMAINS.length), "domains"],
-            ["AI", "rubrics"],
-          ].map(([value, label]) => (
-            <div key={label}>
-              <dt className="text-2xl font-semibold tracking-tight tabular">
-                {value}
-              </dt>
-              <dd className="text-sm text-muted-foreground">{label}</dd>
-            </div>
-          ))}
-        </dl>
+      <aside className="hidden flex-col justify-center gap-8 border-l border-border bg-surface-sunken/70 px-12 py-12 lg:flex xl:px-20">
+        <MarkedSheet compact className="max-w-lg -rotate-[0.6deg]" />
+        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+          Every answer comes back like this: marked against the case&apos;s own
+          rubric, with the step you skipped written in the margin.
+        </p>
       </aside>
     </div>
   );
