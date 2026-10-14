@@ -200,12 +200,27 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
         against the thresholds — not shown to students otherwise.
       */}
       {debug && (
-        <p className="border-t px-2 py-1 font-mono text-[10px] text-muted-foreground">
-          {camera.detector} · faces {camera.live?.faces ?? "–"} · phone{" "}
-          {camera.live ? camera.live.phoneScore.toFixed(2) : "–"} · away{" "}
-          {camera.signals.lookingAwayEvents}/5 · voice {camera.signals.voiceEvents}/3 · lvl{" "}
-          {audioLevel}
-        </p>
+        <div className="border-t border-border/60 bg-muted/50 px-2 py-1.5 font-mono text-[9px] text-muted-foreground space-y-0.5">
+          <p>
+            <span className="font-semibold text-foreground">{camera.detector}</span> · faces {camera.live?.faces ?? "–"} · {camera.live?.gazeState ?? "NORMAL"}
+          </p>
+          {camera.live?.headPose && (
+            <p>
+              pose: Y:{camera.live.headPose.yaw.toFixed(1)}° P:{camera.live.headPose.pitch.toFixed(1)}° R:{camera.live.headPose.roll.toFixed(1)}°
+            </p>
+          )}
+          {camera.live?.irisMetrics && (
+            <p>
+              iris: ({camera.live.irisMetrics.x.toFixed(2)}, {camera.live.irisMetrics.y.toFixed(2)}) · EAR: {camera.live.irisMetrics.ear.toFixed(2)}
+            </p>
+          )}
+          <p>
+            vad: {camera.live?.speechProbability ? (camera.live.speechProbability * 100).toFixed(0) : "0"}% · snr: {camera.live?.snrDb?.toFixed(1) ?? "0"}dB · sfm: {camera.live?.spectralFlatness?.toFixed(2) ?? "–"}
+          </p>
+          <p>
+            strikes: gaze {camera.signals.lookingAwayEvents}/5 · voice {camera.signals.voiceEvents}/3 · lvl {audioLevel}
+          </p>
+        </div>
       )}
     </div>,
     document.body,

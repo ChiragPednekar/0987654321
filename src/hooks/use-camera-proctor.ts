@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { FaceDetector, ObjectDetector } from "@mediapipe/tasks-vision";
+import type { FaceDetector, FaceLandmarker, ObjectDetector } from "@mediapipe/tasks-vision";
 import {
   checkPoseAndGaze,
   createTracker,
@@ -16,6 +16,12 @@ import {
   type SnapshotKind,
   type TrackerState,
 } from "@/lib/camera-proctor";
+import {
+  TemporalGazeTracker,
+  type GazeDetectionState,
+  type HeadPoseEuler,
+} from "@/lib/gaze-tracker";
+import { AudioVadEngine } from "@/lib/audio-vad";
 
 /**
  * Watches the webcam and microphone during a proctored attempt.
@@ -60,11 +66,18 @@ export interface LiveView {
   lookingAwayCount: number;
   lookingAwayReason?: string;
   lookingAwayTip?: string;
+  gazeState?: GazeDetectionState;
+  gazeConfidence?: number;
+  headPose?: HeadPoseEuler;
+  irisMetrics?: { x: number; y: number; ear: number };
   /** True when talking or external voice was heard. */
   voiceDetected: boolean;
   voiceCount: number;
   /** Normalized audio energy 0-100 for live mic feedback. */
   audioLevel: number;
+  speechProbability?: number;
+  snrDb?: number;
+  spectralFlatness?: number;
 }
 
 export interface CameraSignals extends CameraCounters {
@@ -107,7 +120,8 @@ export interface CameraApi {
 
 /** Served from /public: wasm copied out of node_modules at build, models committed. */
 const WASM_BASE = "/proctor/wasm";
-const FACE_MODEL = "/proctor/models/blaze_face_short_range.tflite";
+const FACE_LANDMARKER_MODEL = "/proctor/models/face_landmarker.task";
+const FACE_DETECTOR_MODEL = "/proctor/models/blaze_face_short_range.tflite";
 /**
  * EfficientDet-Lite2, not the smaller Lite0, chosen on measurement. Run against
  * the same photos, Lite2 scored a real phone 0.50 where Lite0 scored 0.41, and
@@ -151,7 +165,8 @@ const EMPTY_STATE_SIGNALS: CameraSignals = {
 };
 
 interface Detectors {
-  face: FaceDetector;
+  face?: FaceDetector;
+  landmarker?: FaceLandmarker;
   objects: ObjectDetector;
 }
 
@@ -160,12 +175,6 @@ interface Detectors {
  * "INFO: Created TensorFlow Lite XNNPACK delegate for CPU." It goes through
  * console.error, so Next's dev overlay counts it as an issue and a browser
  * console shows it in red, though nothing is wrong.
- *
- * It has to be installed for the whole load, not just around an inference: the
- * Emscripten runtime takes its own reference to console.error when the module
- * initialises and keeps that reference for life, so patching console.error
- * afterwards does not reach it. With this in place during load, the runtime
- * captures the filter instead — which forwards everything else untouched.
  */
 function muteRuntimeInfo(): () => void {
   const original = console.error;
@@ -188,59 +197,62 @@ async function loadDetectors(): Promise<Detectors> {
 }
 
 async function loadDetectorsUnmuted(): Promise<Detectors> {
-  // Imported here, not at the top of the file: the library and its models are
-  // megabytes, and only a page that has actually started an exam should pay.
-  const { FilesetResolver, FaceDetector, ObjectDetector } = await import(
+  const { FilesetResolver, FaceDetector, FaceLandmarker, ObjectDetector } = await import(
     "@mediapipe/tasks-vision"
   );
   const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
 
-  /**
-   * CPU, not GPU. One frame every 1.5 seconds is a few tens of milliseconds of
-   * CPU on any laptop sold in the last decade, while the GPU delegate depends
-   * on WebGL state that varies by driver and can be lost mid-attempt. For an
-   * exam the predictable path is worth more than the fast one.
-   */
-  const [face, objects] = await Promise.all([
-    FaceDetector.createFromOptions(fileset, {
-      baseOptions: { modelAssetPath: FACE_MODEL, delegate: "CPU" },
+  const objectsPromise = ObjectDetector.createFromOptions(fileset, {
+    baseOptions: { modelAssetPath: OBJECT_MODEL, delegate: "CPU" },
+    runningMode: "VIDEO",
+    scoreThreshold: PHONE_MIN_SCORE,
+    maxResults: 5,
+    categoryAllowlist: ["cell phone", "book"],
+  });
+
+  let landmarker: FaceLandmarker | undefined;
+  let face: FaceDetector | undefined;
+
+  try {
+    landmarker = await FaceLandmarker.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: FACE_LANDMARKER_MODEL, delegate: "CPU" },
+      runningMode: "VIDEO",
+      numFaces: 2,
+      minFaceDetectionConfidence: 0.5,
+      minFacePresenceConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+      outputFaceBlendshapes: true,
+      outputFacialTransformationMatrixes: true,
+    });
+  } catch (err) {
+    console.warn("[proctor] FaceLandmarker could not load, falling back to FaceDetector", err);
+    face = await FaceDetector.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: FACE_DETECTOR_MODEL, delegate: "CPU" },
       runningMode: "VIDEO",
       minDetectionConfidence: 0.5,
-    }),
-    ObjectDetector.createFromOptions(fileset, {
-      baseOptions: { modelAssetPath: OBJECT_MODEL, delegate: "CPU" },
-      runningMode: "VIDEO",
-      // The lowest score anything is reported at. Phones are accepted from
-      // here (PHONE_MIN_SCORE); books need BOOK_MIN_SCORE. The debounce in
-      // camera-proctor.ts is what stops one bad frame becoming an event.
-      scoreThreshold: PHONE_MIN_SCORE,
-      maxResults: 5,
-      categoryAllowlist: ["cell phone", "book"],
-    }),
-  ]);
+    });
+  }
 
-  warmUp(face, objects);
-  return { face, objects };
+  const objects = await objectsPromise;
+  warmUp({ face, landmarker, objects });
+  return { face, landmarker, objects };
 }
 
 /**
- * Runs each model once on a blank frame while the load is still muted, so the
- * runtime's one-time startup line is printed — and swallowed — here rather
- * than during the exam. Also moves the first-inference cost off the first real
- * sample.
+ * Runs each model once on a blank frame while the load is still muted.
  */
-function warmUp(face: FaceDetector, objects: ObjectDetector) {
+function warmUp(detectors: Detectors) {
   const blank = document.createElement("canvas");
   blank.width = 64;
   blank.height = 48;
   blank.getContext("2d")?.fillRect(0, 0, 64, 48);
   try {
     const t = performance.now();
-    face.detectForVideo(blank, t);
-    objects.detectForVideo(blank, t);
+    if (detectors.landmarker) detectors.landmarker.detectForVideo(blank, t);
+    if (detectors.face) detectors.face.detectForVideo(blank, t);
+    detectors.objects.detectForVideo(blank, t);
   } catch {
-    // A model that cannot read a blank frame will say so on the first real
-    // one, where `sample` already handles it.
+    // A model that cannot read a blank frame will say so on the first real one.
   }
 }
 
@@ -292,6 +304,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
   const noiseFloorRef = React.useRef(14);
   const poseBaselineRef = React.useRef<PoseBaseline | null>(null);
   const baselineSamplesRef = React.useRef<Array<{ vMouth: number; yawDelta: number; roll: number }>>([]);
+  const vadRef = React.useRef<AudioVadEngine>(new AudioVadEngine());
+  const gazeTrackerRef = React.useRef<TemporalGazeTracker>(new TemporalGazeTracker());
 
   React.useEffect(() => {
     // Restart the clock when counting begins, so the first sample does not
@@ -325,7 +339,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     audioContextRef.current = null;
     analyserRef.current = null;
     try {
-      detectorsRef.current?.face.close();
+      detectorsRef.current?.landmarker?.close();
+      detectorsRef.current?.face?.close();
       detectorsRef.current?.objects.close();
     } catch {
       // Closing a half-initialised detector can throw; there is nothing to do.
@@ -443,52 +458,29 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     const imageData = ctx.getImageData(0, 0, 32, 24).data;
     let covered = isCovered(imageData);
 
-    // Audio & voice activity check
+    // Audio & voice activity check using AudioVadEngine
     let voiceDetected = voiceActivityRef.current;
     voiceActivityRef.current = false;
     let audioLevel = 0;
+    let speechProbability: number | undefined;
+    let snrDb: number | undefined;
+    let spectralFlatness: number | undefined;
 
     const analyser = analyserRef.current;
     if (analyser) {
-      const data = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteFrequencyData(data);
+      const freqData = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(freqData);
 
-      let totalEnergy = 0;
-      for (let i = 0; i < data.length; i++) {
-        totalEnergy += data[i];
-      }
-      const rawAvg = data.length > 0 ? totalEnergy / data.length : 0;
-      audioLevel = Math.min(100, Math.round((rawAvg / 128) * 100));
+      const timeData = new Uint8Array(analyser.fftSize);
+      analyser.getByteTimeDomainData(timeData);
 
-      // Voice formant bins (approx 300Hz - 2800Hz) vs high-frequency typing/clack bins (approx 4000Hz - 8000Hz)
-      let voiceEnergy = 0;
-      let voiceBins = 0;
-      for (let i = 2; i < Math.min(16, data.length); i++) {
-        voiceEnergy += data[i];
-        voiceBins++;
-      }
-      const avgVoice = voiceBins > 0 ? voiceEnergy / voiceBins : 0;
+      const vadResult = vadRef.current.processFrame(freqData, timeData, now, elapsed);
+      audioLevel = Math.min(100, Math.round((vadResult.metrics.rmsEnergy / 128) * 100));
+      speechProbability = vadResult.metrics.speechProbability;
+      snrDb = vadResult.metrics.snrDb;
+      spectralFlatness = vadResult.metrics.spectralFlatness;
 
-      let highEnergy = 0;
-      let highBins = 0;
-      for (let i = 22; i < Math.min(46, data.length); i++) {
-        highEnergy += data[i];
-        highBins++;
-      }
-      const avgHigh = highBins > 0 ? highEnergy / highBins : 0;
-
-      // Adapt ambient noise floor
-      const currentNoise = noiseFloorRef.current;
-      if (rawAvg < currentNoise) {
-        noiseFloorRef.current = currentNoise * 0.85 + rawAvg * 0.15;
-      } else {
-        noiseFloorRef.current = currentNoise * 0.98 + rawAvg * 0.02;
-      }
-
-      // Voice detection criteria:
-      // Exceed adaptive noise floor and speech formant energy dominates typing rattle
-      const dynamicThreshold = Math.max(26, noiseFloorRef.current + 16);
-      if (avgVoice > dynamicThreshold && (avgVoice > avgHigh * 1.15 || avgVoice > 38)) {
+      if (vadResult.activeSpeech) {
         voiceDetected = true;
       }
     }
@@ -499,34 +491,63 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     let book = false;
     let lookingAway = false;
     let lookingAwayReason: string | undefined;
+    let lookingAwayTip: string | undefined;
+    let gazeState: GazeDetectionState = "NORMAL";
+    let gazeConfidence: number | undefined;
+    let headPose: HeadPoseEuler | undefined;
+    let irisMetrics: { x: number; y: number; ear: number } | undefined;
 
     if (!covered) {
       try {
-        const faceResult = detectors.face.detectForVideo(video, now);
-        faces = faceResult.detections.length;
-        if (faces === 1) {
-          const keypoints = faceResult.detections[0]?.keypoints;
-          const pose = checkPoseAndGaze(keypoints, poseBaselineRef.current);
-          if (!pose.facing) {
+        if (detectors.landmarker) {
+          const lmResult = detectors.landmarker.detectForVideo(video, now);
+          faces = lmResult.faceLandmarks.length;
+          if (faces === 1) {
+            const landmarks = lmResult.faceLandmarks[0];
+            const matrix = lmResult.facialTransformationMatrixes?.[0]?.data;
+            const blendshapes = lmResult.faceBlendshapes?.[0]?.categories;
+            const analysis = gazeTrackerRef.current.processFrame(landmarks, elapsed, matrix, blendshapes);
+            lookingAway = !analysis.facing;
+            lookingAwayReason = analysis.reason;
+            lookingAwayTip = analysis.tip;
+            gazeState = analysis.state;
+            gazeConfidence = analysis.confidence;
+            headPose = { yaw: analysis.metrics.yaw, pitch: analysis.metrics.pitch, roll: analysis.metrics.roll };
+            irisMetrics = { x: analysis.metrics.irisX, y: analysis.metrics.irisY, ear: analysis.metrics.ear };
+          } else if (faces === 0) {
             lookingAway = true;
-            lookingAwayReason = pose.reason;
-          } else if (pose.metrics && baselineSamplesRef.current.length < 5) {
-            // Calibrate resting pose from first 5 frontal facing frames
-            baselineSamplesRef.current.push({
-              vMouth: pose.metrics.pitch,
-              yawDelta: pose.metrics.yaw,
-              roll: pose.metrics.roll,
-            });
-            if (baselineSamplesRef.current.length === 5) {
-              const samples = baselineSamplesRef.current;
-              const avgVMouth = samples.reduce((acc, s) => acc + s.vMouth, 0) / samples.length;
-              const avgYaw = samples.reduce((acc, s) => acc + s.yawDelta, 0) / samples.length;
-              const avgRoll = samples.reduce((acc, s) => acc + s.roll, 0) / samples.length;
-              poseBaselineRef.current = { vMouth: avgVMouth, yawDelta: avgYaw, roll: avgRoll };
-            }
+            lookingAwayReason = "face_not_visible";
+            lookingAwayTip = "Face not visible — stay in camera view";
+            gazeState = "FACE_NOT_VISIBLE";
           }
-        } else if (faces === 0) {
-          lookingAway = true;
+        } else if (detectors.face) {
+          const faceResult = detectors.face.detectForVideo(video, now);
+          faces = faceResult.detections.length;
+          if (faces === 1) {
+            const keypoints = faceResult.detections[0]?.keypoints;
+            const pose = checkPoseAndGaze(keypoints, poseBaselineRef.current);
+            if (!pose.facing) {
+              lookingAway = true;
+              lookingAwayReason = pose.reason;
+            } else if (pose.metrics && baselineSamplesRef.current.length < 5) {
+              // Calibrate resting pose from first 5 frontal facing frames
+              baselineSamplesRef.current.push({
+                vMouth: pose.metrics.pitch,
+                yawDelta: pose.metrics.yaw,
+                roll: pose.metrics.roll,
+              });
+              if (baselineSamplesRef.current.length === 5) {
+                const samples = baselineSamplesRef.current;
+                const avgVMouth = samples.reduce((acc, s) => acc + s.vMouth, 0) / samples.length;
+                const avgYaw = samples.reduce((acc, s) => acc + s.yawDelta, 0) / samples.length;
+                const avgRoll = samples.reduce((acc, s) => acc + s.roll, 0) / samples.length;
+                poseBaselineRef.current = { vMouth: avgVMouth, yawDelta: avgYaw, roll: avgRoll };
+              }
+            }
+          } else if (faces === 0) {
+            lookingAway = true;
+            gazeState = "FACE_NOT_VISIBLE";
+          }
         }
 
         for (const d of detectors.objects.detectForVideo(video, now).detections) {
@@ -551,8 +572,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       }
     }
 
-    let lookingAwayTip: string | undefined;
-    if (lookingAway) {
+    if (lookingAway && !lookingAwayTip) {
       if (faces === 0) {
         lookingAwayTip = "Face not visible — stay in camera view";
       } else if (lookingAwayReason === "looking_down") {
@@ -583,9 +603,16 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       lookingAwayCount: state.counters.lookingAwayEvents,
       lookingAwayReason,
       lookingAwayTip,
+      gazeState,
+      gazeConfidence,
+      headPose,
+      irisMetrics,
       voiceDetected,
       voiceCount: state.counters.voiceEvents,
       audioLevel,
+      speechProbability,
+      snrDb,
+      spectralFlatness,
     });
     patch({ ...state.counters });
 
@@ -621,6 +648,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       poseBaselineRef.current = null;
       baselineSamplesRef.current = [];
       noiseFloorRef.current = 14;
+      vadRef.current.reset();
+      gazeTrackerRef.current.reset();
     }
 
     patch({ cameraRequested: true, cameraDenied: false, cameraUnavailable: false });
@@ -768,7 +797,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     try {
       const loaded = await loadDetectors();
       if (stopped.current || !streamRef.current) {
-        loaded.face.close();
+        loaded.landmarker?.close();
+        loaded.face?.close();
         loaded.objects.close();
         return;
       }
@@ -799,6 +829,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     poseBaselineRef.current = null;
     baselineSamplesRef.current = [];
     noiseFloorRef.current = 14;
+    vadRef.current.reset();
+    gazeTrackerRef.current.reset();
   }, [teardown]);
 
   const stop = React.useCallback(() => {

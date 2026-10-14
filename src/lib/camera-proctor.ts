@@ -44,6 +44,14 @@ const VOICE_ACTIVATE_AT = 2;
 /** Hits in the window at or below which it switches off again. */
 const RELEASE_AT = 1;
 
+import {
+  extractHeadPose,
+  extractIrisGazeRatio,
+  type GazeDetectionState,
+  type NormalizedLandmark,
+} from "@/lib/gaze-tracker";
+import { DEFAULT_PROCTOR_CONFIG } from "@/lib/proctor-config";
+
 /** Benefit of doubt: 5 warnings for looking away; on/after 5, test suspends. */
 export const MAX_LOOKING_AWAY_STRIKES = 5;
 /** Benefit of doubt: 3 warnings for voice; on/after 3, test suspends. */
@@ -53,6 +61,7 @@ export const MAX_VOICE_STRIKES = 3;
 export interface FaceKeypoint {
   x: number;
   y: number;
+  z?: number;
 }
 
 /** Calibrated natural resting head pose baseline. */
@@ -60,29 +69,138 @@ export interface PoseBaseline {
   vMouth: number;
   yawDelta: number;
   roll?: number;
+  headYaw?: number;
+  headPitch?: number;
+  irisX?: number;
+  irisY?: number;
 }
 
 export interface PoseCheckResult {
   facing: boolean;
-  reason?: "looking_left" | "looking_right" | "looking_down" | "looking_up" | "head_tilted";
+  state?: GazeDetectionState;
+  reason?: "looking_left" | "looking_right" | "looking_down" | "looking_up" | "head_tilted" | "face_not_visible" | "tracking_uncertain";
+  tip?: string;
+  confidence?: number;
   metrics?: {
     yaw: number;
     pitch: number;
     roll: number;
+    irisX?: number;
+    irisY?: number;
+    ear?: number;
+    combinedYaw?: number;
+    combinedPitch?: number;
   };
 }
 
 /**
- * Calculates head pose and gaze orientation from 2D normalized face keypoints.
- * BlazeFace short-range delivers 6 keypoints:
- * 0: right eye, 1: left eye, 2: nose tip, 3: mouth center, 4: right ear, 5: left ear.
- * Optional baseline calibrates against student's natural resting desk posture.
+ * Calculates head pose and gaze orientation from facial landmarks.
+ * Supports:
+ * - 478 MediaPipe FaceMesh + Iris landmarks (high-precision 3D gaze, EAR blink detection)
+ * - 6 BlazeFace keypoints fallback (lightweight 2D pose estimation)
+ * - Optional baseline calibrates against student's natural resting desk posture.
  */
 export function checkPoseAndGaze(
-  keypoints?: FaceKeypoint[] | null,
+  keypoints?: (FaceKeypoint | NormalizedLandmark)[] | null,
   baseline?: PoseBaseline | null,
+  transformationMatrix?: number[] | null,
+  blendshapes?: Array<{ categoryName: string; score: number }> | null,
 ): PoseCheckResult {
   if (!keypoints || keypoints.length < 4) return { facing: true };
+
+  // Full 468/478 FaceLandmarker with iris keypoints
+  if (keypoints.length >= 400) {
+    const rawPose = extractHeadPose(keypoints as NormalizedLandmark[], transformationMatrix);
+    const { irisX, irisY, earAvg, blinking } = extractIrisGazeRatio(keypoints as NormalizedLandmark[]);
+
+    let blinkConfirmed = blinking;
+    if (blendshapes && blendshapes.length > 0) {
+      const bL = blendshapes.find((b) => b.categoryName === "eyeBlinkLeft")?.score ?? 0;
+      const bR = blendshapes.find((b) => b.categoryName === "eyeBlinkRight")?.score ?? 0;
+      if (bL > DEFAULT_PROCTOR_CONFIG.gaze.blinkBlendshapeThreshold || bR > DEFAULT_PROCTOR_CONFIG.gaze.blinkBlendshapeThreshold) {
+        blinkConfirmed = true;
+      }
+    }
+
+    // Baseline calibration offsets
+    const baseYaw = baseline?.headYaw ?? (baseline?.yawDelta ? baseline.yawDelta * 55.0 : 0);
+    const basePitch = baseline?.headPitch ?? (baseline?.vMouth ? (baseline.vMouth - 0.75) * 50.0 : 0);
+    const baseIrisX = baseline?.irisX ?? 0.5;
+    const baseIrisY = baseline?.irisY ?? 0.5;
+
+    const effectiveYaw = rawPose.yaw - baseYaw;
+    const effectivePitch = rawPose.pitch - basePitch;
+    const effectiveIrisX = irisX - baseIrisX;
+    const effectiveIrisY = irisY - baseIrisY;
+
+    // Multimodal gaze fusion (head + eyes)
+    const combinedYaw = effectiveYaw + effectiveIrisX * 45.0;
+    const combinedPitch = effectivePitch + effectiveIrisY * 35.0;
+
+    const metrics = {
+      yaw: rawPose.yaw,
+      pitch: rawPose.pitch,
+      roll: rawPose.roll,
+      irisX,
+      irisY,
+      ear: earAvg,
+      combinedYaw,
+      combinedPitch,
+    };
+
+    if (blinkConfirmed) {
+      return { facing: true, state: "BLINKING", metrics, confidence: 0.9 };
+    }
+
+    if (Math.abs(rawPose.roll) > DEFAULT_PROCTOR_CONFIG.gaze.headRollThresholdDeg) {
+      return {
+        facing: false,
+        state: "SUSPECTED_OFF_SCREEN",
+        reason: "head_tilted",
+        tip: "Head tilted — please face the screen directly",
+        metrics,
+        confidence: 0.9,
+      };
+    }
+
+    if (Math.abs(combinedYaw) > DEFAULT_PROCTOR_CONFIG.gaze.headYawThresholdDeg || Math.abs(effectiveIrisX) > DEFAULT_PROCTOR_CONFIG.gaze.irisYawThreshold) {
+      const reason = combinedYaw > 0 ? "looking_left" : "looking_right";
+      return {
+        facing: false,
+        state: "SUSPECTED_OFF_SCREEN",
+        reason,
+        tip: "Head turned away — please face the screen",
+        metrics,
+        confidence: 0.92,
+      };
+    }
+
+    if (combinedPitch > DEFAULT_PROCTOR_CONFIG.gaze.headPitchDownThresholdDeg || effectiveIrisY > DEFAULT_PROCTOR_CONFIG.gaze.irisPitchThreshold) {
+      return {
+        facing: false,
+        state: "SUSPECTED_OFF_SCREEN",
+        reason: "looking_down",
+        tip: "Looking down — please face the screen",
+        metrics,
+        confidence: 0.92,
+      };
+    }
+
+    if (combinedPitch < -DEFAULT_PROCTOR_CONFIG.gaze.headPitchUpThresholdDeg || effectiveIrisY < -DEFAULT_PROCTOR_CONFIG.gaze.irisPitchThreshold) {
+      return {
+        facing: false,
+        state: "SUSPECTED_OFF_SCREEN",
+        reason: "looking_up",
+        tip: "Looking up — please face the screen",
+        metrics,
+        confidence: 0.88,
+      };
+    }
+
+    return { facing: true, state: "NORMAL", metrics, confidence: 0.95 };
+  }
+
+  // BlazeFace 6 keypoints fallback
   const rEye = keypoints[0];
   const lEye = keypoints[1];
   const nose = keypoints[2];
