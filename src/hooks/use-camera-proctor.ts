@@ -88,6 +88,7 @@ export interface CameraSignals extends CameraCounters {
   cameraLostCount: number;
   detectorFailed: boolean;
   micGranted: boolean;
+  micDenied: boolean;
 }
 
 export interface CameraApi {
@@ -161,6 +162,7 @@ const EMPTY_STATE_SIGNALS: CameraSignals = {
   cameraLostCount: 0,
   detectorFailed: false,
   micGranted: false,
+  micDenied: false,
   ...createTracker().counters,
 };
 
@@ -659,6 +661,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
 
     let media: MediaStream;
     let micGranted = false;
+    let micDenied = false;
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new DOMException("", "NotFoundError");
       try {
@@ -673,6 +676,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
           audio: false,
         });
         micGranted = false;
+        micDenied = true;
       }
     } catch (error) {
       clearTimeout(patience);
@@ -692,7 +696,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     streamRef.current = media;
     setStream(media);
     setStatus("on");
-    patch({ cameraGranted: true, micGranted });
+    patch({ cameraGranted: true, micGranted, micDenied });
 
     // Setup audio analysis if mic was granted
     if (micGranted) {

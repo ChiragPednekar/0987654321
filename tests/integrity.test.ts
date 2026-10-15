@@ -397,6 +397,7 @@ describe("camera findings", () => {
       watched({
         cameraGranted: false,
         cameraDenied: true,
+        micDenied: true,
         cameraLostCount: 1,
         phoneEvents: 1,
         multiFaceEvents: 1,

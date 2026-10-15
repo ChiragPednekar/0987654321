@@ -265,7 +265,7 @@ export function ObjectiveRunner({
         </Card>
 
         {results.results.map((r, i) => {
-          const right = r.chosen === r.correct_index;
+          const right = r.correct !== undefined ? r.correct : r.chosen === r.correct_index;
           return (
             <Card key={r.id}>
               <CardContent className="space-y-3 p-5">
@@ -290,9 +290,9 @@ export function ObjectiveRunner({
                           key={idx}
                           className={cn(
                             "rounded px-2 py-1",
-                            idx === r.correct_index && "bg-[var(--success)]/10 font-medium",
+                            r.correct_index !== -1 && idx === r.correct_index && "bg-[var(--success)]/10 font-medium",
                             idx === r.chosen &&
-                              idx !== r.correct_index &&
+                              (r.correct_index === -1 ? !right : idx !== r.correct_index) &&
                               "bg-destructive/10 line-through",
                           )}
                         >
@@ -308,10 +308,16 @@ export function ObjectiveRunner({
                     {r.chosen === null ? (
                       <p className="mt-2 text-xs text-muted-foreground">Skipped.</p>
                     ) : null}
-                    <div className="mt-3 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">Why: </span>
-                      {r.explanation}
-                    </div>
+                    {r.explanation ? (
+                      <div className="mt-3 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">Why: </span>
+                        {r.explanation}
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-xs italic text-muted-foreground">
+                        Answer key and explanations will be revealed after the assignment due date.
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>

@@ -92,6 +92,7 @@ export interface ProctorSignals {
   voiceEvents: number;
   voiceMs: number;
   micGranted: boolean;
+  micDenied: boolean;
 }
 
 export const EMPTY_SIGNALS: ProctorSignals = {
@@ -121,6 +122,7 @@ export const EMPTY_SIGNALS: ProctorSignals = {
   voiceEvents: 0,
   voiceMs: 0,
   micGranted: false,
+  micDenied: false,
 };
 
 /**
@@ -143,6 +145,7 @@ export const CAMERA_REVIEW_FLAGS = [
   "camera_covered",
   "camera_refused",
   "camera_lost",
+  "mic_refused",
 ] as const;
 
 export type IntegritySeverity = "clean" | "suspect" | "severe";
@@ -325,6 +328,10 @@ export function assessIntegrity({
       add("camera_refused", "Camera access was refused for this attempt.", 0, false);
     } else if (signals.cameraUnavailable) {
       add("camera_unavailable", "No camera was available for this attempt.", 0, false);
+    }
+
+    if (signals.micDenied) {
+      add("mic_refused", "Microphone access was refused for this attempt.", 0, false);
     }
 
     if (signals.cameraLostCount > 0) {

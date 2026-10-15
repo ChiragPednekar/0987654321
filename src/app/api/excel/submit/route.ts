@@ -61,6 +61,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Exercise not found." }, { status: 404 });
   }
 
+  // Proctoring verification: ensure signals indicate proctoring was running and not bypassed
+  const { signals } = body;
+  const isCameraLegit =
+    signals.cameraUnavailable ||
+    (signals.cameraRequested &&
+      (signals.cameraDenied ||
+        signals.detectorFailed ||
+        (signals.cameraGranted && signals.cameraSamples > 0)));
+
+  if (!signals.proctored || !isCameraLegit) {
+    return NextResponse.json(
+      { error: "Submission rejected: proof of proctoring is required to submit your formula." },
+      { status: 403 },
+    );
+  }
+
+  // Active attempt verification: must have opened via /api/excel/open
+  const { data: activeAttempt } = await admin
+    .from("activity_attempts")
+    .select("started_at")
+    .eq("user_id", user.id)
+    .eq("activity", "excel")
+    .eq("activity_ref", exercise.id)
+    .maybeSingle();
+
+  if (!activeAttempt?.started_at) {
+    return NextResponse.json(
+      { error: "No active test sitting found. You must start the exercise from the problem page." },
+      { status: 403 },
+    );
+  }
+
   const verdict = markFormula(
     {
       grid: exercise.grid as Grid,

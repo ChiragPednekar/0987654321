@@ -263,13 +263,12 @@ function CameraConsent({ camera }: { camera: CameraApi }) {
     <div className="mx-auto mt-4 max-w-sm rounded-md border bg-muted/40 p-3 text-left text-xs text-muted-foreground">
       <p className="flex items-center gap-1.5 font-medium text-foreground">
         <Camera className="size-3.5" aria-hidden />
-        Camera
+        Camera & Microphone
       </p>
       <p className="mt-1.5">
-        Your camera checks that you are on your own and that no phone is in
-        view. The checks run on this laptop and no video is uploaded. If
-        something is detected, one small photo is saved for a reviewer and
-        deleted after 30 days.
+        Your camera and microphone check that you are on your own, facing the screen, and that
+        no phone or voice dictation is present. The checks run on this laptop and no continuous video or audio is uploaded. If
+        something is detected, evidence is saved for a reviewer and deleted after 30 days.
       </p>
       {/*
         Said before Start, in full, because it is the rule with the hardest
@@ -277,13 +276,17 @@ function CameraConsent({ camera }: { camera: CameraApi }) {
         their test ended.
       */}
       <p className="mt-1.5 font-medium text-foreground">
-        The camera must stay on for the whole test. Your test ends at once,
+        The camera and microphone must stay active for the whole test. Your test ends at once,
         and cannot be continued, if you switch tabs or leave this window, a
-        phone or another person is seen, the camera is covered or switched
+        phone or another person is seen, you look away repeatedly, speech is detected, the camera is covered or switched
         off, or you are out of view for over a minute. The question is then
-        blocked for 24 hours; the third time it is ended, it is blocked for
-        good.
+        blocked for 24 hours; the second time it is ended, it is blocked permanently.
       </p>
+      {camera.signals.micDenied && (
+        <p className="mt-1.5 font-medium text-[var(--warning,#d97706)]">
+          Microphone access was refused — voice detection requires microphone access and this refusal will be flagged for your reviewer.
+        </p>
+      )}
       {state && <p className={`mt-1.5 ${state.tone}`}>{state.text}</p>}
     </div>
   );

@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canOpenExercise } from "@/lib/teacher-exercises";
 import { startActivityAttempt } from "@/lib/proctoring";
-import { lockoutResponse } from "@/lib/exam-lockouts";
+import { lockoutResponse, recordLockout, lockMessage } from "@/lib/exam-lockouts";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +58,49 @@ export async function POST(request: NextRequest) {
 
   if (!exercise || !(await canOpenExercise(admin, "sql", exercise, user.id))) {
     return NextResponse.json({ error: "Exercise not found." }, { status: 404 });
+  }
+
+  // Check for an abandoned in-progress attempt
+  const { data: existingAttempt } = await admin
+    .from("activity_attempts")
+    .select("started_at")
+    .eq("user_id", user.id)
+    .eq("activity", "sql")
+    .eq("activity_ref", exercise.id)
+    .maybeSingle();
+
+  if (existingAttempt?.started_at) {
+    const elapsedSinceStart =
+      (Date.now() - new Date(existingAttempt.started_at).getTime()) / 1000;
+    if (elapsedSinceStart > 45) {
+      await admin
+        .from("activity_attempts")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("activity", "sql")
+        .eq("activity_ref", exercise.id);
+
+      const lock = await recordLockout(admin, {
+        userId: user.id,
+        path: `/sql/${body.slug}`,
+        reason: "no_face",
+        signals: {
+          violation: "abandoned_test",
+          message: "A test on this question was previously started and abandoned without submitting.",
+          elapsedSinceStart,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          error: lock
+            ? lockMessage(lock)
+            : "Test was started and abandoned without submitting. Exercise is locked.",
+          lock,
+        },
+        { status: 403 },
+      );
+    }
   }
 
   await startActivityAttempt(admin, user.id, "sql", exercise.id);

@@ -6,8 +6,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Download,
-  FileText,
+  Lock,
 } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
@@ -30,16 +29,16 @@ import {
   type ModelCell,
 } from "@/components/case/model-workspace";
 import { CaseChat } from "@/components/case/case-chat";
-import { CaseProctorShell } from "@/components/case/case-proctor-shell";
+import { CaseProctorShell, type CaseQuestionData } from "@/components/case/case-proctor-shell";
+import { CaseProblemView } from "@/components/case/case-problem-view";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
-import { cn, initials, plural, timeAgo, truncate } from "@/lib/utils";
+import { cn, initials, plural, timeAgo } from "@/lib/utils";
 import { canSolve } from "@/lib/entitlement";
 import { LicenceGate } from "@/components/case/licence-gate";
 import type {
-  Attachment,
   Difficulty,
   Domain,
   RubricCriteria,
@@ -58,7 +57,7 @@ export async function generateMetadata({
   const supabase = await createClient();
   const { data } = await supabase
     .from("cases")
-    .select("title, scenario")
+    .select("title")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -66,7 +65,6 @@ export async function generateMetadata({
 
   return {
     title: data.title,
-    description: truncate(data.scenario.replace(/[#*`>]/g, ""), 155),
   };
 }
 
@@ -88,8 +86,10 @@ export default async function CaseDetailPage({
     // here would ask for it and fail.
     // Must stay one string literal: supabase-js infers the row type from it,
     // and a concatenated expression collapses to GenericStringError.
+    // Question fields (scenario, supporting_data, attachments, instructions, expected_framework)
+    // are intentionally NOT selected here so they are not leaked in the page payload before Start.
     .select(
-      "id, slug, title, domain, difficulty, category_id, company_track, estimated_minutes, scenario, supporting_data, attachments, instructions, expected_framework, tags, is_published, created_by, total_submissions, total_solved, avg_score, completion_rate, created_at, updated_at, format, firm_style, is_pro, rubrics(criteria, max_score, pass_score), case_categories(name)",
+      "id, slug, title, domain, difficulty, category_id, company_track, estimated_minutes, tags, is_published, created_by, total_submissions, total_solved, avg_score, completion_rate, created_at, updated_at, format, firm_style, is_pro, rubrics(criteria, max_score, pass_score), case_categories(name)",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -237,42 +237,74 @@ export default async function CaseDetailPage({
     isBookmarked = Boolean(bookmark);
   }
 
-  const [{ data: topSolutions }, { data: rawComments }, { data: myVotes }] =
-    await Promise.all([
-      supabase
-        .from("submissions")
-        .select("id, answer, upvotes, created_at, users(full_name), scores(total_score, max_score, percentage)")
-        .eq("case_id", caseData.id)
-        .eq("is_public", true)
-        .eq("status", "evaluated")
-        .order("upvotes", { ascending: false })
-        .limit(10),
-      supabase
-        .from("comments")
-        .select("id, body, upvotes, created_at, parent_id, users(full_name, avatar_url)")
-        .eq("case_id", caseData.id)
-        .eq("is_deleted", false)
-        .order("upvotes", { ascending: false })
-        .order("created_at", { ascending: true })
-        .limit(100),
-      profile
-        ? supabase.from("comment_votes").select("comment_id").eq("user_id", profile.id)
-        : Promise.resolve({ data: [] as { comment_id: string }[] }),
-    ]);
+  const hasSubmitted = mySubmissions.length > 0;
 
-  const votedIds = new Set((myVotes ?? []).map((v) => v.comment_id));
+  let initialQuestion: CaseQuestionData | null = null;
+  if (hasSubmitted) {
+    const { data: qData } = await supabase
+      .from("cases")
+      .select("scenario, supporting_data, attachments, instructions, expected_framework")
+      .eq("id", caseData.id)
+      .maybeSingle();
+    if (qData) {
+      initialQuestion = {
+        scenario: qData.scenario,
+        instructions: qData.instructions,
+        supporting_data: qData.supporting_data,
+        attachments: (qData.attachments ?? []) as unknown[],
+        expected_framework: qData.expected_framework,
+      };
+    }
+  }
 
-  const comments: DiscussionComment[] = (rawComments ?? []).map((row) => ({
-    id: row.id,
-    body: row.body,
-    upvotes: row.upvotes,
-    created_at: row.created_at,
-    parent_id: row.parent_id,
-    author: (Array.isArray(row.users) ? row.users[0] : row.users) as
-      | { full_name: string | null; avatar_url: string | null }
-      | null,
-    viewer_has_voted: votedIds.has(row.id),
-  }));
+  let topSolutions: Array<{
+    id: string;
+    answer: string;
+    upvotes: number;
+    created_at: string;
+    users: unknown;
+    scores: unknown;
+  }> = [];
+  let comments: DiscussionComment[] = [];
+
+  if (hasSubmitted) {
+    const [{ data: top }, { data: rawComments }, { data: myVotes }] =
+      await Promise.all([
+        supabase
+          .from("submissions")
+          .select("id, answer, upvotes, created_at, users(full_name), scores(total_score, max_score, percentage)")
+          .eq("case_id", caseData.id)
+          .eq("is_public", true)
+          .eq("status", "evaluated")
+          .order("upvotes", { ascending: false })
+          .limit(10),
+        supabase
+          .from("comments")
+          .select("id, body, upvotes, created_at, parent_id, users(full_name, avatar_url)")
+          .eq("case_id", caseData.id)
+          .eq("is_deleted", false)
+          .order("upvotes", { ascending: false })
+          .order("created_at", { ascending: true })
+          .limit(100),
+        profile
+          ? supabase.from("comment_votes").select("comment_id").eq("user_id", profile.id)
+          : Promise.resolve({ data: [] as { comment_id: string }[] }),
+      ]);
+
+    topSolutions = (top ?? []) as typeof topSolutions;
+    const votedIds = new Set((myVotes ?? []).map((v) => v.comment_id));
+    comments = (rawComments ?? []).map((row) => ({
+      id: row.id,
+      body: row.body,
+      upvotes: row.upvotes,
+      created_at: row.created_at,
+      parent_id: row.parent_id,
+      author: (Array.isArray(row.users) ? row.users[0] : row.users) as
+        | { full_name: string | null; avatar_url: string | null }
+        | null,
+      viewer_has_voted: votedIds.has(row.id),
+    }));
+  }
 
   // Which score to show in the AI Review tab: the one just submitted, else latest.
   const selected =
@@ -289,11 +321,6 @@ export default async function CaseDetailPage({
     }),
   );
   const solved = bestPercentage >= (rubric?.pass_score ?? 60);
-
-  const attachments = (caseData.attachments ?? []) as Attachment[];
-  const supportingData = caseData.supporting_data as Record<string, unknown>;
-  const hasSupportingData =
-    supportingData && Object.keys(supportingData).length > 0;
 
   // Adjacent case navigation (supports learning path progression or general catalogue)
   let nextCase: { slug: string; title: string } | null = null;
@@ -425,24 +452,40 @@ export default async function CaseDetailPage({
 
       <CaseProctorShell
         caseId={caseData.id}
+        slug={caseData.slug}
         signedIn={Boolean(profile)}
         entitled={entitled}
         defaultTab={query.submission ? "review" : "problem"}
         hasSubmissionParam={Boolean(query.submission && selectedScore)}
+        hasSubmitted={hasSubmitted}
+        initialQuestion={initialQuestion}
       >
         <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
           <TabsTrigger value="problem">Problem</TabsTrigger>
           <TabsTrigger value="solution">My Solution</TabsTrigger>
           <TabsTrigger value="interview">Interview</TabsTrigger>
-          <TabsTrigger value="top">Top Solutions</TabsTrigger>
-          <TabsTrigger value="discussion">
-            Discussion
-            {comments.length > 0 && (
-              <span className="ml-1 text-xs text-muted-foreground tabular">
-                {comments.length}
-              </span>
-            )}
-          </TabsTrigger>
+          {hasSubmitted ? (
+            <>
+              <TabsTrigger value="top">Top Solutions</TabsTrigger>
+              <TabsTrigger value="discussion">
+                Discussion
+                {comments.length > 0 && (
+                  <span className="ml-1 text-xs text-muted-foreground tabular">
+                    {comments.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            </>
+          ) : (
+            <>
+              <TabsTrigger value="top" disabled title="Locked until you submit your answer">
+                <Lock className="mr-1 size-3 text-muted-foreground" /> Top Solutions
+              </TabsTrigger>
+              <TabsTrigger value="discussion" disabled title="Locked until you submit your answer">
+                <Lock className="mr-1 size-3 text-muted-foreground" /> Discussion
+              </TabsTrigger>
+            </>
+          )}
           <TabsTrigger value="hints">
             Hints
             {hints.length > 0 && (
@@ -459,125 +502,11 @@ export default async function CaseDetailPage({
 
         {/* ---------------------------------------------------- problem --- */}
         <TabsContent value="problem">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="space-y-6 lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Scenario</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Markdown className="prose-document">{caseData.scenario}</Markdown>
-                </CardContent>
-              </Card>
-
-              {hasSupportingData && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Supporting data</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <SupportingData data={supportingData} />
-                  </CardContent>
-                </Card>
-              )}
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Your task</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Markdown className="prose-document">{caseData.instructions}</Markdown>
-                  {nextCase && (
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-                      <span className="text-xs text-muted-foreground">
-                        Ready to move forward? Up next:{" "}
-                        <strong className="text-foreground">{nextCase.title}</strong>
-                      </span>
-                      <Button size="sm" asChild variant="outline">
-                        <Link href={`/cases/${nextCase.slug}${query.path ? `?path=${query.path}` : ""}`}>
-                          Next question <ChevronRight className="ml-1 size-3.5" />
-                        </Link>
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="space-y-6">
-              {rubric && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">
-                      How you&apos;ll be graded
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {rubric.max_score} points, {rubric.pass_score}% to pass.
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {Object.entries(rubric.criteria).map(([key, weight]) => (
-                        <li
-                          key={key}
-                          className="flex items-center justify-between text-sm"
-                        >
-                          <span className="capitalize text-muted-foreground">
-                            {key.replace(/_/g, " ")}
-                          </span>
-                          <span className="tabular font-medium">{weight}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              )}
-
-              {attachments.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Attachments</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {attachments.map((attachment) => (
-                        <li key={attachment.url}>
-                          <a
-                            href={attachment.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 text-sm hover:underline"
-                          >
-                            <FileText className="size-4 shrink-0 text-muted-foreground" />
-                            <span className="truncate">{attachment.name}</span>
-                            <Download className="size-3.5 shrink-0 text-muted-foreground" />
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              )}
-
-              {caseData.expected_framework && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Hint</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <details className="text-sm">
-                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                        Reveal suggested structure
-                      </summary>
-                      <div className="mt-3">
-                        <Markdown>{caseData.expected_framework}</Markdown>
-                      </div>
-                    </details>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
+          <CaseProblemView
+            rubric={rubric}
+            nextCase={nextCase}
+            pathQuery={query.path}
+          />
         </TabsContent>
 
         {/* -------------------------------------------------- interview --- */}
@@ -679,79 +608,83 @@ export default async function CaseDetailPage({
         </TabsContent>
 
         {/* ----------------------------------------------- top solutions --- */}
-        <TabsContent value="top">
-          {!topSolutions || topSolutions.length === 0 ? (
-            <Card>
-              <CardContent className="py-16 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No public solutions yet. Solve it, then share yours from the
-                  attempts list.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <ul className="space-y-4">
-              {topSolutions.map((solution) => {
-                const author = Array.isArray(solution.users)
-                  ? solution.users[0]
-                  : solution.users;
-                const score = Array.isArray(solution.scores)
-                  ? solution.scores[0]
-                  : solution.scores;
-                return (
-                  <Card key={solution.id}>
-                    <CardHeader className="flex-row items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <Avatar className="size-7">
-                          <AvatarFallback className="text-[10px]">
-                            {initials(author?.full_name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-medium">
-                            {author?.full_name ?? "Anonymous"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {timeAgo(solution.created_at)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {score && (
-                          <Badge variant="success" className="tabular">
-                            {Number(score.percentage).toFixed(0)}%
-                          </Badge>
-                        )}
-                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <ArrowBigUp className="size-4" />
-                          <span className="tabular">{solution.upvotes}</span>
-                        </span>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <Markdown className="text-muted-foreground">
-                        {solution.answer}
-                      </Markdown>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </ul>
-          )}
-        </TabsContent>
+        {hasSubmitted && (
+          <>
+            <TabsContent value="top">
+              {!topSolutions || topSolutions.length === 0 ? (
+                <Card>
+                  <CardContent className="py-16 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      No public solutions yet. Solve it, then share yours from the
+                      attempts list.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <ul className="space-y-4">
+                  {topSolutions.map((solution) => {
+                    const author = Array.isArray(solution.users)
+                      ? solution.users[0]
+                      : solution.users;
+                    const score = Array.isArray(solution.scores)
+                      ? solution.scores[0]
+                      : solution.scores;
+                    return (
+                      <Card key={solution.id}>
+                        <CardHeader className="flex-row items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <Avatar className="size-7">
+                              <AvatarFallback className="text-[10px]">
+                                {initials(author?.full_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {author?.full_name ?? "Anonymous"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {timeAgo(solution.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {score && (
+                              <Badge variant="success" className="tabular">
+                                {Number(score.percentage).toFixed(0)}%
+                              </Badge>
+                            )}
+                            <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <ArrowBigUp className="size-4" />
+                              <span className="tabular">{solution.upvotes}</span>
+                            </span>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <Markdown className="text-muted-foreground">
+                            {solution.answer}
+                          </Markdown>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </ul>
+              )}
+            </TabsContent>
 
-        {/* ------------------------------------------------- discussion --- */}
-        <TabsContent value="discussion">
-          <Card>
-            <CardContent className="p-6">
-              <Discussion
-                caseId={caseData.id}
-                comments={comments}
-                signedIn={Boolean(profile)}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            {/* ------------------------------------------------- discussion --- */}
+            <TabsContent value="discussion">
+              <Card>
+                <CardContent className="p-6">
+                  <Discussion
+                    caseId={caseData.id}
+                    comments={comments}
+                    signedIn={Boolean(profile)}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </>
+        )}
 
         {/* ----------------------------------------------------- review --- */}
         <TabsContent value="hints">
@@ -820,85 +753,6 @@ export default async function CaseDetailPage({
           )}
         </TabsContent>
       </CaseProctorShell>
-    </div>
-  );
-}
-
-/** Renders the case's `supporting_data` JSON as readable tables. */
-function SupportingData({ data }: { data: Record<string, unknown> }) {
-  return (
-    <div className="space-y-5">
-      {Object.entries(data).map(([key, value]) => {
-        const label = key.replace(/_/g, " ");
-
-        if (Array.isArray(value) && typeof value[0] === "object" && value[0]) {
-          const columns = Object.keys(value[0] as object);
-          return (
-            <div key={key}>
-              <h3 className="mb-2 text-sm font-medium capitalize">{label}</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr>
-                      {columns.map((column) => (
-                        <th
-                          key={column}
-                          className="border border-border bg-muted px-3 py-2 text-left font-medium capitalize"
-                        >
-                          {column.replace(/_/g, " ")}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(value as Record<string, unknown>[]).map((row, index) => (
-                      <tr key={index}>
-                        {columns.map((column) => (
-                          <td
-                            key={column}
-                            className="border border-border px-3 py-2 tabular"
-                          >
-                            {String(row[column] ?? "—")}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          );
-        }
-
-        if (value && typeof value === "object") {
-          return (
-            <div key={key}>
-              <h3 className="mb-2 text-sm font-medium capitalize">{label}</h3>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-3">
-                {Object.entries(value as Record<string, unknown>).map(
-                  ([metric, metricValue]) => (
-                    <div key={metric}>
-                      <dt className="text-xs capitalize text-muted-foreground">
-                        {metric.replace(/_/g, " ")}
-                      </dt>
-                      <dd className="tabular font-medium">
-                        {String(metricValue)}
-                      </dd>
-                    </div>
-                  ),
-                )}
-              </dl>
-            </div>
-          );
-        }
-
-        return (
-          <div key={key} className="flex justify-between text-sm">
-            <span className="capitalize text-muted-foreground">{label}</span>
-            <span className="tabular font-medium">{String(value)}</span>
-          </div>
-        );
-      })}
     </div>
   );
 }

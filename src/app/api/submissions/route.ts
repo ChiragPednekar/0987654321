@@ -117,6 +117,37 @@ export async function POST(request: NextRequest) {
   const lockedCase = await lockoutResponse(user.id, `/cases/${caseData.slug}`);
   if (lockedCase) return lockedCase;
 
+  // Proctoring verification: ensure signals indicate proctoring was running and not bypassed
+  const { signals } = body;
+  const isCameraLegit =
+    signals.cameraUnavailable ||
+    (signals.cameraRequested &&
+      (signals.cameraDenied ||
+        signals.detectorFailed ||
+        (signals.cameraGranted && signals.cameraSamples > 0)));
+
+  if (!signals.proctored || !isCameraLegit) {
+    return NextResponse.json(
+      { error: "Submission rejected: proof of proctoring is required to submit your test." },
+      { status: 403 },
+    );
+  }
+
+  // Active attempt verification: must have opened via /api/cases/open or /api/attempts/start
+  const { data: activeAttempt } = await admin
+    .from("solve_attempts")
+    .select("started_at")
+    .eq("user_id", user.id)
+    .eq("case_id", body.case_id)
+    .maybeSingle();
+
+  if (!activeAttempt?.started_at) {
+    return NextResponse.json(
+      { error: "No active test sitting found. You must start the test from the question page." },
+      { status: 403 },
+    );
+  }
+
   const { data: rubric } = await admin
     .from("rubrics")
     .select("criteria, descriptors, max_score")

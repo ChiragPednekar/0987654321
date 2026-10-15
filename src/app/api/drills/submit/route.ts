@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 const bodySchema = z.object({
   case_id: z.string().uuid(),
@@ -58,6 +59,17 @@ export async function POST(request: NextRequest) {
   // courtesy, not a control — see src/lib/entitlement.ts.
   if (!(await canSolve(admin, user.id))) {
     return NextResponse.json(SOLVE_DENIAL, { status: 403 });
+  }
+
+  const { data: caseRow } = await admin
+    .from("cases")
+    .select("slug")
+    .eq("id", body.case_id)
+    .maybeSingle();
+
+  if (caseRow?.slug) {
+    const locked = await lockoutResponse(user.id, `/cases/${caseRow.slug}`);
+    if (locked) return locked;
   }
 
   const { data: questions } = await admin

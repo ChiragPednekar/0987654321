@@ -8,6 +8,7 @@ import { getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { recordUsage } from "@/lib/usage";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { ROLEPLAY_GUARD } from "@/lib/ai/untrusted";
+import { lockoutResponse } from "@/lib/exam-lockouts";
 
 // A model turn takes several seconds; the default function timeout is tight.
 export const maxDuration = 60;
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
   const { data: caseData } = await admin
     .from("cases")
     .select(
-      "id, title, domain, difficulty, scenario, instructions, expected_framework, model_answer, is_published",
+      "id, slug, title, domain, difficulty, scenario, instructions, expected_framework, model_answer, is_published",
     )
     .eq("id", body.case_id)
     .maybeSingle();
@@ -130,6 +131,9 @@ export async function POST(request: NextRequest) {
   if (!caseData || !caseData.is_published) {
     return NextResponse.json({ error: "Case not found" }, { status: 404 });
   }
+
+  const locked = await lockoutResponse(user.id, `/cases/${caseData.slug}`);
+  if (locked) return locked;
 
   // ---- resolve the session -------------------------------------------------
   let sessionId = body.session_id;

@@ -132,6 +132,31 @@ export interface ObjectiveResultRow {
   options: string[];
   chosen: number | null;
   correct_index: number;
-  explanation: string;
+  explanation: string | null;
   topic: string;
+  correct?: boolean;
+}
+
+/**
+ * Deterministically permutes option indices given a seed string.
+ * Used to randomize option display order per student sitting an assigned quiz.
+ */
+export function getOptionPermutation(length: number, seedStr: string): number[] {
+  let hash = 0;
+  for (let i = 0; i < seedStr.length; i++) {
+    hash = (hash << 5) - hash + seedStr.charCodeAt(i);
+    hash |= 0;
+  }
+  const rng = () => {
+    hash = Math.imul(hash ^ (hash >>> 15), 1 | hash);
+    hash ^= hash + Math.imul(hash ^ (hash >>> 7), 61 | hash);
+    return ((hash ^ (hash >>> 14)) >>> 0) / 4294967296;
+  };
+
+  const indices = Array.from({ length }, (_, i) => i);
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  return indices;
 }

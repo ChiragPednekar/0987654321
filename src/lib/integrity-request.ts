@@ -50,5 +50,6 @@ export const signalsSchema = z
     voiceEvents: z.number().int().min(0).max(10_000).default(0),
     voiceMs: z.number().int().min(0).max(86_400_000).default(0),
     micGranted: z.boolean().default(false),
+    micDenied: z.boolean().default(false),
   })
   .default(EMPTY_SIGNALS);

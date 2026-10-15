@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { ObjectiveResultRow } from "@/lib/objective";
+import { getOptionPermutation, type ObjectiveResultRow } from "@/lib/objective";
 import { signalsSchema } from "@/lib/integrity-request";
 import {
   consumeActivityElapsed,
@@ -96,6 +96,20 @@ export async function POST(request: NextRequest) {
 
   const byId = new Map(questions.map((q) => [q.id, q]));
 
+  // If this is an assigned quiz with a future due date, withhold the answer key
+  // and explanations until the due date passes to prevent leaks across students.
+  let withholdKey = false;
+  if (session.assignment_id) {
+    const { data: asgn } = await admin
+      .from("classroom_assignments")
+      .select("due_at")
+      .eq("id", session.assignment_id)
+      .maybeSingle();
+    if (asgn?.due_at && Date.now() < new Date(asgn.due_at).getTime()) {
+      withholdKey = true;
+    }
+  }
+
   /**
    * Iterated over `session.question_ids`, not over the submitted answers.
    *
@@ -111,20 +125,35 @@ export async function POST(request: NextRequest) {
     const q = byId.get(id);
     if (!q) continue; // Deleted since the set was drawn.
 
-    const chosen = Object.prototype.hasOwnProperty.call(body.answers, id)
+    // If assigned quiz, options were permuted with seed session.id:q.id
+    const perm = session.assignment_id
+      ? getOptionPermutation(q.options.length, `${session.id}:${q.id}`)
+      : Array.from({ length: q.options.length }, (_, i) => i);
+
+    const chosenPermuted = Object.prototype.hasOwnProperty.call(body.answers, id)
       ? body.answers[id]
       : null;
 
-    if (chosen !== null && chosen === q.correct_index) correct++;
+    const originalChosen =
+      chosenPermuted !== null && chosenPermuted >= 0 && chosenPermuted < perm.length
+        ? perm[chosenPermuted]
+        : null;
+
+    const isCorrect = originalChosen !== null && originalChosen === q.correct_index;
+    if (isCorrect) correct++;
+
+    const permutedCorrectIndex = perm.indexOf(q.correct_index);
+    const permutedOptions = perm.map((idx) => q.options[idx]);
 
     results.push({
       id: q.id,
       stem: q.stem,
-      options: q.options,
-      chosen,
-      correct_index: q.correct_index,
-      explanation: q.explanation,
+      options: permutedOptions,
+      chosen: chosenPermuted,
+      correct_index: withholdKey ? -1 : permutedCorrectIndex,
+      explanation: withholdKey ? null : q.explanation,
       topic: q.topic,
+      correct: isCorrect,
     });
   }
 

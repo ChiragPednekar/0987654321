@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
-import { OBJECTIVE_SET_SIZE, OBJECTIVE_TRACK_VALUES } from "@/lib/objective";
+import { OBJECTIVE_SET_SIZE, OBJECTIVE_TRACK_VALUES, getOptionPermutation } from "@/lib/objective";
 import { startActivityAttempt } from "@/lib/proctoring";
 import { lockoutResponse } from "@/lib/exam-lockouts";
 
@@ -247,9 +247,17 @@ async function startAssignedQuiz(userId: string, assignmentId: string) {
     return NextResponse.json({ error: "This quiz has no questions." }, { status: 404 });
   }
 
-  // In the teacher's order, not the database's.
+  // In the teacher's order for teacher preview, but shuffled for student sittings
+  // so no two students get questions or options in the same order.
   const byId = new Map(rows.map((q) => [q.id, q]));
   const paper = ids.map((id) => byId.get(id)).filter((q): q is NonNullable<typeof q> => Boolean(q));
+
+  if (!isTeacher) {
+    for (let i = paper.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [paper[i], paper[j]] = [paper[j], paper[i]];
+    }
+  }
 
   const { data: session, error: sessionError } = await admin
     .from("objective_sessions")
@@ -272,9 +280,20 @@ async function startAssignedQuiz(userId: string, assignmentId: string) {
 
   await startActivityAttempt(admin, userId, "objective", session.id);
 
+  // Permute options deterministically using session.id + question.id so options are
+  // scrambled for students while letting the submit route invert the permutation.
+  const questionsForStudent = paper.map((q) => {
+    if (isTeacher) return q;
+    const perm = getOptionPermutation(q.options.length, `${session.id}:${q.id}`);
+    return {
+      ...q,
+      options: perm.map((idx) => q.options[idx]),
+    };
+  });
+
   return NextResponse.json({
     session_id: session.id,
     started_at: session.started_at,
-    questions: paper,
+    questions: questionsForStudent,
   });
 }

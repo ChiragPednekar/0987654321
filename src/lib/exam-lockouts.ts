@@ -15,7 +15,7 @@ type Admin = SupabaseClient<Database>;
 import type { EndReason } from "@/lib/camera-proctor";
 
 export const COOLDOWN_HOURS = 24;
-export const MAX_STRIKES = 3;
+export const MAX_STRIKES = 2;
 
 /** What a page's lock looks like to the student it locks. */
 export interface LockState {
@@ -150,9 +150,9 @@ export async function recordLockout(
 /** "Try again after 14 Oct, 10:05" — the student's sentence for a lock. */
 export function lockMessage(state: LockState): string {
   if (state.until === null) {
-    return `This question has been flagged ${state.maxStrikes} times under the proctoring rules and is now blocked for good. Ask your teacher if you think this is a mistake.`;
+    return `This question has been flagged ${state.maxStrikes} times under the proctoring rules and is now permanently blocked. Ask your teacher if you think this is a mistake.`;
   }
-  return `This test was ended under the proctoring rules. You can try it again after ${new Date(state.until).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}.`;
+  return `This test was ended under the proctoring rules. You can try it again after ${new Date(state.until).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} (1 attempt remaining before permanent block).`;
 }
 
 export interface LockoutView {
