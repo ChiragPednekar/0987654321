@@ -10,6 +10,8 @@ import {
   NO_FACE_END_MS,
   observe,
   SAMPLE_INTERVAL_MS,
+  MAX_LOOKING_AWAY_STRIKES,
+  MAX_VOICE_STRIKES,
   type CameraSample,
   type TrackerState,
 } from "@/lib/camera-proctor";
@@ -32,56 +34,70 @@ function run(samples: Partial<CameraSample>[], start: TrackerState = createTrack
 
 const phone = { phone: true };
 
+/**
+ * A sample held for a duration. The tracker's windows are defined in time, so
+ * the tests are too: these hold whatever SAMPLE_INTERVAL_MS is.
+ */
+const hold = (ms: number, sample: Partial<CameraSample> = {}) =>
+  Array.from({ length: Math.max(1, Math.round(ms / SAMPLE_INTERVAL_MS)) }, () => sample);
+const one = (sample: Partial<CameraSample> = {}) => [sample];
+
 describe("camera tracker", () => {
+  it("samples often enough to see a one-second glance", () => {
+    expect(SAMPLE_INTERVAL_MS).toBeLessThanOrEqual(750);
+  });
+
   it("ignores a phone seen for a single frame", () => {
-    const { state } = run([{}, phone, {}, {}, {}]);
+    const { state } = run([...hold(1_500), ...one(phone), ...hold(4_000)]);
     expect(state.counters.phoneEvents).toBe(0);
   });
 
   it("counts a phone held in view as one event, not one per frame", () => {
-    const { state, started } = run([phone, phone, phone, phone, phone, phone, phone, phone]);
+    const { state, started } = run(hold(12_000, phone));
     expect(state.counters.phoneEvents).toBe(1);
     expect(started).toEqual(["phone"]);
   });
 
   it("does not stutter when a detection hovers at the threshold", () => {
-    // 3 hits switch it on; it only switches off once hits fall to 1 of 5.
-    const hovering = [phone, phone, phone, {}, phone, {}, phone, {}, phone, {}, phone];
+    // Seen, missed, seen, missed for ten seconds: one appearance, not several.
+    const hovering = Array.from({ length: Math.round(10_000 / SAMPLE_INTERVAL_MS) }, (_, i) =>
+      i % 2 === 0 ? phone : {},
+    );
     expect(run(hovering).state.counters.phoneEvents).toBe(1);
   });
 
   it("counts a second, separate appearance", () => {
-    const appear = [phone, phone, phone, phone];
-    const gone = [{}, {}, {}, {}, {}];
+    const appear = hold(4_500, phone);
+    const gone = hold(8_000);
     expect(run([...appear, ...gone, ...appear]).state.counters.phoneEvents).toBe(2);
   });
 
   it("reports a covered lens as covered, not also as an empty desk", () => {
-    const covered = Array.from({ length: 10 }, () => ({ covered: true, faces: 0 }));
-    const { state } = run(covered);
+    const { state } = run(hold(15_000, { covered: true, faces: 0 }));
     expect(state.counters.coveredMs).toBeGreaterThan(0);
     expect(state.counters.noFaceMs).toBe(0);
     expect(state.counters.noFaceEvents).toBe(0);
   });
 
   it("counts two faces as a helper", () => {
-    const { state, started } = run([{ faces: 2 }, { faces: 2 }, { faces: 2 }]);
+    const { state, started } = run(hold(5_000, { faces: 2 }));
     expect(state.counters.multiFaceEvents).toBe(1);
     expect(started).toContain("multiple_faces");
   });
 
   it("only credits absence time while the absence is established", () => {
-    // Two empty frames never reach the threshold, so no time is charged.
-    expect(run([{ faces: 0 }, { faces: 0 }, {}, {}]).state.counters.noFaceMs).toBe(0);
-    // Ten empty frames: on from the third, so eight intervals are credited.
-    const long = run(Array.from({ length: 10 }, () => ({ faces: 0 })));
-    expect(long.state.counters.noFaceMs).toBe(8 * SAMPLE_INTERVAL_MS);
+    // Three seconds empty never reaches the 4.5-second bar, so nothing is charged.
+    expect(run([...hold(3_000, { faces: 0 }), ...hold(3_000)]).state.counters.noFaceMs).toBe(0);
+    // Fifteen seconds empty: charged from the moment the bar is reached.
+    const long = run(hold(15_000, { faces: 0 }));
+    expect(long.state.counters.noFaceMs).toBeGreaterThan(9_000);
+    expect(long.state.counters.noFaceMs).toBeLessThan(15_000);
   });
 
   it("does not charge a throttled background tab's whole gap", () => {
     // Hidden tabs fire timers about once a minute. That minute was not observed.
-    const { state } = run(Array.from({ length: 4 }, () => ({ faces: 0 })), createTracker(), 60_000);
-    expect(state.counters.noFaceMs).toBeLessThanOrEqual(2 * 3 * SAMPLE_INTERVAL_MS);
+    const { state } = run(Array.from({ length: 10 }, () => ({ faces: 0 })), createTracker(), 60_000);
+    expect(state.counters.noFaceMs).toBeLessThanOrEqual(10 * 3 * SAMPLE_INTERVAL_MS);
   });
 
   it("keeps every counter an integer, because the wire schema rejects anything else", () => {
@@ -89,9 +105,9 @@ describe("camera tracker", () => {
     // signalsSchema, and that schema sits inside every submit route's body —
     // so this would reject the whole submission, not just the camera fields.
     const { state } = run(
-      Array.from({ length: 12 }, () => ({ faces: 0 })),
+      Array.from({ length: 30 }, () => ({ faces: 0 })),
       createTracker(),
-      1499.7371,
+      SAMPLE_INTERVAL_MS - 0.2629,
     );
     for (const value of Object.values(state.counters)) expect(Number.isInteger(value)).toBe(true);
 
@@ -102,6 +118,109 @@ describe("camera tracker", () => {
       cameraGranted: true,
     });
     expect(parsed.success).toBe(true);
+  });
+
+  it("counts a confirmed look away at the first sample — it was already debounced upstream", () => {
+    const { state } = run([...one({ lookingAway: true }), ...hold(3_000)]);
+    expect(state.counters.lookingAwayEvents).toBe(1);
+  });
+
+  it("counts a short confirmed utterance — a 1–2 second question is not discarded", () => {
+    const { state } = run([...one({ voiceDetected: true }), ...hold(3_000)]);
+    expect(state.counters.voiceEvents).toBe(1);
+  });
+
+  it("treats one continuous look away as one strike, and a separate one as another", () => {
+    const away = hold(4_000, { lookingAway: true });
+    const back = hold(3_000);
+    expect(run([...away, ...back]).state.counters.lookingAwayEvents).toBe(1);
+    expect(run([...away, ...back, ...away, ...back]).state.counters.lookingAwayEvents).toBe(2);
+  });
+});
+
+describe("endReason", () => {
+  it("does not end a test for one misread frame", () => {
+    const { state } = run([...hold(1_500), ...one(phone), ...hold(3_000)]);
+    expect(endReason(state)).toBeNull();
+  });
+
+  it("ends the test once a phone is held in view", () => {
+    expect(endReason(run(one(phone)).state)).toBeNull();
+    expect(endReason(run(hold(3_000, phone)).state)).toBe("phone");
+  });
+
+  it("catches a phone the model only sees in some frames", () => {
+    // Measured on a real webcam: a phone in shot is detected, missed, detected.
+    const flicker = Array.from({ length: Math.round(7_500 / SAMPLE_INTERVAL_MS) }, (_, i) =>
+      i % 2 === 0 ? phone : {},
+    );
+    expect(endReason(run(flicker).state)).toBe("phone");
+  });
+
+  it("still needs repeated sightings — one misread frame never ends a test", () => {
+    expect(endReason(run([...one(phone), ...hold(6_000), ...one(phone)]).state)).toBeNull();
+  });
+
+  it("ends the test for a second person or a covered lens", () => {
+    expect(endReason(run(hold(5_000, { faces: 2 })).state)).toBe("multiple_faces");
+    expect(endReason(run(hold(3_000, { covered: true, faces: 0 })).state)).toBe("camera_covered");
+  });
+
+  it("ends the test once the camera is covered for about three seconds", () => {
+    expect(endReason(run(one({ covered: true })).state)).toBeNull();
+    expect(endReason(run(hold(3_000, { covered: true })).state)).toBe("camera_covered");
+  });
+
+  it("never ends a test for a book — rough work is allowed", () => {
+    const { state } = run(hold(15_000, { book: true }));
+    expect(state.counters.bookEvents).toBe(1);
+    expect(endReason(state)).toBeNull();
+  });
+
+  it("allows looking away, but not a continuous minute out of frame", () => {
+    // About 35 seconds away, back, 35 more: past a minute in total, never a minute at once.
+    const glances = run([...hold(35_000, { faces: 0 }), ...hold(7_500), ...hold(35_000, { faces: 0 })]).state;
+    expect(glances.counters.noFaceMs).toBeGreaterThan(NO_FACE_END_MS);
+    expect(endReason(glances)).toBeNull();
+    expect(endReason(run(hold(70_000, { faces: 0 })).state)).toBe("no_face");
+  });
+
+  it("every reason has a label the student is shown", () => {
+    for (const r of END_REASONS) expect(END_REASON_LABEL[r]).toBeTruthy();
+  });
+
+  it("suspends on the 5th looking-away strike — when the counter reads 5/5", () => {
+    let state = createTracker();
+    const glance = one({ lookingAway: true });
+    const back = hold(3_000);
+
+    for (let i = 1; i <= 4; i++) {
+      state = run([...glance, ...back], state).state;
+      expect(state.counters.lookingAwayEvents).toBe(i);
+      expect(endReason(state)).toBeNull();
+    }
+
+    const fifth = run(glance, state).state;
+    expect(fifth.counters.lookingAwayEvents).toBe(MAX_LOOKING_AWAY_STRIKES);
+    expect(endReason(fifth)).toBe("looking_away");
+    expect(END_REASON_LABEL[endReason(fifth)!]).toContain("looked away");
+  });
+
+  it("suspends on the 3rd voice strike — when the counter reads 3/3", () => {
+    let state = createTracker();
+    const speaking = one({ voiceDetected: true });
+    const silent = hold(3_000);
+
+    for (let i = 1; i <= 2; i++) {
+      state = run([...speaking, ...silent], state).state;
+      expect(state.counters.voiceEvents).toBe(i);
+      expect(endReason(state)).toBeNull();
+    }
+
+    const third = run(speaking, state).state;
+    expect(third.counters.voiceEvents).toBe(MAX_VOICE_STRIKES);
+    expect(endReason(third)).toBe("voice_detected");
+    expect(END_REASON_LABEL[endReason(third)!]).toContain("voice was detected");
   });
 });
 
@@ -149,100 +268,6 @@ describe("isCovered", () => {
     // Normal student working/looking down: high natural scene contrast
     const student = frame((i) => (i % 2 === 0 ? 160 : 60));
     expect(isBlockedWithoutFace(student)).toBe(false);
-  });
-});
-
-describe("endReason", () => {
-  it("does not end a test for one misread frame", () => {
-    const { state } = run([{}, phone, {}, {}, {}]);
-    expect(endReason(state)).toBeNull();
-  });
-
-  it("ends the test once a phone is held in view", () => {
-    expect(endReason(run([phone]).state)).toBeNull();
-    expect(endReason(run([phone, phone]).state)).toBe("phone");
-  });
-
-  it("catches a phone the model only sees in some frames", () => {
-    // Measured on a real webcam: a phone in shot is detected, missed, detected.
-    // Two hits in the last five samples is enough.
-    expect(endReason(run([{}, phone, {}, {}, phone]).state)).toBe("phone");
-  });
-
-  it("still needs a second sighting — one misread frame never ends a test", () => {
-    expect(endReason(run([phone, {}, {}, {}, {}, {}, phone]).state)).toBeNull();
-  });
-
-  it("ends the test for a second person or a covered lens", () => {
-    const two = Array.from({ length: 3 }, () => ({ faces: 2 }));
-    expect(endReason(run(two).state)).toBe("multiple_faces");
-    const dark = Array.from({ length: 3 }, () => ({ covered: true, faces: 0 }));
-    expect(endReason(run(dark).state)).toBe("camera_covered");
-  });
-
-  it("ends the test once the camera is covered for two samples", () => {
-    expect(endReason(run([{ covered: true }]).state)).toBeNull();
-    expect(endReason(run([{ covered: true }, { covered: true }]).state)).toBe("camera_covered");
-  });
-
-  it("never ends a test for a book — rough work is allowed", () => {
-    const books = Array.from({ length: 10 }, () => ({ book: true }));
-    const { state } = run(books);
-    expect(state.counters.bookEvents).toBe(1);
-    expect(endReason(state)).toBeNull();
-  });
-
-  it("allows looking away, but not a continuous minute out of frame", () => {
-    const away = (n: number) => Array.from({ length: n }, () => ({ faces: 0 }));
-    // About 35 seconds away, back, 35 more: past a minute in total, never a minute at once.
-    const glances = run([...away(25), {}, {}, {}, {}, {}, ...away(25)]).state;
-    expect(glances.counters.noFaceMs).toBeGreaterThan(NO_FACE_END_MS);
-    expect(endReason(glances)).toBeNull();
-    expect(endReason(run(away(45)).state)).toBe("no_face");
-  });
-
-  it("every reason has a label the student is shown", () => {
-    for (const r of END_REASONS) expect(END_REASON_LABEL[r]).toBeTruthy();
-  });
-
-  it("gives 5 warnings for looking away before suspending on the 6th strike", () => {
-    let state = createTracker();
-    const glance = [{ lookingAway: true }, { lookingAway: true }];
-    const back = [{}, {}, {}, {}, {}];
-
-    // Strikes 1 through 5: student gets benefit of doubt
-    for (let i = 1; i <= 5; i++) {
-      const res = run([...glance, ...back], state);
-      state = res.state;
-      expect(state.counters.lookingAwayEvents).toBe(i);
-      expect(endReason(state)).toBeNull();
-    }
-
-    // After 5 times (6th strike): suspended
-    const finalStrike = run(glance, state);
-    expect(finalStrike.state.counters.lookingAwayEvents).toBe(6);
-    expect(endReason(finalStrike.state)).toBe("looking_away");
-    expect(END_REASON_LABEL[endReason(finalStrike.state)!]).toContain("looked away");
-  });
-
-  it("gives 3 warnings for voice/speaking before suspending on the 4th strike", () => {
-    let state = createTracker();
-    const speaking = [{ voiceDetected: true }, { voiceDetected: true }];
-    const silent = [{}, {}, {}, {}, {}];
-
-    // Strikes 1 through 3: student gets benefit of doubt
-    for (let i = 1; i <= 3; i++) {
-      const res = run([...speaking, ...silent], state);
-      state = res.state;
-      expect(state.counters.voiceEvents).toBe(i);
-      expect(endReason(state)).toBeNull();
-    }
-
-    // After 3 times (4th strike): suspended
-    const finalStrike = run(speaking, state);
-    expect(finalStrike.state.counters.voiceEvents).toBe(4);
-    expect(endReason(finalStrike.state)).toBe("voice_detected");
-    expect(END_REASON_LABEL[endReason(finalStrike.state)!]).toContain("voice was detected");
   });
 });
 

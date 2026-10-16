@@ -20,8 +20,17 @@ import {
   TemporalGazeTracker,
   type GazeDetectionState,
   type HeadPoseEuler,
+  OffScreenDwell,
 } from "@/lib/gaze-tracker";
 import { AudioVadEngine } from "@/lib/audio-vad";
+import { DEFAULT_PROCTOR_CONFIG } from "@/lib/proctor-config";
+
+/** How often the voice detector reads the microphone. The frame length it was designed for. */
+const AUDIO_FRAME_MS = 100;
+/** First delay before restarting the browser's speech recogniser after it ends. */
+const SPEECH_RESTART_MS = 250;
+/** Longest back-off between restarts after repeated network errors. */
+const SPEECH_RESTART_MAX_MS = 5_000;
 
 /**
  * Watches the webcam and microphone during a proctored attempt.
@@ -308,6 +317,24 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
   const baselineSamplesRef = React.useRef<Array<{ vMouth: number; yawDelta: number; roll: number }>>([]);
   const vadRef = React.useRef<AudioVadEngine>(new AudioVadEngine());
   const gazeTrackerRef = React.useRef<TemporalGazeTracker>(new TemporalGazeTracker());
+  // The BlazeFace fallback (no face mesh) is judged on the same dwell clock.
+  const fallbackDwellRef = React.useRef(new OffScreenDwell());
+
+  /**
+   * Audio runs on its own clock, not the camera's. Each analyser read is a
+   * snapshot of a few milliseconds of sound; read once per camera sample it
+   * heard well under 1% of the test, so a two-second question to Siri or a
+   * helper landed between reads. The voice detector is fed every
+   * AUDIO_FRAME_MS instead — the frame length it was designed for — and the
+   * camera sample only collects what it CONFIRMED in between.
+   */
+  const audioTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastAudioAtRef = React.useRef<number | null>(null);
+  const voiceLatchRef = React.useRef(false);
+  const audioPeakRef = React.useRef(0);
+  const audioMetricsRef = React.useRef<{ speechProbability: number; snrDb: number; spectralFlatness: number } | null>(null);
+  const audioResumeCleanupRef = React.useRef<(() => void) | null>(null);
+  const speechRestartTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     // Restart the clock when counting begins, so the first sample does not
@@ -325,14 +352,27 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
   const teardown = React.useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = null;
+    if (audioTimerRef.current) clearInterval(audioTimerRef.current);
+    audioTimerRef.current = null;
+    lastAudioAtRef.current = null;
+    voiceLatchRef.current = false;
+    audioPeakRef.current = 0;
+    audioMetricsRef.current = null;
+    audioResumeCleanupRef.current?.();
+    audioResumeCleanupRef.current = null;
+    if (speechRestartTimerRef.current) clearTimeout(speechRestartTimerRef.current);
+    speechRestartTimerRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     videoRef.current?.remove();
     videoRef.current = null;
-    try {
-      speechRecRef.current?.stop();
-    } catch {}
+    const rec = speechRecRef.current;
+    // Cleared first, so its onend sees it is no longer current and does not
+    // schedule a restart after the attempt is over.
     speechRecRef.current = null;
+    try {
+      rec?.stop();
+    } catch {}
     try {
       if (audioContextRef.current && audioContextRef.current.state !== "closed") {
         void audioContextRef.current.close().catch(() => {});
@@ -460,32 +500,17 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     const imageData = ctx.getImageData(0, 0, 32, 24).data;
     let covered = isCovered(imageData);
 
-    // Audio & voice activity check using AudioVadEngine
-    let voiceDetected = voiceActivityRef.current;
+    // Voice: whatever the audio loop CONFIRMED since the last camera sample
+    // (sustained speech, not a click or a cough), or what the browser's own
+    // speech recogniser heard. Both latches are cleared as they are read.
+    const voiceDetected = voiceActivityRef.current || voiceLatchRef.current;
     voiceActivityRef.current = false;
-    let audioLevel = 0;
-    let speechProbability: number | undefined;
-    let snrDb: number | undefined;
-    let spectralFlatness: number | undefined;
-
-    const analyser = analyserRef.current;
-    if (analyser) {
-      const freqData = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteFrequencyData(freqData);
-
-      const timeData = new Uint8Array(analyser.fftSize);
-      analyser.getByteTimeDomainData(timeData);
-
-      const vadResult = vadRef.current.processFrame(freqData, timeData, now, elapsed);
-      audioLevel = Math.min(100, Math.round((vadResult.metrics.rmsEnergy / 128) * 100));
-      speechProbability = vadResult.metrics.speechProbability;
-      snrDb = vadResult.metrics.snrDb;
-      spectralFlatness = vadResult.metrics.spectralFlatness;
-
-      if (vadResult.activeSpeech) {
-        voiceDetected = true;
-      }
-    }
+    voiceLatchRef.current = false;
+    const audioLevel = audioPeakRef.current;
+    audioPeakRef.current = 0;
+    const speechProbability = audioMetricsRef.current?.speechProbability;
+    const snrDb = audioMetricsRef.current?.snrDb;
+    const spectralFlatness = audioMetricsRef.current?.spectralFlatness;
 
     let faces = 0;
     let phone = false;
@@ -517,10 +542,13 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
             headPose = { yaw: analysis.metrics.yaw, pitch: analysis.metrics.pitch, roll: analysis.metrics.roll };
             irisMetrics = { x: analysis.metrics.irisX, y: analysis.metrics.irisY, ear: analysis.metrics.ear };
           } else if (faces === 0) {
-            lookingAway = true;
+            // Same dwell clock as any other look away: a face that drops out
+            // of the mesh for a moment is not a strike.
+            const analysis = gazeTrackerRef.current.processFrame(null, elapsed);
+            lookingAway = !analysis.facing;
             lookingAwayReason = "face_not_visible";
             lookingAwayTip = "Face not visible — stay in camera view";
-            gazeState = "FACE_NOT_VISIBLE";
+            gazeState = analysis.state;
           }
         } else if (detectors.face) {
           const faceResult = detectors.face.detectForVideo(video, now);
@@ -528,8 +556,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
           if (faces === 1) {
             const keypoints = faceResult.detections[0]?.keypoints;
             const pose = checkPoseAndGaze(keypoints, poseBaselineRef.current);
+            lookingAway = fallbackDwellRef.current.update(!pose.facing, elapsed).confirmed;
             if (!pose.facing) {
-              lookingAway = true;
               lookingAwayReason = pose.reason;
             } else if (pose.metrics && baselineSamplesRef.current.length < 5) {
               // Calibrate resting pose from first 5 frontal facing frames
@@ -547,7 +575,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
               }
             }
           } else if (faces === 0) {
-            lookingAway = true;
+            lookingAway = fallbackDwellRef.current.update(true, elapsed).confirmed;
             gazeState = "FACE_NOT_VISIBLE";
           }
         }
@@ -652,6 +680,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       noiseFloorRef.current = 14;
       vadRef.current.reset();
       gazeTrackerRef.current.reset();
+      fallbackDwellRef.current.reset();
     }
 
     patch({ cameraRequested: true, cameraDenied: false, cameraUnavailable: false });
@@ -708,10 +737,81 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
           if (audioTracks.length > 0) {
             const source = audioCtx.createMediaStreamSource(new MediaStream([audioTracks[0]]));
             const analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 512;
+            analyser.fftSize = DEFAULT_PROCTOR_CONFIG.audio.fftSize;
+            // The analyser blends each read with the previous one. At 0.8 —
+            // the default — and one read per camera sample, every "current"
+            // spectrum was mostly the sound from 1.5 s earlier. With reads
+            // every AUDIO_FRAME_MS, 0.5 smooths a single frame without
+            // smearing a cough into a sentence.
+            analyser.smoothingTimeConstant = 0.5;
             source.connect(analyser);
             audioContextRef.current = audioCtx;
             analyserRef.current = analyser;
+            // Frequency bands follow the real sample rate (48 kHz on most
+            // laptops, 44.1 kHz on others), not hard-coded bin numbers.
+            vadRef.current.configureSpectrum(audioCtx.sampleRate, analyser.fftSize);
+
+            /**
+             * Browsers create an AudioContext "suspended" unless a user
+             * gesture is still fresh — and the camera prompt can easily
+             * outlast one. Suspended, the analyser reads all zeros: the meter
+             * sits dead and no voice is ever detected. So: resume now; if
+             * that is refused, resume on the student's next click or key
+             * (they will press Start); and resume again if the system
+             * suspends it mid-test or the microphone track comes back.
+             */
+            const resume = () => {
+              if (stopped.current || audioCtx.state !== "suspended") return;
+              void audioCtx.resume().catch(() => {});
+            };
+            const onGesture = () => {
+              resume();
+              if (audioCtx.state === "running") audioResumeCleanupRef.current?.();
+            };
+            window.addEventListener("pointerdown", onGesture, true);
+            window.addEventListener("keydown", onGesture, true);
+            audioCtx.onstatechange = () => {
+              if (audioCtx.state === "running") audioResumeCleanupRef.current?.();
+              else resume();
+            };
+            audioTracks[0].addEventListener("unmute", resume);
+            audioResumeCleanupRef.current = () => {
+              window.removeEventListener("pointerdown", onGesture, true);
+              window.removeEventListener("keydown", onGesture, true);
+              audioCtx.onstatechange = null;
+              audioTracks[0].removeEventListener("unmute", resume);
+            };
+            try {
+              await audioCtx.resume();
+            } catch {}
+
+            const freqData = new Uint8Array(analyser.frequencyBinCount);
+            const timeData = new Uint8Array(analyser.fftSize);
+            audioTimerRef.current = setInterval(() => {
+              if (stopped.current || analyserRef.current !== analyser) return;
+              const now = performance.now();
+              // Real elapsed time, capped: a throttled background timer must
+              // not credit a whole second of "speech" for one frame.
+              const dt = Math.min(500, lastAudioAtRef.current === null ? AUDIO_FRAME_MS : now - lastAudioAtRef.current);
+              lastAudioAtRef.current = now;
+              analyser.getByteFrequencyData(freqData);
+              analyser.getByteTimeDomainData(timeData);
+              const r = vadRef.current.processFrame(freqData, timeData, now, dt);
+              audioPeakRef.current = Math.max(
+                audioPeakRef.current,
+                Math.min(100, Math.round((r.metrics.rmsEnergy / 128) * 100)),
+              );
+              audioMetricsRef.current = {
+                speechProbability: r.metrics.speechProbability,
+                snrDb: r.metrics.snrDb,
+                spectralFlatness: r.metrics.spectralFlatness,
+              };
+              // Only SUSTAINED speech (the detector's minimum utterance
+              // length) is latched, and only while the attempt is running.
+              if (countingRef.current && (r.sustainedSpeech || r.confirmedEvent)) {
+                voiceLatchRef.current = true;
+              }
+            }, AUDIO_FRAME_MS);
           }
         }
       } catch {}
@@ -723,7 +823,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
           lang: string;
           onresult: (() => void) | null;
           onspeechstart: (() => void) | null;
-          onerror: (() => void) | null;
+          onerror: ((event: { error?: string }) => void) | null;
           onend: (() => void) | null;
           start: () => void;
           stop: () => void;
@@ -739,24 +839,53 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
           rec.continuous = true;
           rec.interimResults = true;
           rec.lang = "en-US";
-          rec.onresult = () => {
-            voiceActivityRef.current = true;
+          let restartDelay = SPEECH_RESTART_MS;
+          let fatal = false;
+          const heard = () => {
+            if (countingRef.current) voiceActivityRef.current = true;
+            restartDelay = SPEECH_RESTART_MS;
           };
-          rec.onspeechstart = () => {
-            voiceActivityRef.current = true;
-          };
-          rec.onerror = () => {};
-          rec.onend = () => {
-            if (!stopped.current && countingRef.current) {
-              try {
-                rec.start();
-              } catch {}
+          rec.onresult = heard;
+          rec.onspeechstart = heard;
+          rec.onerror = (event) => {
+            const error = event?.error;
+            // Permission or hardware: restarting cannot help, and would spin.
+            if (error === "not-allowed" || error === "service-not-allowed" || error === "audio-capture") {
+              fatal = true;
+            } else if (error === "network") {
+              restartDelay = Math.min(SPEECH_RESTART_MAX_MS, restartDelay * 2);
             }
           };
+          /**
+           * Chrome ends continuous recognition on its own — after silence,
+           * after a network blip — and its recogniser is still shutting down
+           * when onend fires, so calling start() right there throws
+           * InvalidStateError. Swallowed, that left recognition dead for the
+           * rest of the test. Restart after a short delay instead, backing
+           * off on network errors, and only while this is still the live
+           * recogniser and the microphone is still live. It restarts whether
+           * or not the attempt has begun: a recogniser that ended on the
+           * start screen must be running when the test starts.
+           */
+          rec.onend = () => {
+            if (fatal || stopped.current || speechRecRef.current !== rec) return;
+            if (speechRestartTimerRef.current) clearTimeout(speechRestartTimerRef.current);
+            speechRestartTimerRef.current = setTimeout(() => {
+              speechRestartTimerRef.current = null;
+              if (stopped.current || speechRecRef.current !== rec) return;
+              const micLive = streamRef.current?.getAudioTracks().some((t) => t.readyState === "live");
+              if (!micLive) return;
+              try {
+                rec.start();
+              } catch {
+                // Still starting: its own onend will come round again.
+              }
+            }, restartDelay);
+          };
+          speechRecRef.current = rec;
           try {
             rec.start();
           } catch {}
-          speechRecRef.current = rec;
         }
       } catch {}
     }
@@ -835,6 +964,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     noiseFloorRef.current = 14;
     vadRef.current.reset();
     gazeTrackerRef.current.reset();
+    fallbackDwellRef.current.reset();
   }, [teardown]);
 
   const stop = React.useCallback(() => {

@@ -141,9 +141,19 @@ export function calculateEyeAspectRatio(
 /**
  * Extracts normalized horizontal and vertical iris position within eye opening.
  */
+/**
+ * Eyelid opening, as a fraction of eye width, below which the vertical iris
+ * position is not trusted. A concentrating or squinting student narrows the
+ * eye to a few pixels; dividing the iris offset by that sliver turns a
+ * sub-pixel jitter into a swing across the whole 0–1 range — a phantom 17°
+ * glance. Below this, the vertical reading is held instead of read. An open
+ * eye measures about 0.3–0.4; the blink threshold sits at 0.18.
+ */
+export const SQUINT_APERTURE = 0.25;
+
 export function extractIrisGazeRatio(
   landmarks: NormalizedLandmark[],
-): { irisX: number; irisY: number; earAvg: number; blinking: boolean } {
+): { irisX: number; irisY: number; earAvg: number; blinking: boolean; irisYReliable: boolean } {
   const earRight = calculateEyeAspectRatio(landmarks, true);
   const earLeft = calculateEyeAspectRatio(landmarks, false);
   const earAvg = (earRight + earLeft) / 2.0;
@@ -166,7 +176,7 @@ export function extractIrisGazeRatio(
   const blinking = earAvg < DEFAULT_PROCTOR_CONFIG.gaze.blinkEarThreshold;
 
   if (!rOuter || !rInner || !rIris || !lOuter || !lInner || !lIris) {
-    return { irisX: 0.5, irisY: 0.5, earAvg, blinking };
+    return { irisX: 0.5, irisY: 0.5, earAvg, blinking, irisYReliable: false };
   }
 
   // Right eye horizontal ratio (outer = 0, inner = 1)
@@ -180,22 +190,29 @@ export function extractIrisGazeRatio(
   // Combined horizontal ratio: average of both eyes
   const irisX = Math.max(0, Math.min(1, (rRatioX + lRatioX) / 2.0));
 
-  // Vertical ratio
-  let rRatioY = 0.5;
-  if (rTop && rBottom) {
-    const rHeight = rBottom.y - rTop.y;
-    if (rHeight > 1e-4) rRatioY = (rIris.y - rTop.y) / rHeight;
-  }
+  // Vertical ratio, per eye, only where the eye is open enough to read it.
+  const verticalRatio = (
+    iris: NormalizedLandmark,
+    top: NormalizedLandmark | undefined,
+    bottom: NormalizedLandmark | undefined,
+    width: number,
+  ): number | null => {
+    if (!top || !bottom) return null;
+    const height = bottom.y - top.y;
+    if (Math.abs(width) < 1e-4 || height < SQUINT_APERTURE * Math.abs(width)) return null;
+    return (iris.y - top.y) / height;
+  };
+  const ys = [
+    verticalRatio(rIris, rTop, rBottom, rWidth),
+    verticalRatio(lIris, lTop, lBottom, lWidth),
+  ].filter((v): v is number => v !== null);
 
-  let lRatioY = 0.5;
-  if (lTop && lBottom) {
-    const lHeight = lBottom.y - lTop.y;
-    if (lHeight > 1e-4) lRatioY = (lIris.y - lTop.y) / lHeight;
-  }
+  const irisYReliable = ys.length > 0 && !blinking;
+  const irisY = irisYReliable
+    ? Math.max(0, Math.min(1, ys.reduce((a, b) => a + b, 0) / ys.length))
+    : 0.5;
 
-  const irisY = Math.max(0, Math.min(1, (rRatioY + lRatioY) / 2.0));
-
-  return { irisX, irisY, earAvg, blinking };
+  return { irisX, irisY, earAvg, blinking, irisYReliable };
 }
 
 /**
@@ -253,10 +270,44 @@ export function extractHeadPose(
   return { yaw, pitch, roll };
 }
 
+/**
+ * The one off-screen timer. A glance only becomes "looking away" once the
+ * gaze has stayed off the screen for `minOffScreenDwellMs`; looking back
+ * drains the timer at 1.5× speed, so flicking back for a moment does not reset
+ * a sustained look away, and a single missed frame does not end one either.
+ *
+ * Exported so the BlazeFace fallback path (no face mesh) is judged by the
+ * same clock rather than by a second, competing debounce.
+ */
+export class OffScreenDwell {
+  private dwellMs = 0;
+  constructor(private readonly minDwellMs = DEFAULT_PROCTOR_CONFIG.gaze.minOffScreenDwellMs) {}
+
+  reset() {
+    this.dwellMs = 0;
+  }
+
+  /** Feeds one frame; returns whether the gaze is CONFIRMED off-screen. */
+  update(offScreen: boolean, elapsedMs: number, hold = false): { confirmed: boolean; suspected: boolean } {
+    if (hold) {
+      // A blink: neither evidence for nor against.
+    } else if (offScreen) {
+      this.dwellMs += elapsedMs;
+    } else {
+      this.dwellMs = Math.max(0, this.dwellMs - elapsedMs * 1.5);
+    }
+    return { confirmed: this.dwellMs >= this.minDwellMs, suspected: this.dwellMs > 0 };
+  }
+}
+
+/** Downward head pitch (degrees) still treated as a resting laptop posture. */
+export const LAPTOP_MAX_REST_PITCH = 22;
+
 export class TemporalGazeTracker {
   private config: GazeTrackingConfig;
   private baseline: GazeBaseline | null = null;
   private baselineBuffer: Array<{ yaw: number; pitch: number; roll: number; irisX: number; irisY: number }> = [];
+  private rawCalibration: Array<{ pitch: number; yaw: number }> = [];
 
   private smoothedYaw = 0;
   private smoothedPitch = 0;
@@ -264,12 +315,13 @@ export class TemporalGazeTracker {
   private smoothedIrisX = 0.5;
   private smoothedIrisY = 0.5;
 
-  private offScreenDwellMs = 0;
+  private dwell: OffScreenDwell;
   private currentState: GazeDetectionState = "NORMAL";
   private hasHistory = false;
 
   constructor(config: GazeTrackingConfig = DEFAULT_PROCTOR_CONFIG.gaze) {
     this.config = config;
+    this.dwell = new OffScreenDwell(config.minOffScreenDwellMs);
   }
 
   public setBaseline(baseline: GazeBaseline | null) {
@@ -283,12 +335,13 @@ export class TemporalGazeTracker {
   public reset() {
     this.baseline = null;
     this.baselineBuffer = [];
+    this.rawCalibration = [];
     this.smoothedYaw = 0;
     this.smoothedPitch = 0;
     this.smoothedRoll = 0;
     this.smoothedIrisX = 0.5;
     this.smoothedIrisY = 0.5;
-    this.offScreenDwellMs = 0;
+    this.dwell.reset();
     this.currentState = "NORMAL";
     this.hasHistory = false;
   }
@@ -303,11 +356,14 @@ export class TemporalGazeTracker {
     blendshapes?: Array<{ categoryName: string; score: number }> | null,
   ): GazeAnalysisResult {
     if (!landmarks || landmarks.length < 4) {
-      this.offScreenDwellMs = 0;
-      this.currentState = "FACE_NOT_VISIBLE";
+      // A face that drops out of the mesh for a moment — a hand to the chin,
+      // a turn of the head to reach for water — is judged on the same clock
+      // as any other look away. Only a sustained absence counts.
+      const { confirmed } = this.dwell.update(true, elapsedMs);
+      this.currentState = confirmed ? "OFF_SCREEN_CONFIRMED" : "FACE_NOT_VISIBLE";
       return {
-        state: "FACE_NOT_VISIBLE",
-        facing: false,
+        state: this.currentState,
+        facing: !confirmed,
         confidence: 0,
         reason: "face_not_visible",
         tip: "Face not visible — please stay centered in front of the camera",
@@ -329,7 +385,13 @@ export class TemporalGazeTracker {
     const rawPose = extractHeadPose(landmarks, transformationMatrix);
 
     // 2. Extract Iris & Blink status
-    const { earAvg, irisX: rawIrisX, irisY: rawIrisY, blinking: rawBlinking } = extractIrisGazeRatio(landmarks);
+    const {
+      earAvg,
+      irisX: rawIrisX,
+      irisY: rawIrisY,
+      blinking: rawBlinking,
+      irisYReliable,
+    } = extractIrisGazeRatio(landmarks);
     let irisX = rawIrisX;
     let irisY = rawIrisY;
     let blinking = rawBlinking;
@@ -347,6 +409,9 @@ export class TemporalGazeTracker {
     if (blinking) {
       irisX = this.smoothedIrisX;
       irisY = this.smoothedIrisY;
+    } else if (!irisYReliable) {
+      // Squinting: the horizontal reading is still good, the vertical is not.
+      irisY = this.hasHistory ? this.smoothedIrisY : 0.5;
     }
 
     // 3. Temporal Smoothing (EMA) with warm start
@@ -368,13 +433,36 @@ export class TemporalGazeTracker {
 
     // 4. Baseline Calibration during initial frontal samples
     if (!this.baseline) {
-      const isFrontal =
+      /**
+       * A laptop webcam sits above the screen, so a student reading it looks
+       * 12–22° DOWN relative to the camera. Requiring |pitch| < 10° meant most
+       * laptop users never calibrated, and the uncalibrated threshold then
+       * called their ordinary reading posture "looking down" all test long.
+       * Up to LAPTOP_MAX_REST_PITCH down is accepted — but only while the head
+       * is steady, so a student glancing around cannot calibrate on a glance.
+       */
+      const resting =
         Math.abs(this.smoothedYaw) < 10.0 &&
-        Math.abs(this.smoothedPitch) < 10.0 &&
+        this.smoothedPitch > -10.0 &&
+        this.smoothedPitch < LAPTOP_MAX_REST_PITCH &&
         Math.abs(this.smoothedRoll) < 12.0 &&
         !blinking;
+      // Steadiness is judged on the RAW pose against the frames collected so
+      // far. The smoothed pose hides a wobbling head — an EMA turns ±8°
+      // swings into ±3° — so it cannot tell resting from glancing around.
+      const n = this.rawCalibration.length;
+      const meanRawPitch = n ? this.rawCalibration.reduce((a, b) => a + b.pitch, 0) / n : rawPose.pitch;
+      const meanRawYaw = n ? this.rawCalibration.reduce((a, b) => a + b.yaw, 0) / n : rawPose.yaw;
+      const steady =
+        Math.abs(rawPose.pitch - meanRawPitch) < 5.0 && Math.abs(rawPose.yaw - meanRawYaw) < 6.0;
+      if (!steady) {
+        this.baselineBuffer = [];
+        this.rawCalibration = [];
+      }
+      const isFrontal = resting;
 
       if (isFrontal) {
+        this.rawCalibration.push({ pitch: rawPose.pitch, yaw: rawPose.yaw });
         this.baselineBuffer.push({
           yaw: this.smoothedYaw,
           pitch: this.smoothedPitch,
@@ -434,47 +522,48 @@ export class TemporalGazeTracker {
       reason = combinedYaw > 0 ? "looking_left" : "looking_right";
       tip = "Head turned away — please face the screen";
     }
-    // Vertical off-screen (looking down at lap / notes)
-    else if (combinedPitch > this.config.headPitchDownThresholdDeg || effectiveIrisY > this.config.irisPitchThreshold) {
+    // Vertical off-screen (looking down at lap / notes). Until the resting
+    // posture is calibrated, a laptop camera sees everyone reading at up to
+    // LAPTOP_MAX_REST_PITCH down, so that much is allowed on top of the usual
+    // threshold — and the iris, which also sits low when reading a laptop
+    // screen, is not judged vertically. This is NOT "no judgement": a student
+    // who looks down at notes from the very first second never calibrates,
+    // and must still be caught.
+    else if (
+      combinedPitch - (this.baseline ? 0 : LAPTOP_MAX_REST_PITCH) > this.config.headPitchDownThresholdDeg ||
+      (this.baseline !== null && effectiveIrisY > this.config.irisPitchThreshold)
+    ) {
       instantaneousOffScreen = true;
       reason = "looking_down";
       tip = "Looking down — please face the screen";
     }
-    // Vertical off-screen (looking up)
-    else if (combinedPitch < -this.config.headPitchUpThresholdDeg || effectiveIrisY < -this.config.irisPitchThreshold) {
+    // Vertical off-screen (looking up). Up is not skewed by the camera, so
+    // the head is judged from the start; the iris waits for calibration.
+    else if (
+      combinedPitch < -this.config.headPitchUpThresholdDeg ||
+      (this.baseline !== null && effectiveIrisY < -this.config.irisPitchThreshold)
+    ) {
       instantaneousOffScreen = true;
       reason = "looking_up";
       tip = "Looking up — please face the screen";
     }
 
-    // 7. Temporal Dwell Time & Hysteresis State Machine
-    if (blinking) {
-      // Natural blink: maintain existing confirmed state or remain normal
-      if (this.currentState !== "OFF_SCREEN_CONFIRMED") {
-        this.currentState = "BLINKING";
-      }
-    } else if (instantaneousOffScreen) {
-      this.offScreenDwellMs += elapsedMs;
-      if (this.offScreenDwellMs >= this.config.minOffScreenDwellMs) {
-        this.currentState = "OFF_SCREEN_CONFIRMED";
-      } else {
-        this.currentState = "SUSPECTED_OFF_SCREEN";
-      }
-    } else {
-      // Recovery hysteresis
-      if (this.offScreenDwellMs > 0) {
-        this.offScreenDwellMs = Math.max(0, this.offScreenDwellMs - elapsedMs * 1.5);
-      }
-      if (this.offScreenDwellMs === 0) {
-        this.currentState = "NORMAL";
-      }
-    }
+    // 7. One dwell timer decides. A glance is SUSPECTED until it has lasted
+    //    minOffScreenDwellMs; only then is it CONFIRMED, and only CONFIRMED
+    //    counts as not facing. Blinks hold the timer where it is.
+    const { confirmed, suspected } = this.dwell.update(instantaneousOffScreen, elapsedMs, blinking);
+    if (confirmed) this.currentState = "OFF_SCREEN_CONFIRMED";
+    else if (blinking) this.currentState = "BLINKING";
+    else if (suspected && instantaneousOffScreen) this.currentState = "SUSPECTED_OFF_SCREEN";
+    else this.currentState = "NORMAL";
 
     // Confidence estimation
     const faceScale = dist(landmarks[0] ?? landmarks[MESH_INDICES.noseTip], landmarks[1] ?? landmarks[MESH_INDICES.chin]);
     const confidence = Math.max(0.4, Math.min(0.98, faceScale > 0.05 ? 0.92 : 0.65));
 
-    const facing = this.currentState !== "OFF_SCREEN_CONFIRMED" && this.currentState !== "SUSPECTED_OFF_SCREEN";
+    // Facing unless the dwell CONFIRMED the look away. A suspected glance is
+    // shown to the student as a tip, never counted (see camera-proctor.ts).
+    const facing = this.currentState !== "OFF_SCREEN_CONFIRMED";
 
     return {
       state: this.currentState,

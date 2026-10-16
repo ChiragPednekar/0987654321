@@ -33,8 +33,58 @@ export interface SpeechEvent {
   peakProbability: number;
 }
 
+/** Frequency band edges in Hz. Bins are derived from these and the real sample rate. */
+const BANDS = {
+  /** Room hum, fans, mains. */
+  humMaxHz: 200,
+  /** Voiced speech: F1 to F3, where nearly all speech energy sits. */
+  formantLowHz: 300,
+  formantHighHz: 3_000,
+  /** Keyboard clatter and clicks: above the speech formants. */
+  clatterLowHz: 4_000,
+  clatterHighHz: 8_000,
+  /** Range over which spectral flatness is measured. */
+  flatnessLowHz: 150,
+  flatnessHighHz: 4_500,
+} as const;
+
+interface BinRanges {
+  humEnd: number;
+  formantStart: number;
+  formantEnd: number;
+  clatterStart: number;
+  clatterEnd: number;
+  flatnessStart: number;
+  flatnessEnd: number;
+}
+
+/**
+ * Converts the Hz bands into FFT bin indices for this microphone.
+ *
+ * Each bin is sampleRate / fftSize Hz wide: 93.75 Hz at 48 kHz with a 512
+ * FFT, 86.1 Hz at 44.1 kHz. The bands used to be hard-coded bin numbers that
+ * only matched one rate — at 48 kHz "speech" stopped at 1.7 kHz, losing F2 and
+ * F3, and "clatter" began at 2.25 kHz, right inside many voices, so speech was
+ * scored as keyboard noise. bin = round(f × fftSize / sampleRate).
+ */
+export function binRanges(sampleRate: number, fftSize: number): BinRanges {
+  const binCount = Math.floor(fftSize / 2);
+  const bin = (hz: number) => Math.max(0, Math.min(binCount, Math.round((hz * fftSize) / sampleRate)));
+  return {
+    humEnd: Math.max(1, bin(BANDS.humMaxHz)),
+    formantStart: bin(BANDS.formantLowHz),
+    formantEnd: bin(BANDS.formantHighHz),
+    clatterStart: bin(BANDS.clatterLowHz),
+    clatterEnd: bin(BANDS.clatterHighHz),
+    flatnessStart: Math.max(1, bin(BANDS.flatnessLowHz)),
+    flatnessEnd: bin(BANDS.flatnessHighHz),
+  };
+}
+
 export class AudioVadEngine {
   private config: AudioVadConfig;
+  // Until configureSpectrum() is called, assume the most common laptop rate.
+  private bins: BinRanges = binRanges(48_000, DEFAULT_PROCTOR_CONFIG.audio.fftSize);
   private noiseFloor: number;
   private activeSpeechStart: number | null = null;
   private lastSpeechEnd: number = 0;
@@ -60,6 +110,11 @@ export class AudioVadEngine {
     this.lastCooldownTimestamp = -100_000;
   }
 
+  /** Sets the frequency bands for this microphone's sample rate and FFT size. */
+  public configureSpectrum(sampleRate: number, fftSize: number): void {
+    if (sampleRate > 0 && fftSize > 0) this.bins = binRanges(sampleRate, fftSize);
+  }
+
   public getNoiseFloor(): number {
     return this.noiseFloor;
   }
@@ -73,8 +128,8 @@ export class AudioVadEngine {
     let sum = 0;
     let logSum = 0;
     let count = 0;
-    const startBin = 2; // ~150Hz
-    const endBin = Math.min(60, magnitudes.length); // ~4500Hz
+    const startBin = this.bins.flatnessStart; // ~150 Hz
+    const endBin = Math.min(this.bins.flatnessEnd, magnitudes.length); // ~4.5 kHz
 
     for (let i = startBin; i < endBin; i++) {
       const p = Math.max(1e-4, Math.pow(magnitudes[i] / 255.0, 2));
@@ -115,6 +170,12 @@ export class AudioVadEngine {
   ): {
     metrics: AudioFrameMetrics;
     activeSpeech: boolean;
+    /**
+     * Speech has been sustained for at least minSpeechDurationMs without a
+     * break. This — not a single loud frame — is what counts as someone
+     * talking; it is what the proctor latches as a voice sighting.
+     */
+    sustainedSpeech: boolean;
     confirmedEvent: SpeechEvent | null;
   } {
     // 1. RMS / Average Energy
@@ -124,27 +185,31 @@ export class AudioVadEngine {
     }
     const rawAvg = frequencyData.length > 0 ? totalEnergy / frequencyData.length : 0;
 
-    // 2. Frequency Band Power Breakdown
-    // Speech formant range: Bins 2 to 18 (~300Hz to ~2800Hz)
+    // 2. Frequency Band Power Breakdown (bins from the real sample rate)
+    // Speech formants: ~300 Hz to ~3 kHz
+    const { formantStart, formantEnd, clatterStart, clatterEnd, humEnd } = this.bins;
     let formantEnergy = 0;
     let formantBins = 0;
-    for (let i = 2; i < Math.min(18, frequencyData.length); i++) {
+    for (let i = formantStart; i < Math.min(formantEnd, frequencyData.length); i++) {
       formantEnergy += frequencyData[i];
       formantBins++;
     }
     const avgFormant = formantBins > 0 ? formantEnergy / formantBins : 0;
 
-    // High frequency clatter / typing clicks: Bins 24 to 52 (~3800Hz to ~8000Hz)
+    // High frequency clatter / typing clicks: ~4 kHz to ~8 kHz
     let highEnergy = 0;
     let highBins = 0;
-    for (let i = 24; i < Math.min(52, frequencyData.length); i++) {
+    for (let i = clatterStart; i < Math.min(clatterEnd, frequencyData.length); i++) {
       highEnergy += frequencyData[i];
       highBins++;
     }
     const avgHigh = highBins > 0 ? highEnergy / highBins : 0;
 
-    // Sub-bass rumble (fans, AC, room hum): Bins 0 to 1 (< 200Hz)
-    const lowHum = frequencyData.length > 0 ? (frequencyData[0] + (frequencyData[1] ?? 0)) / 2 : 0;
+    // Sub-bass rumble (fans, AC, room hum): below ~200 Hz
+    let humEnergy = 0;
+    const humBins = Math.min(humEnd, frequencyData.length);
+    for (let i = 0; i < humBins; i++) humEnergy += frequencyData[i];
+    const lowHum = humBins > 0 ? humEnergy / humBins : 0;
 
     // 3. Asymmetric Dual-Rate Adaptive Noise Floor Tracking
     // When environment is quieter than floor, adapt down quickly.
@@ -251,6 +316,7 @@ export class AudioVadEngine {
         isSpeechInstantaneous,
       },
       activeSpeech: isSpeechInstantaneous || this.consecutiveSpeechMs >= this.config.minSpeechDurationMs,
+      sustainedSpeech: this.consecutiveSpeechMs >= this.config.minSpeechDurationMs,
       confirmedEvent,
     };
   }

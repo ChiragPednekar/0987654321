@@ -17,32 +17,56 @@
  * and only becomes false again once it has dropped to RELEASE_AT — hysteresis,
  * so a condition hovering at the threshold is one event rather than ten.
  *
- * At a sample every 1.5s that means most conditions need roughly 4.5 seconds
- * in view across a 7.5-second span before anything is counted.
+ * Every window is defined in TIME and converted to a sample count, so changing
+ * the sampling rate changes how finely a moment is seen, never how long it
+ * has to last: most conditions need roughly 4.5 seconds in view across a
+ * 7.5-second span before anything is counted, at any rate.
  *
- * A phone needs only two of the five samples. Measured on a real webcam, the
- * object model's confidence for a phone held in front of the camera hovers
- * around its threshold — in shot for ten seconds, it is seen in some frames and
- * missed in others — so three hits out of five was rarely reached and phones
- * went unnoticed. Two still ignores a single misread frame.
+ * A phone needs only about 3 seconds of sightings in the window. Measured on a
+ * real webcam, the object model's confidence for a phone held in front of the
+ * camera hovers around its threshold — in shot for ten seconds, it is seen in
+ * some frames and missed in others — so the 4.5-second bar was rarely reached
+ * and phones went unnoticed. Three seconds still ignores a misread frame.
+ *
+ * Looking away and voice are different: they arrive ALREADY debounced. The
+ * gaze tracker only reports looking away once the gaze has stayed off-screen
+ * for its dwell time (src/lib/gaze-tracker.ts), and the voice detector only
+ * reports speech sustained for its minimum utterance length
+ * (src/lib/audio-vad.ts). Debouncing those a second time here is what made a
+ * glance or a short question to an assistant disappear, so they switch on at
+ * the first confirmed sample and only need a short quiet spell to release.
  */
 
-export const SAMPLE_INTERVAL_MS = 1500;
+/**
+ * One camera sample every 750 ms. At 1.5 s a one-second glance at a phone or
+ * at notes fell entirely between two frames; at 750 ms it is seen. The models
+ * run on the student's own CPU, so this is the fastest rate that stays light
+ * on an ordinary laptop.
+ */
+export const SAMPLE_INTERVAL_MS = 750;
 
-/** Samples kept per condition. */
-const WINDOW = 5;
-/** Hits in the window needed to switch a condition on. */
-const ACTIVATE_AT = 3;
-/** The same, for a phone. See "Why everything is debounced" above. */
-const PHONE_ACTIVATE_AT = 2;
-/** The same, for a covered/blocked lens: 2 hits in 5 samples (~3s). */
-const COVERED_ACTIVATE_AT = 2;
-/** The same, for looking away: 2 hits in 5 samples (~3s). */
-const LOOKING_AWAY_ACTIVATE_AT = 2;
-/** The same, for voice detection: 2 hits in 5 samples (~3s of speech). */
-const VOICE_ACTIVATE_AT = 2;
-/** Hits in the window at or below which it switches off again. */
-const RELEASE_AT = 1;
+/** A duration as a whole number of samples, at least one. */
+const samples = (ms: number) => Math.max(1, Math.round(ms / SAMPLE_INTERVAL_MS));
+
+/** Samples kept per condition: 7.5 seconds. */
+const WINDOW = samples(7_500);
+/** Hits in the window needed to switch a condition on: about 4.5 seconds. */
+const ACTIVATE_AT = samples(4_500);
+/** The same, for a phone: about 3 seconds. See "Why everything is debounced". */
+const PHONE_ACTIVATE_AT = samples(3_000);
+/** The same, for a covered or blocked lens: about 3 seconds. */
+const COVERED_ACTIVATE_AT = samples(3_000);
+/** Hits in the window at or below which it switches off again: about 1.5 seconds. */
+const RELEASE_AT = samples(1_500);
+
+/**
+ * Looking away and voice, which arrive already debounced (see above): on at
+ * the first confirmed sample, off once nothing has been confirmed for about
+ * two seconds, so a second, separate episode is a second event.
+ */
+const CONFIRMED_WINDOW = samples(2_250);
+const CONFIRMED_ACTIVATE_AT = 1;
+const CONFIRMED_RELEASE_AT = 0;
 
 import {
   extractHeadPose,
@@ -52,9 +76,9 @@ import {
 } from "@/lib/gaze-tracker";
 import { DEFAULT_PROCTOR_CONFIG } from "@/lib/proctor-config";
 
-/** Benefit of doubt: 5 warnings for looking away; on/after 5, test suspends. */
+/** Looking away: the test is suspended on the 5th strike — the counter reads 5/5. */
 export const MAX_LOOKING_AWAY_STRIKES = 5;
-/** Benefit of doubt: 3 warnings for voice; on/after 3, test suspends. */
+/** Voice: the test is suspended on the 3rd strike — the counter reads 3/3. */
 export const MAX_VOICE_STRIKES = 3;
 
 /** Normalized landmark keypoint from face detector. */
@@ -387,13 +411,14 @@ function step(
   c: Condition,
   hit: boolean,
   activateAt = ACTIVATE_AT,
+  { window = WINDOW, releaseAt = RELEASE_AT }: { window?: number; releaseAt?: number } = {},
 ): { next: Condition; rose: boolean } {
-  const hits = [...c.hits, hit].slice(-WINDOW);
+  const hits = [...c.hits, hit].slice(-window);
   const count = hits.filter(Boolean).length;
 
   let active = c.active;
   if (!active && count >= activateAt) active = true;
-  else if (active && count <= RELEASE_AT) active = false;
+  else if (active && count <= releaseAt) active = false;
 
   return { next: { hits, active }, rose: active && !c.active };
 }
@@ -435,8 +460,9 @@ export function observe(
   const multiFace = step(state.multiFace, seeing && sample.faces >= 2);
   const phone = step(state.phone, seeing && sample.phone, PHONE_ACTIVATE_AT);
   const book = step(state.book, seeing && sample.book);
-  const lookingAway = step(state.lookingAway, seeing && Boolean(sample.lookingAway), LOOKING_AWAY_ACTIVATE_AT);
-  const voice = step(state.voice, Boolean(sample.voiceDetected), VOICE_ACTIVATE_AT);
+  const confirmed = { window: CONFIRMED_WINDOW, releaseAt: CONFIRMED_RELEASE_AT };
+  const lookingAway = step(state.lookingAway, seeing && Boolean(sample.lookingAway), CONFIRMED_ACTIVATE_AT, confirmed);
+  const voice = step(state.voice, Boolean(sample.voiceDetected), CONFIRMED_ACTIVATE_AT, confirmed);
 
   let newLookingAwayRunMs = lookingAway.next.active ? state.lookingAwayRunMs + credit : 0;
   let extraLookingAwayEvents = 0;
@@ -540,10 +566,9 @@ export const NO_FACE_END_MS = 60_000;
 /**
  * Whether what the camera is seeing now ends the attempt.
  *
- * It reads the debounced conditions, never a raw frame: a phone has to be in
- * view for 3 of the last 5 samples — about 4.5 seconds — before this fires,
- * the same bar that makes it an event at all. One misread frame cannot end
- * anyone's test.
+ * It reads the debounced conditions, never a raw frame: a phone has to be
+ * seen for about 3 seconds of the last 7.5 before this fires, the same bar
+ * that makes it an event at all. One misread frame cannot end anyone's test.
  *
  * A book is not on the list. Rough work on paper is normal for case
  * arithmetic, and the object model cannot tell a notebook from a textbook.
@@ -556,8 +581,9 @@ export function endReason(state: TrackerState): EndReason | null {
   if (state.multiFace.active) return "multiple_faces";
   if (state.covered.active) return "camera_covered";
   if (state.noFaceRunMs >= NO_FACE_END_MS) return "no_face";
-  if (state.counters.lookingAwayEvents > MAX_LOOKING_AWAY_STRIKES) return "looking_away";
-  if (state.counters.voiceEvents > MAX_VOICE_STRIKES) return "voice_detected";
+  // `>=`: the student is shown "5/5" and "3/3", and that is when it ends.
+  if (state.counters.lookingAwayEvents >= MAX_LOOKING_AWAY_STRIKES) return "looking_away";
+  if (state.counters.voiceEvents >= MAX_VOICE_STRIKES) return "voice_detected";
   return null;
 }
 

@@ -6,7 +6,7 @@
  */
 
 export interface GazeTrackingConfig {
-  /** Sampling interval for video frames in milliseconds. Default: 1500ms. */
+  /** Sampling interval for video frames in milliseconds. Mirrors SAMPLE_INTERVAL_MS in camera-proctor.ts. */
   sampleIntervalMs: number;
   /** Minimum MediaPipe model confidence for face detection. */
   minFaceDetectionConfidence: number;
@@ -70,7 +70,8 @@ export interface AudioVadConfig {
 export interface ObjectDetectionConfig {
   phoneMinScore: number;
   bookMinScore: number;
-  phoneActivateHits: number;
+  /** Seconds of sightings in the 7.5 s window that switch "phone" on (camera-proctor.ts works in time, not samples). */
+  phoneActivateSeconds: number;
 }
 
 export interface ProctorEngineConfig {
@@ -81,7 +82,7 @@ export interface ProctorEngineConfig {
 
 export const DEFAULT_PROCTOR_CONFIG: ProctorEngineConfig = {
   gaze: {
-    sampleIntervalMs: 1500,
+    sampleIntervalMs: 750,
     minFaceDetectionConfidence: 0.5,
     minTrackingConfidence: 0.5,
     headYawThresholdDeg: 20.0,
@@ -115,6 +116,6 @@ export const DEFAULT_PROCTOR_CONFIG: ProctorEngineConfig = {
   objects: {
     phoneMinScore: 0.3,
     bookMinScore: 0.4,
-    phoneActivateHits: 2,
+    phoneActivateSeconds: 3,
   },
 };

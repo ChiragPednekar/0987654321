@@ -225,7 +225,9 @@ describe("Eye-Gaze & Off-Screen Tracking Accuracy Evaluation", () => {
     const res = tracker.processFrame(glanceAway, 1000);
 
     expect(res.state).toBe("SUSPECTED_OFF_SCREEN");
-    expect(res.facing).toBe(false); // Flagged to preview
+    // Suspected is shown as a tip but not counted: only the dwell-confirmed
+    // state is "not facing", so the camera tracker never double-debounces.
+    expect(res.facing).toBe(true);
     // Dwell requirement not met yet (needs 3000ms), so it's not confirmed
     expect(res.state).not.toBe("OFF_SCREEN_CONFIRMED");
 
@@ -249,8 +251,14 @@ describe("Eye-Gaze & Off-Screen Tracking Accuracy Evaluation", () => {
 
   it("scenario F: looking down at lap/notes is accurately identified", () => {
     const tracker = new TemporalGazeTracker();
+    // Calibrate on a few seconds of ordinary reading, then look down and stay.
+    const reading = createSyntheticLandmarks({ pitchDeg: 0 });
+    for (let i = 0; i < 6; i++) tracker.processFrame(reading, 750);
     const lookingDown = createSyntheticLandmarks({ pitchDeg: 25, irisOffsetY: 0.4 });
-    const res = tracker.processFrame(lookingDown, 1500);
+    // Held for six seconds: the smoothed pose ramps over the first frames,
+    // then the look down must last the 3 s dwell to count.
+    let res = tracker.processFrame(lookingDown, 1500);
+    for (let i = 0; i < 3; i++) res = tracker.processFrame(lookingDown, 1500);
 
     expect(res.facing).toBe(false);
     expect(res.reason).toBe("looking_down");
@@ -261,7 +269,8 @@ describe("Eye-Gaze & Off-Screen Tracking Accuracy Evaluation", () => {
     const tracker = new TemporalGazeTracker();
     // Head straight, but eyes looking far sideways
     const sideGaze = createSyntheticLandmarks({ yawDeg: 0, irisOffsetX: 0.65 });
-    const res = tracker.processFrame(sideGaze, 1500);
+    tracker.processFrame(sideGaze, 1500);
+    const res = tracker.processFrame(sideGaze, 1600); // held past the 3 s dwell
 
     expect(res.facing).toBe(false);
     expect(res.reason).toBe("looking_left");
@@ -288,9 +297,15 @@ describe("Eye-Gaze & Off-Screen Tracking Accuracy Evaluation", () => {
     const tracker = new TemporalGazeTracker();
     const result = tracker.processFrame(null, 1500);
 
-    expect(result.facing).toBe(false);
+    // A face that drops out for a moment is suspected, not counted…
+    expect(result.facing).toBe(true);
     expect(result.state).toBe("FACE_NOT_VISIBLE");
     expect(result.reason).toBe("face_not_visible");
+
+    // …and counts once it has been missing past the dwell time.
+    const sustained = tracker.processFrame(null, 1600);
+    expect(sustained.facing).toBe(false);
+    expect(sustained.reason).toBe("face_not_visible");
   });
 });
 
