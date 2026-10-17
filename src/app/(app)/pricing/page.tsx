@@ -1,15 +1,17 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Button } from "@/components/ui/button";
+import { CheckoutButton } from "@/components/billing/checkout-button";
 import { PlanTable, TopupList } from "@/components/billing/plan-table";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import { checkoutMode, checkoutModeFor } from "@/lib/billing/checkout-mode";
 import { getAccess, purchaseBlock, type Access } from "@/lib/subscription";
-import { EXPERT_COMMISSION_BPS, EXPERT_PRICE_RANGE_PAISE, PLANS, USAGE_WINDOW, rupees } from "@/lib/pricing";
+import { PLANS, USAGE_WINDOW, rupees } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "CaseCode Pro plans from ₹299 a month, top-up packs, certificate exams and expert mock interviews.",
+  description: "CaseCode Pro plans from ₹299 a month, top-up packs and certificate exams.",
 };
 
 /**
@@ -22,8 +24,8 @@ export const metadata: Metadata = {
 
 const FAQ: { q: string; a: string }[] = [
   {
-    q: "Can I take a certificate exam or book an expert without a plan?",
-    a: "Yes. Exams and expert interviews are sold separately, pay as you go — buy just the attempt or the session you want.",
+    q: "Can I take a certificate exam without a plan?",
+    a: "Yes. Certificate exams are sold separately, pay as you go — you buy just the attempt you want.",
   },
   {
     q: "Do I need a college ID?",
@@ -50,13 +52,20 @@ const FAQ: { q: string; a: string }[] = [
 export default async function PricingPage() {
   const profile = await getCurrentUser();
   const admin = createAdminClientOrNull();
-  const [access, mode, exams] = await Promise.all([
+  const [access, mode, exams, attempts] = await Promise.all([
     profile && admin ? getAccess(admin, profile.id) : Promise.resolve(null as Access | null),
     profile && admin ? checkoutModeFor(admin, profile) : Promise.resolve(checkoutMode()),
     admin
-      ? admin.from("cert_exams").select("slug, title, track, price_paise, duration_minutes").eq("is_published", true).order("title")
-      : Promise.resolve({ data: [] as { slug: string; title: string; track: string; price_paise: number; duration_minutes: number }[] }),
+      ? admin.from("cert_exams").select("id, slug, title, track, price_paise, duration_minutes").eq("is_published", true).order("title")
+      : Promise.resolve({ data: [] as { id: string; slug: string; title: string; track: string; price_paise: number; duration_minutes: number }[] }),
+    profile && admin
+      ? admin.from("cert_attempts").select("id, exam_id, status, deadline_at").eq("user_id", profile.id).in("status", ["ready", "in_progress"])
+      : Promise.resolve({ data: [] as { id: string; exam_id: string; status: string; deadline_at: string | null }[] }),
   ]);
+
+  const openAttempts = new Map(
+    ((attempts?.data ?? []) as { id: string; exam_id: string; status: string }[]).map((a) => [a.exam_id, a]),
+  );
 
   const buyer = {
     signedIn: Boolean(profile),
@@ -80,7 +89,7 @@ export default async function PricingPage() {
         </p>
       </header>
 
-      <div className="mt-14">
+      <div id="plans" className="mt-14 scroll-mt-10">
         <PlanTable buyer={buyer} loginNext="/pricing" />
       </div>
 
@@ -101,14 +110,14 @@ export default async function PricingPage() {
           Pay as you go · no plan needed
         </p>
         <h2 className="mt-2 font-editorial text-[2.2rem] font-normal leading-tight">
-          Certificates and expert interviews, <em className="italic">on their own</em>.
+          Certificate exams, <em className="italic">on their own</em>.
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Sold separately from the plans. Sign up, pay for the one thing you want, and use it — with or without
           CaseCode Pro.
         </p>
 
-        <div className="mt-8 grid gap-x-14 gap-y-10 lg:grid-cols-2">
+        <div className="mt-8 max-w-2xl">
           <div>
             <h3 className="font-editorial text-2xl font-normal">Certificate exams</h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -116,40 +125,47 @@ export default async function PricingPage() {
               LinkedIn. You pay per attempt, pass or not.
             </p>
             <ul className="mt-4 divide-y divide-border border-y border-border">
-              {(exams.data ?? []).map((exam) => (
-                <li key={exam.slug} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                  <div>
-                    <Link href={`/certificates/${exam.slug}`} className="text-sm font-medium hover:underline">
-                      {exam.title}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">
-                      {exam.track} · {exam.duration_minutes} minutes · proctored
-                    </p>
-                  </div>
-                  <span className="font-editorial text-2xl">{rupees(exam.price_paise)}</span>
-                </li>
-              ))}
+              {(exams.data ?? []).map((exam) => {
+                const open = openAttempts.get(exam.id);
+                return (
+                  <li key={exam.slug} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <div>
+                      <Link href={`/certificates/${exam.slug}`} className="text-sm font-medium hover:underline">
+                        {exam.title}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        {exam.track} · {exam.duration_minutes} minutes · proctored
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-editorial text-2xl">{rupees(exam.price_paise)}</span>
+                      {open ? (
+                        <Button variant="ink" size="sm" asChild>
+                          <Link href={`/certificates/attempt/${open.id}`}>
+                            {open.status === "ready" ? "Start exam" : "Resume"}
+                          </Link>
+                        </Button>
+                      ) : (
+                        <CheckoutButton
+                          item={{ kind: "exam", slug: exam.slug }}
+                          mode={buyer.mode}
+                          signedIn={buyer.signedIn}
+                          email={buyer.email}
+                          name={buyer.name}
+                          loginNext={`/certificates/${exam.slug}`}
+                          label="Take exam"
+                          variant="outline"
+                          size="sm"
+                        />
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
             <Link href="/certificates" className="mt-3 inline-block text-sm underline underline-offset-4">
               See the exams
             </Link>
-          </div>
-
-          <div>
-            <h3 className="font-editorial text-2xl font-normal">Mock interviews with experts</h3>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              A live case or fit interview with an ex-consultant, banker or product lead, then written feedback.
-              Sessions are {rupees(EXPERT_PRICE_RANGE_PAISE.min)}–{rupees(EXPERT_PRICE_RANGE_PAISE.max)}, set by each
-              expert, and you pay when you book.
-            </p>
-            <p className="mt-4 text-sm text-muted-foreground">
-              <Link href="/experts" className="text-foreground underline underline-offset-4">Browse experts</Link>
-              {" · "}
-              <Link href="/experts/apply" className="underline underline-offset-4 hover:text-foreground">
-                Become an expert
-              </Link>{" "}
-              (you keep {100 - EXPERT_COMMISSION_BPS / 100}% of each session)
-            </p>
           </div>
         </div>
       </section>

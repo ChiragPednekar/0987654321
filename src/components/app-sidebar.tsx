@@ -94,7 +94,6 @@ const STUDENT_GROUPS: { heading: string; items: Item[] }[] = [
       { href: "/progress", label: "Progress", icon: BarChart3 },
       { href: "/bookmarks", label: "Bookmarks", icon: BookMarked },
       { href: "/certificates", label: "Certificates", icon: Award },
-      { href: "/experts", label: "Expert mocks", icon: UserRoundCheck },
       { href: "/upgrade", label: "Upgrade", icon: Sparkles },
     ],
   },

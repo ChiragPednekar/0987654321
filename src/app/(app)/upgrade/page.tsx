@@ -64,7 +64,7 @@ export default async function UpgradePage() {
           still top up below if you run low.
         </p>
       ) : (
-        <div className="mt-12">
+        <div id="plans" className="mt-12 scroll-mt-10">
           <PlanTable buyer={buyer} />
         </div>
       )}
@@ -90,17 +90,11 @@ export default async function UpgradePage() {
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
           Pay as you go · no plan needed
         </p>
-        <div className="mt-3 grid gap-6 sm:grid-cols-2">
+        <div className="mt-3 max-w-xl">
           <Link href="/certificates" className="group block border-b border-border pb-4">
             <p className="font-editorial text-2xl group-hover:underline">Certificate exams</p>
             <p className="mt-1 text-sm text-muted-foreground">
               A proctored case exam with a verifiable certificate — ₹399 an attempt.
-            </p>
-          </Link>
-          <Link href="/experts" className="group block border-b border-border pb-4">
-            <p className="font-editorial text-2xl group-hover:underline">Expert mock interviews</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              A live interview with an ex-consultant, banker or product lead, with written feedback.
             </p>
           </Link>
         </div>

@@ -47,8 +47,8 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
   const on = camera.status === "on";
   const note = describe(camera);
   const audioLevel = camera.live?.audioLevel ?? 0;
-  const hasGazeStrikes = camera.signals.lookingAwayEvents > 0;
-  const hasVoiceStrikes = camera.signals.voiceEvents > 0;
+  const hasGazeStrikes = camera.signals.lookingAwayEvents > 0 || Boolean(camera.live?.lookingAway);
+  const hasVoiceStrikes = camera.signals.voiceEvents > 0 || Boolean(camera.live?.voiceDetected);
 
   if (!on) {
     return createPortal(
@@ -254,9 +254,13 @@ function describe(camera: CameraApi): { ok: boolean; text: string } {
   if (live.voiceDetected || (live.voiceCount > 0 && live.voiceCount <= 3)) {
     const count = Math.min(3, Math.max(1, live.voiceCount));
     const prefix = count === 3 ? "Final warning" : `Warning ${count} of 3`;
+    const voiceAlert =
+      live.voiceCount > 0
+        ? `Voice detected — ${prefix} (Please remain silent)`
+        : `Voice detected — Please remain silent`;
     return {
       ok: false,
-      text: `Voice detected — ${prefix} (Please remain silent)`,
+      text: voiceAlert,
     };
   }
 
@@ -265,9 +269,11 @@ function describe(camera: CameraApi): { ok: boolean; text: string } {
     const count = Math.min(5, Math.max(1, live.lookingAwayCount));
     const prefix = count === 5 ? "Final warning" : `Warning ${count} of 5`;
     const tip = live.lookingAwayTip ?? "Please face the screen";
+    const alertText =
+      live.lookingAwayCount > 0 ? `${tip} (${prefix})` : `${tip} — Please face the screen`;
     return {
       ok: false,
-      text: `${tip} (${prefix})`,
+      text: alertText,
     };
   }
 

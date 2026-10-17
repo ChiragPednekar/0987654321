@@ -222,20 +222,6 @@ export function extractHeadPose(
   landmarks: NormalizedLandmark[],
   transformationMatrix?: number[] | null,
 ): HeadPoseEuler {
-  // If MediaPipe 4x4 transformation matrix is available (column-major)
-  if (transformationMatrix && transformationMatrix.length >= 16) {
-    const m = transformationMatrix;
-    // Rotation matrix elements:
-    // m[0]=r00, m[1]=r10, m[2]=r20
-    // m[4]=r01, m[5]=r11, m[6]=r21
-    // m[8]=r02, m[9]=r12, m[10]=r22
-    const yaw = Math.atan2(m[2], m[10]) * (180.0 / Math.PI);
-    const pitch = Math.asin(Math.max(-1.0, Math.min(1.0, -m[6]))) * (180.0 / Math.PI);
-    const roll = Math.atan2(m[4], m[5]) * (180.0 / Math.PI);
-    return { yaw, pitch, roll };
-  }
-
-  // Fallback: estimate from landmarks geometry
   const nose = landmarks[MESH_INDICES.noseTip] ?? landmarks[2];
   const rEye = landmarks[MESH_INDICES.rightEye.outer] ?? landmarks[0];
   const lEye = landmarks[MESH_INDICES.leftEye.outer] ?? landmarks[1];
@@ -251,23 +237,69 @@ export function extractHeadPose(
 
   if (eyeDist < 1e-4) return { yaw: 0, pitch: 0, roll: 0 };
 
-  // Yaw: horizontal displacement of nose relative to eye midpoint
-  const yaw = ((nose.x - eyeMidX) / eyeDist) * 55.0;
+  // 1. Geometric Yaw from horizontal nose displacement relative to eye midpoint
+  let geomYaw = ((nose.x - eyeMidX) / eyeDist) * 55.0;
 
-  // Roll: angle of eye line relative to horizontal
-  const roll = (Math.atan2(lEye.y - rEye.y, lEye.x - rEye.x) * 180.0) / Math.PI;
+  // Enhance with facial contour / cheek keypoints if available and distinct
+  const rCheek = landmarks[234];
+  const lCheek = landmarks[454];
+  if (rCheek && lCheek) {
+    const cheekDist = Math.hypot(lCheek.x - rCheek.x, lCheek.y - rCheek.y);
+    if (cheekDist > 0.15) {
+      const distR = Math.hypot(nose.x - rCheek.x, nose.y - rCheek.y);
+      const distL = Math.hypot(nose.x - lCheek.x, nose.y - lCheek.y);
+      const totalW = distR + distL;
+      if (totalW > 1e-4) {
+        // Turned left (distR > distL) => positive yaw
+        const asymmetry = (distR - distL) / totalW;
+        const cheekYaw = asymmetry * 65.0;
+        geomYaw = geomYaw * 0.45 + cheekYaw * 0.55;
+      }
+    }
+  }
 
-  // Pitch: vertical displacement of nose/chin relative to eyes
-  let pitch = 0;
+  // 2. Geometric Roll from eye line angle
+  const geomRoll = (Math.atan2(lEye.y - rEye.y, lEye.x - rEye.x) * 180.0) / Math.PI;
+
+  // 3. Geometric Pitch from vertical foreshortening
+  let geomPitch = 0;
   if (chin) {
     const faceHeight = Math.hypot(chin.x - eyeMidX, chin.y - eyeMidY);
     const expectedNoseY = eyeMidY + faceHeight * 0.42;
-    pitch = ((nose.y - expectedNoseY) / eyeDist) * 50.0;
+    geomPitch = ((nose.y - expectedNoseY) / eyeDist) * 50.0;
   } else {
-    pitch = ((nose.y - eyeMidY) / eyeDist - 0.38) * 50.0;
+    geomPitch = ((nose.y - eyeMidY) / eyeDist - 0.38) * 50.0;
   }
 
-  return { yaw, pitch, roll };
+  // If MediaPipe 4x4 transformation matrix is available, compute normalized matrix pose
+  if (transformationMatrix && transformationMatrix.length >= 16) {
+    const m = transformationMatrix;
+    let m00 = m[0], m01 = m[4], m02 = m[8];
+    let m10 = m[1], m11 = m[5], m12 = m[9];
+    let m20 = m[2], m21 = m[6], m22 = m[10];
+
+    const l0 = Math.hypot(m00, m10, m20);
+    const l1 = Math.hypot(m01, m11, m21);
+    const l2 = Math.hypot(m02, m12, m22);
+
+    if (l0 > 1e-4) { m00 /= l0; m10 /= l0; m20 /= l0; }
+    if (l1 > 1e-4) { m01 /= l1; m11 /= l1; m21 /= l1; }
+    if (l2 > 1e-4) { m02 /= l2; m12 /= l2; m22 /= l2; }
+
+    const matYaw = Math.atan2(m20, m22) * (180.0 / Math.PI);
+    const matPitch = Math.asin(Math.max(-1.0, Math.min(1.0, -m21))) * (180.0 / Math.PI);
+    const matRoll = Math.atan2(m01, m11) * (180.0 / Math.PI);
+
+    // Fuse geometric pose with matrix pose.
+    // Real-world head turns overcome MediaPipe's weak-perspective damping via landmark geometry.
+    const yaw = Math.abs(geomYaw) > Math.abs(matYaw) ? geomYaw : matYaw;
+    const pitch = Math.abs(geomPitch) > Math.abs(matPitch) ? (geomPitch > 0 ? Math.abs(geomPitch) : -Math.abs(geomPitch)) : matPitch;
+    const roll = Math.abs(geomRoll) > Math.abs(matRoll) ? geomRoll : matRoll;
+
+    return { yaw, pitch, roll };
+  }
+
+  return { yaw: geomYaw, pitch: geomPitch, roll: geomRoll };
 }
 
 /**

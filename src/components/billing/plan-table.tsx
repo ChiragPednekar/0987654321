@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { CheckoutButton } from "@/components/billing/checkout-button";
 import type { CheckoutMode } from "@/lib/billing/checkout-mode";
 import {
@@ -156,7 +158,23 @@ export function TopupList({ buyer, canTopUp }: { buyer: Omit<Buyer, "blocked" | 
                     variant="outline"
                     size="sm"
                   />
-                ) : null}
+                ) : !buyer.signedIn ? (
+                  <CheckoutButton
+                    item={{ kind: "topup", code }}
+                    mode={buyer.mode}
+                    signedIn={false}
+                    email={buyer.email}
+                    name={buyer.name}
+                    loginNext="/upgrade#topups"
+                    label="Buy"
+                    variant="outline"
+                    size="sm"
+                  />
+                ) : (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="#plans">Upgrade first</Link>
+                  </Button>
+                )}
               </div>
             </li>
           );

@@ -516,7 +516,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     let phone = false;
     let phoneScore = 0;
     let book = false;
-    let lookingAway = false;
+    let lookingAwayLive = false;
+    let lookingAwayConfirmed = false;
     let lookingAwayReason: string | undefined;
     let lookingAwayTip: string | undefined;
     let gazeState: GazeDetectionState = "NORMAL";
@@ -534,7 +535,9 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
             const matrix = lmResult.facialTransformationMatrixes?.[0]?.data;
             const blendshapes = lmResult.faceBlendshapes?.[0]?.categories;
             const analysis = gazeTrackerRef.current.processFrame(landmarks, elapsed, matrix, blendshapes);
-            lookingAway = !analysis.facing;
+            const isOffScreen = analysis.state === "OFF_SCREEN_CONFIRMED" || analysis.state === "SUSPECTED_OFF_SCREEN";
+            lookingAwayConfirmed = analysis.state === "OFF_SCREEN_CONFIRMED";
+            lookingAwayLive = isOffScreen;
             lookingAwayReason = analysis.reason;
             lookingAwayTip = analysis.tip;
             gazeState = analysis.state;
@@ -545,7 +548,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
             // Same dwell clock as any other look away: a face that drops out
             // of the mesh for a moment is not a strike.
             const analysis = gazeTrackerRef.current.processFrame(null, elapsed);
-            lookingAway = !analysis.facing;
+            lookingAwayConfirmed = analysis.state === "OFF_SCREEN_CONFIRMED";
+            lookingAwayLive = true;
             lookingAwayReason = "face_not_visible";
             lookingAwayTip = "Face not visible — stay in camera view";
             gazeState = analysis.state;
@@ -556,9 +560,12 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
           if (faces === 1) {
             const keypoints = faceResult.detections[0]?.keypoints;
             const pose = checkPoseAndGaze(keypoints, poseBaselineRef.current);
-            lookingAway = fallbackDwellRef.current.update(!pose.facing, elapsed).confirmed;
+            const dwellRes = fallbackDwellRef.current.update(!pose.facing, elapsed);
+            lookingAwayConfirmed = dwellRes.confirmed;
+            lookingAwayLive = !pose.facing;
             if (!pose.facing) {
               lookingAwayReason = pose.reason;
+              lookingAwayTip = pose.tip;
             } else if (pose.metrics && baselineSamplesRef.current.length < 5) {
               // Calibrate resting pose from first 5 frontal facing frames
               baselineSamplesRef.current.push({
@@ -575,7 +582,11 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
               }
             }
           } else if (faces === 0) {
-            lookingAway = fallbackDwellRef.current.update(true, elapsed).confirmed;
+            const dwellRes = fallbackDwellRef.current.update(true, elapsed);
+            lookingAwayConfirmed = dwellRes.confirmed;
+            lookingAwayLive = true;
+            lookingAwayReason = "face_not_visible";
+            lookingAwayTip = "Face not visible — stay in camera view";
             gazeState = "FACE_NOT_VISIBLE";
           }
         }
@@ -602,7 +613,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       }
     }
 
-    if (lookingAway && !lookingAwayTip) {
+    if (lookingAwayLive && !lookingAwayTip) {
       if (faces === 0) {
         lookingAwayTip = "Face not visible — stay in camera view";
       } else if (lookingAwayReason === "looking_down") {
@@ -620,7 +631,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
 
     const { state, started } = observe(
       trackerRef.current,
-      { faces, phone, book, covered, lookingAway, voiceDetected },
+      { faces, phone, book, covered, lookingAway: lookingAwayConfirmed, voiceDetected },
       elapsed,
     );
     trackerRef.current = state;
@@ -629,7 +640,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       phone,
       phoneScore,
       covered,
-      lookingAway,
+      lookingAway: lookingAwayLive,
       lookingAwayCount: state.counters.lookingAwayEvents,
       lookingAwayReason,
       lookingAwayTip,
