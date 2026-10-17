@@ -15,11 +15,12 @@ export default async function SignupPage() {
         <h1>
           Create your <em className="italic">account</em>.
         </h1>
-        {/* Sign-up is open (071). Reading is free; practising is Pro, so this
-            promises the library, not free grading. */}
+        {/* Sign-up is open (071), but the product opens only with Pro or a
+            college licence (072), so this promises neither free reading nor
+            free grading. */}
         <p className="text-sm text-muted-foreground">
-          Read all {MARKETED_CASE_FLOOR}+ cases free. Upgrade to CaseCode Pro to
-          have your answers graded — any email works, no college ID needed.
+          {MARKETED_CASE_FLOOR}+ cases, marked against a rubric. Any email works —
+          pick a plan after signing up, or use your college&apos;s licence.
         </p>
       </div>
 

@@ -22,6 +22,7 @@ export default async function AppLayout({
   // Drives the Placement link. Optional enrichment, so a missing service-role
   // key hides the link rather than taking the whole shell down.
   let isInstitutionStaff = false;
+  let entitled = true;
 
   if (profile) {
     const supabase = await createClient();
@@ -50,6 +51,8 @@ export default async function AppLayout({
         .eq("user_id", profile.id)
         .in("role", ["owner", "staff"]);
       isInstitutionStaff = (staffRows ?? 0) > 0;
+      const { data: solve } = await admin.rpc("can_solve", { p_user: profile.id });
+      entitled = solve === true;
     }
   }
 
@@ -72,6 +75,7 @@ export default async function AppLayout({
           <AppSidebar
             role={profile.role}
             isInstitutionStaff={isInstitutionStaff}
+            entitled={entitled}
           />
           <main className="min-w-0 flex-1">{children}</main>
           {/*

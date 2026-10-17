@@ -11,21 +11,21 @@ import { PLAN_ORDER, PLANS, rupees } from "@/lib/pricing";
  * it; an email address on the right domain does not unlock anything by itself
  * (public.can_solve matches on membership).
  *
- * Reading the case and its rubric stays open, so anyone deciding whether to
- * subscribe can see the standard first.
+ * Since 072 the middleware sends an account without a plan to /upgrade
+ * before any case page renders, so this only shows if that gate is bypassed
+ * (for example a licence that lapses while the page is open).
  */
 export function LicenceGate({ signedIn = false }: { signedIn?: boolean; userEmail?: string; userName?: string | null }) {
   return (
     <section className="border-t-2 border-foreground pt-6">
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-        Reading is open · practising needs Pro
+        This needs CaseCode Pro
       </p>
       <h3 className="mt-3 font-editorial text-[1.9rem] font-normal leading-tight">
         Practise this with <em className="italic">CaseCode Pro</em>.
       </h3>
       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-        You can read every case and see how it is marked. Upgrade to write answers and have them graded, and to unlock
-        drills and AI mock interviews.
+        Upgrade to open every case, have your answers graded, and unlock drills and AI mock interviews.
       </p>
 
       <ul className="mt-6 grid max-w-2xl gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
@@ -57,8 +57,8 @@ export function LicenceGate({ signedIn = false }: { signedIn?: boolean; userEmai
           What each plan includes
         </Link>
         {" · "}
-        <Link href="/cases" className="underline underline-offset-4 hover:text-foreground">
-          Keep browsing
+        <Link href="/upgrade" className="underline underline-offset-4 hover:text-foreground">
+          Back to plans
         </Link>
       </p>
     </section>

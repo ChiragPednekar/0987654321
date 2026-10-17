@@ -16,8 +16,8 @@ import { roleHome } from "@/lib/role-home";
  * short note for the placement cells who license it. Section titles share the
  * hero's serif so the page reads as one piece.
  *
- * Anyone can sign up (071) and read the library; practising is CaseCode Pro,
- * bought individually or through a college licence.
+ * Anyone can sign up (071), but the product opens only with CaseCode Pro —
+ * bought individually or through a college licence (072).
  */
 
 const STEPS = [
@@ -98,17 +98,16 @@ export default async function LandingPage() {
                 <ArrowRight className="size-4" />
               </Link>
               <Link
-                href="/cases"
+                href="/pricing"
                 className="text-sm underline decoration-border underline-offset-[6px] transition-colors hover:decoration-foreground"
               >
-                Browse the library
+                See plans
               </Link>
             </div>
           </div>
           {!profile && (
             <p className="mt-6 text-xs text-subtle-foreground md:text-right">
-              Reading is free. Practising is CaseCode Pro, from ₹299 a month —{" "}
-              <Link href="/pricing" className="underline underline-offset-4">see plans</Link>. Already have an account?{" "}
+              CaseCode Pro from ₹299 a month, or free through your college&apos;s licence. Already have an account?{" "}
               <Link href="/login" className="underline underline-offset-4">Sign in</Link>.
             </p>
           )}

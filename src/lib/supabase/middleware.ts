@@ -7,7 +7,8 @@ import { SESSION_COOKIE_OPTIONS } from "./cookie-options";
 /**
  * Anyone can sign up (071), but the app is still behind a session: the list
  * below is the complete set of paths that may be seen without an account.
- * Anything else needs a signed-in, live (not deactivated) account.
+ * Anything else needs a signed-in, live account — and, except for
+ * OPEN_WITHOUT_PLAN, a plan or a campus licence (072).
  *
  * /certificate/<code> is public on purpose — it is the verification page an
  * employer opens from a CV.
@@ -26,6 +27,49 @@ const PUBLIC_PATHS = [
   "/how-grading-works",
   "/certificate",
 ];
+
+/**
+ * What a signed-in account without a plan or licence may still open: the ways
+ * to pay, its own account, and the expert pages an interviewer who is not a
+ * student needs. Everything else redirects to /upgrade (072).
+ */
+const OPEN_WITHOUT_PLAN = [
+  "/upgrade",
+  "/pricing",
+  "/purchases",
+  "/settings",
+  "/profile",
+  "/notifications",
+  "/experts/apply",
+  "/experts/dashboard",
+  "/api/billing",
+  "/api/settings",
+  "/api/notifications",
+  "/api/experts/apply",
+  "/api/experts/me",
+  "/api/experts/bookings",
+];
+
+function isOpenWithoutPlan(pathname: string): boolean {
+  return OPEN_WITHOUT_PLAN.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+function redirectTo(
+  request: NextRequest,
+  response: NextResponse,
+  pathname: string,
+  params: Record<string, string> = {},
+) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  const redirectResponse = NextResponse.redirect(url);
+  response.cookies.getAll().forEach((cookie) => {
+    redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+  });
+  return redirectResponse;
+}
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some(
@@ -100,23 +144,24 @@ export async function updateSession(request: NextRequest) {
   }
 
   /**
-   * Invite-only gate.
+   * Access gate: a live account, and a plan or licence (072).
    *
-   * RLS already returns nothing to an account that is not on the list, but
-   * almost every page under (app) renders through the service-role client,
-   * which bypasses RLS by design. So for those pages this check is the only
-   * thing standing between a de-listed account and the questions.
+   * RLS already returns no content to an account without either, but almost
+   * every page under (app) renders through the service-role client, which
+   * bypasses RLS by design. So for those pages this check is the only thing
+   * standing between an unpaid account and the product.
    *
-   * Costs one RPC on non-public paths. That is the price of the service-role
-   * rendering; shrinking it by trusting the JWT would mean trusting a token
-   * issued before the address was removed.
+   * Costs one RPC (app_gate) on non-public paths. That is the price of the
+   * service-role rendering; trusting the JWT instead would mean trusting a
+   * token issued before a plan ran out.
    */
   if (user && isProtected) {
-    const { data: allowed } = await supabase.rpc("has_access", {
-      p_user: user.id,
-    });
+    const { data: gate } = await supabase.rpc("app_gate");
+    const row = Array.isArray(gate) ? gate[0] : gate;
 
-    if (allowed === false) {
+    // A deactivated account: nothing at all. Only an explicit false counts —
+    // a failed lookup must not send every paying student to a "closed" page.
+    if (row?.live === false) {
       // An API caller gets a status it can act on, not a login page. This is
       // the gate that matters for the routes reading through the service-role
       // client, where RLS withholds nothing.
@@ -126,18 +171,31 @@ export async function updateSession(request: NextRequest) {
           { status: 403 },
         );
       }
-
-      const url = request.nextUrl.clone();
-      url.pathname = "/no-access";
-      url.search = "";
-      const redirectResponse = NextResponse.redirect(url);
-      response.cookies.getAll().forEach((cookie) => {
-        redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
-      });
-      return redirectResponse;
+      return redirectTo(request, response, "/no-access");
     }
-    // A null/errored result deliberately does NOT redirect: a failed lookup
-    // must not lock out the whole platform. RLS still withholds the rows.
+
+    /**
+     * The paywall (072). Without a plan or a live campus licence, the only
+     * things an account may open are the ways to pay and its own account.
+     *
+     * This FAILS CLOSED: a lookup that errors is treated as unpaid. Almost
+     * every page renders through the service-role client, so RLS cannot hold
+     * the line behind a failed check. A paying student who hits a hiccup lands
+     * on /upgrade, which reads their plan through the service role and shows
+     * it — one click back.
+     */
+    if (row?.entitled !== true && !isOpenWithoutPlan(pathname)) {
+      if (isApi) {
+        return NextResponse.json(
+          {
+            error: "CaseCode needs a plan or your college's licence. Upgrade to continue.",
+            upgrade: true,
+          },
+          { status: 402 },
+        );
+      }
+      return redirectTo(request, response, "/upgrade", { from: pathname });
+    }
   }
 
   /**

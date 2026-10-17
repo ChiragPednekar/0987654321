@@ -5,7 +5,6 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import { checkoutMode, checkoutModeFor } from "@/lib/billing/checkout-mode";
 import { getAccess, purchaseBlock, type Access } from "@/lib/subscription";
-import { DOMAINS, MARKETED_CASE_FLOOR } from "@/lib/constants";
 import { EXPERT_COMMISSION_BPS, EXPERT_PRICE_RANGE_PAISE, PLANS, USAGE_WINDOW, rupees } from "@/lib/pricing";
 
 export const metadata: Metadata = {
@@ -16,15 +15,9 @@ export const metadata: Metadata = {
 /**
  * Everything CaseCode sells, on one page: the three plans, top-ups, the
  * certificate exams and expert mock interviews — then the campus licence for
- * colleges. Set like the front page: type, rules and space, no boxed price
+ * colleges. Nothing in the product opens without one of the two (072). Set like the front page: type, rules and space, no boxed price
  * cards, and every line is something the product actually does.
  */
-
-const FREE = [
-  `Read all ${MARKETED_CASE_FLOOR}+ cases across ${DOMAINS.length} domains`,
-  "See each case's rubric before you start",
-  "Learning paths and leaderboards",
-];
 
 const FAQ: { q: string; a: string }[] = [
   {
@@ -41,7 +34,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "What happens when my plan ends?",
-    a: "Practising stops on the day it ends; everything you have done stays on your account. Unused top-up credits stay valid for a year and work again as soon as you have a plan.",
+    a: "Access stops on the day it ends; everything you have done stays on your account and comes back when you renew. Unused top-up credits stay valid for a year.",
   },
   {
     q: "How do I pay?",
@@ -77,8 +70,8 @@ export default async function PricingPage() {
           Practise properly, <em className="italic">from {rupees(PLANS.monthly.pricePaise)} a month</em>.
         </h1>
         <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-          Reading the library is free. CaseCode Pro adds graded answers, AI mock interviews and every drill. Sign up
-          with any email — no college ID needed.
+          CaseCode Pro opens the whole library: every case, graded answers, AI mock interviews and every drill. Sign
+          up with any email — no college ID needed — or get it free through your college&apos;s licence.
         </p>
       </header>
 
@@ -162,15 +155,6 @@ export default async function PricingPage() {
           >
             Ask about a campus licence
           </a>
-        </p>
-      </section>
-
-      {/* --------------------------------------------------------- free --- */}
-      <section className="mt-12 grid gap-6 border-t border-border pt-6 lg:grid-cols-[18rem_1fr]">
-        <h2 className="font-editorial text-3xl font-normal">Free, for everyone</h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {FREE.join(" · ")}.{" "}
-          <Link href="/cases" className="text-foreground underline underline-offset-4">Browse the library</Link>
         </p>
       </section>
 
