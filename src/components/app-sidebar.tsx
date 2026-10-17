@@ -191,9 +191,9 @@ const RECRUITER_GROUPS: { heading: string; items: Item[] }[] = [
 ];
 
 /**
- * The menu for an account with neither a plan nor a licence: the middleware
- * sends every other page to /upgrade (072), so listing them would only be a
- * row of links that bounce.
+ * The menu for an account with neither a plan nor a licence: the way to pay,
+ * and the two products sold on their own. The middleware sends every other
+ * page to /upgrade (072), so listing them would only be links that bounce.
  */
 const UNPAID_GROUPS: { heading: string; items: Item[] }[] = [
   {
@@ -201,6 +201,13 @@ const UNPAID_GROUPS: { heading: string; items: Item[] }[] = [
     items: [
       { href: "/upgrade", label: "Upgrade", icon: Sparkles },
       { href: "/pricing", label: "Plans & pricing", icon: ListOrdered },
+    ],
+  },
+  {
+    heading: "No plan needed",
+    items: [
+      { href: "/certificates", label: "Certificates", icon: Award },
+      { href: "/experts", label: "Expert mocks", icon: UserRoundCheck },
     ],
   },
 ];

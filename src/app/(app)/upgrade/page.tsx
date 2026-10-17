@@ -63,8 +63,8 @@ export default async function UpgradePage({ searchParams }: { searchParams: Prom
         <p className="mt-8 max-w-2xl border-l-2 border-foreground pl-4 text-sm">
           <span className="font-medium">That page needs CaseCode Pro.</span>{" "}
           <span className="text-muted-foreground">
-            Everything on CaseCode opens once you have a plan — or once your placement cell adds you to your
-            college&apos;s licence.
+            CaseCode opens once you have a plan — or once your placement cell adds you to your college&apos;s
+            licence. Certificate exams and expert interviews can be bought on their own, below.
           </span>
         </p>
       ) : null}
@@ -97,17 +97,25 @@ export default async function UpgradePage({ searchParams }: { searchParams: Prom
         {quota && (access?.canSolve || access?.pro) ? <QuotaCard quota={quota} title="Where you stand" /> : null}
       </div>
 
-      <p className="mt-14 text-xs text-muted-foreground">
-        Also on CaseCode:{" "}
-        <Link href="/certificates" className="underline underline-offset-4 hover:text-foreground">
-          proctored certificate exams
-        </Link>{" "}
-        and{" "}
-        <Link href="/experts" className="underline underline-offset-4 hover:text-foreground">
-          mock interviews with experts
-        </Link>
-        .
-      </p>
+      <section className="mt-16 border-t-2 border-foreground pt-5">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+          Pay as you go · no plan needed
+        </p>
+        <div className="mt-3 grid gap-6 sm:grid-cols-2">
+          <Link href="/certificates" className="group block border-b border-border pb-4">
+            <p className="font-editorial text-2xl group-hover:underline">Certificate exams</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              A proctored case exam with a verifiable certificate — ₹399 an attempt.
+            </p>
+          </Link>
+          <Link href="/experts" className="group block border-b border-border pb-4">
+            <p className="font-editorial text-2xl group-hover:underline">Expert mock interviews</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              A live interview with an ex-consultant, banker or product lead, with written feedback.
+            </p>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

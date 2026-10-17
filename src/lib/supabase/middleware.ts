@@ -30,8 +30,12 @@ const PUBLIC_PATHS = [
 
 /**
  * What a signed-in account without a plan or licence may still open: the ways
- * to pay, its own account, and the expert pages an interviewer who is not a
- * student needs. Everything else redirects to /upgrade (072).
+ * to pay, its own account, and the two products sold on their own — the
+ * certificate exams and expert mock interviews, which anyone may buy without a
+ * plan. Everything else redirects to /upgrade (072).
+ *
+ * /api/proctor is here because a certificate exam is proctored: the page
+ * reports lockouts and camera evidence there, for the caller's own sitting.
  */
 const OPEN_WITHOUT_PLAN = [
   "/upgrade",
@@ -40,14 +44,14 @@ const OPEN_WITHOUT_PLAN = [
   "/settings",
   "/profile",
   "/notifications",
-  "/experts/apply",
-  "/experts/dashboard",
+  "/certificates",
+  "/experts",
   "/api/billing",
   "/api/settings",
   "/api/notifications",
-  "/api/experts/apply",
-  "/api/experts/me",
-  "/api/experts/bookings",
+  "/api/certificates",
+  "/api/experts",
+  "/api/proctor",
 ];
 
 function isOpenWithoutPlan(pathname: string): boolean {
