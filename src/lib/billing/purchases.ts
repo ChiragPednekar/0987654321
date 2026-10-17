@@ -194,6 +194,27 @@ export async function resolveItem(admin: Admin, userId: string, item: PurchaseIt
   }
 }
 
+/**
+ * A free exam attempt for a complimentary account (074): the same checks as a
+ * paid one (published, no unused attempt waiting), then the attempt is created
+ * with no purchase behind it.
+ */
+export async function freeExamAttempt(
+  admin: Admin,
+  userId: string,
+  slug: string,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const resolved = await resolveItem(admin, userId, { kind: "exam", slug });
+  if (!resolved.ok) return { status: resolved.status, body: { error: resolved.error } };
+  const { data, error } = await admin
+    .from("cert_attempts")
+    .insert({ exam_id: resolved.item.itemRef as string, user_id: userId, status: "ready" })
+    .select("id")
+    .single();
+  if (error || !data) return { status: 500, body: { error: "Could not create the attempt." } };
+  return { status: 200, body: { mode: "complimentary", redirect: `/certificates/attempt/${data.id}` } };
+}
+
 export async function createPurchase(
   admin: Admin,
   userId: string,

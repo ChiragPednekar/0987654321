@@ -58,7 +58,7 @@ export interface QuotaStatus {
   topups: { gradings: number; interviews: number };
   /** What the plan alone would still allow now, before top-ups. */
   planLeft: { gradings: number; interviews: number };
-  /** Admins are not metered. */
+  /** Admins and complimentary accounts (074) are not metered at all. */
   exempt: boolean;
 }
 
@@ -173,10 +173,12 @@ export function buildQuotaStatus(facts: QuotaFacts, now = new Date()): QuotaStat
   };
 
   // ---- 3. what is usable now ----------------------------------------------
-  const periodLeft = {
-    gradings: Math.max(0, gradingLimit - gradingsUsed),
-    interviews: Math.max(0, interviewLimit - interviewsUsed),
-  };
+  const periodLeft = facts.exempt
+    ? { gradings: Infinity, interviews: Infinity }
+    : {
+        gradings: Math.max(0, gradingLimit - gradingsUsed),
+        interviews: Math.max(0, interviewLimit - interviewsUsed),
+      };
   const windowLeft = facts.exempt
     ? { gradings: Infinity, interviews: Infinity }
     : {
@@ -211,7 +213,7 @@ export async function getQuotaStatus(admin: Admin, userId: string): Promise<Quot
   const now = new Date();
   const nowIso = now.toISOString();
 
-  const [quotaRow, seats, subRows, profile, creditRows] = await Promise.all([
+  const [quotaRow, seats, subRows, profile, creditRows, comp] = await Promise.all([
     admin.rpc("quota_status", {
       p_user: userId,
       p_window_days: QUOTA.windowDays,
@@ -237,6 +239,7 @@ export async function getQuotaStatus(admin: Admin, userId: string): Promise<Quot
       .select("kind, amount, used")
       .eq("user_id", userId)
       .gt("expires_at", nowIso),
+    admin.rpc("is_complimentary", { p_user: userId }),
   ]);
 
   const row = Array.isArray(quotaRow.data) ? quotaRow.data[0] : quotaRow.data;
@@ -283,7 +286,7 @@ export async function getQuotaStatus(admin: Admin, userId: string): Promise<Quot
       uses: ((uses.data ?? []) as UsageMoment[]).map((u) => ({ kind: u.kind, at: u.at })),
       debits: (debits.data ?? []).map((d) => ({ kind: d.kind as QuotaKind, at: d.created_at })),
       credits,
-      exempt: profile.data?.role === "admin",
+      exempt: profile.data?.role === "admin" || comp.data === true,
     },
     now,
   );

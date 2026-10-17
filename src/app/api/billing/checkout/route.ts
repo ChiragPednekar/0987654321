@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createOrder, CURRENCY } from "@/lib/billing/razorpay";
 import { checkoutModeFor } from "@/lib/billing/checkout-mode";
-import { createPurchase, fulfilPurchase, itemSchema, receiptPath, resolveItem } from "@/lib/billing/purchases";
+import { createPurchase, freeExamAttempt, fulfilPurchase, itemSchema, receiptPath, resolveItem } from "@/lib/billing/purchases";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +26,18 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid item." }, { status: 400 });
 
   const admin = createAdminClient();
+
+  // Complimentary accounts (074) get CaseCode's own products free: an exam
+  // attempt is created directly, with no purchase. Expert sessions stay paid —
+  // that money is the expert's — and plans or top-ups are never needed.
+  if (parsed.data.kind === "exam") {
+    const { data: comp } = await admin.rpc("is_complimentary", { p_user: user.id });
+    if (comp === true) {
+      const free = await freeExamAttempt(admin, user.id, parsed.data.slug);
+      return NextResponse.json(free.body, { status: free.status });
+    }
+  }
+
   const mode = await checkoutModeFor(admin, user);
   if (mode === "closed") {
     return NextResponse.json(

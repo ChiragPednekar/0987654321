@@ -26,12 +26,16 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
   const exam = data as CertExamRow | null;
   if (!exam || !exam.is_published) notFound();
 
-  const [{ data: attempts }, mode] = await Promise.all([
+  const [{ data: attempts }, mode, comp] = await Promise.all([
     profile
       ? admin.from("cert_attempts").select("*").eq("exam_id", exam.id).eq("user_id", profile.id).order("created_at", { ascending: false })
       : Promise.resolve({ data: [] as CertAttemptRow[] }),
     profile ? checkoutModeFor(admin, profile) : Promise.resolve(checkoutMode()),
+    profile ? admin.rpc("is_complimentary", { p_user: profile.id }) : Promise.resolve({ data: false }),
   ]);
+  // Complimentary accounts (074) take exams free; the checkout route creates
+  // the attempt directly, whatever the payment mode.
+  const included = comp.data === true;
   const open = ((attempts ?? []) as CertAttemptRow[]).find((a) => ["ready", "in_progress"].includes(attemptState(a)));
   const passed = ((attempts ?? []) as CertAttemptRow[]).find((a) => a.passed && a.certificate_code);
 
@@ -73,18 +77,20 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
             ) : (
               <CheckoutButton
                 item={{ kind: "exam", slug: exam.slug }}
-                mode={mode}
+                mode={included ? "demo" : mode}
                 signedIn={Boolean(profile)}
                 email={profile?.email}
                 name={profile?.full_name}
                 loginNext={`/certificates/${exam.slug}`}
-                label={profile ? `Pay ${rupees(exam.price_paise)}` : "Sign in to take this exam"}
+                label={!profile ? "Sign in to take this exam" : included ? "Start an attempt — included" : `Pay ${rupees(exam.price_paise)}`}
                 size="lg"
                 className="w-full"
               />
             )}
           </div>
-          {mode === "demo" && !open && profile ? (
+          {included ? (
+            <p className="mt-3 text-xs text-muted-foreground">Included with your account — no payment.</p>
+          ) : mode === "demo" && !open && profile ? (
             <p className="mt-3 text-xs text-muted-foreground">Demo checkout: no money is taken.</p>
           ) : null}
           {passed ? (

@@ -208,7 +208,7 @@ export function DeckReviewer({
           </label>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              Your file is read and discarded, never stored. Uses 1 graded answer ({left} left).
+              Your file is read and discarded, never stored. Uses 1 graded answer ({Number.isFinite(left) ? `${left} left` : "unlimited"}).
             </p>
             <Button onClick={review} disabled={!file || tooBig || notPdf || busy || !entitled || left <= 0}>
               {busy ? <Loader2 className="animate-spin" /> : <Presentation />}

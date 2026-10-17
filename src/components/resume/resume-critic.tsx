@@ -258,7 +258,7 @@ export function ResumeCritic({
                 ? `${bullets.length} bullets — up to ${RESUME_LIMITS.maxBullets} at a time.`
                 : tooLong !== -1
                   ? `Bullet ${tooLong + 1} is over ${RESUME_LIMITS.maxBulletChars} characters.`
-                  : `${bullets.length} of ${RESUME_LIMITS.maxBullets} bullets · uses 1 graded answer (${left} left)`}
+                  : `${bullets.length} of ${RESUME_LIMITS.maxBullets} bullets · uses 1 graded answer (${Number.isFinite(left) ? `${left} left` : "unlimited"})`}
             </p>
             <Button
               onClick={critique}

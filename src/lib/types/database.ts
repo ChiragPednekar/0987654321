@@ -1956,6 +1956,8 @@ export interface Database {
        * has_pro/can_solve: "may you see anything", not "may you spend AI budget".
        */
       has_access: { Args: { p_user: string }; Returns: boolean };
+      /** On complimentary_access: every premium feature, free and unmetered (074). */
+      is_complimentary: { Args: { p_user: string }; Returns: boolean };
       /** For the calling account only: live, and entitled (can_solve) — 072. */
       app_gate: { Args: Record<string, never>; Returns: { live: boolean; entitled: boolean }[] };
       /** Spends one top-up credit; false when none is left (071). */

@@ -83,6 +83,12 @@ export function CheckoutButton({
         return;
       }
 
+      if (order.mode === "complimentary") {
+        toast.success("Included with your account.");
+        router.push(order.redirect);
+        return;
+      }
+
       if (order.mode === "demo") {
         toast.success("Payment received.");
         router.push(order.redirect);

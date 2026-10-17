@@ -271,6 +271,16 @@ describe("quota status", () => {
     expect(status.window.gradingsUsed).toBe(USAGE_WINDOW.gradings);
   });
 
+  it("does not meter complimentary accounts at all — no allowance, no window", () => {
+    const uses = Array.from({ length: 600 }, () => ({ kind: "gradings" as const, at: hoursAgo(1) }));
+    const status = buildQuotaStatus(
+      facts({ row: { is_pro: true, grading_limit: 250, interview_limit: 50, gradings_used: 600, interviews_used: 0 }, uses, exempt: true }),
+      NOW,
+    );
+    expect(status.gradingsLeft).toBe(Infinity);
+    expect(status.interviewsLeft).toBe(Infinity);
+  });
+
   it("does not meter admins against the window", () => {
     const uses = Array.from({ length: 20 }, () => ({ kind: "gradings" as const, at: hoursAgo(1) }));
     const status = buildQuotaStatus(facts({ uses, exempt: true }), NOW);

@@ -36,6 +36,16 @@ export function QuotaCard({ quota, title = "Your allowance" }: { quota: QuotaSta
   const windowFull = windowRows.some((r) => r.used >= r.limit);
   const hasTopups = quota.topups.gradings > 0 || quota.topups.interviews > 0;
 
+  if (quota.exempt) {
+    return (
+      <Section title={title} action={<span className="font-mono text-xs text-muted-foreground">unlimited</span>}>
+        <p className="pt-4 text-sm text-muted-foreground">
+          This account has complimentary access: every premium feature, with no allowance or 5-hour limit.
+        </p>
+      </Section>
+    );
+  }
+
   return (
     <Section
       title={title}
