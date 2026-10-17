@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyWebhookSignature } from "@/lib/billing/razorpay";
+import { activatePaidPeriod } from "@/lib/subscription";
 
 export const dynamic = "force-dynamic";
 
@@ -58,28 +59,19 @@ export async function POST(request: NextRequest) {
     event.event === "payment.captured" || event.event === "order.paid";
 
   if (captured) {
-    const periodEnd = new Date();
-    periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-
-    await admin
-      .from("subscriptions")
-      .update({
-        status: "active",
-        razorpay_payment_id: entity?.id ?? null,
-        current_period_end: periodEnd.toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", subscription.id);
-
-    await admin
-      .from("users")
-      .update({ plan: "pro" })
-      .eq("id", subscription.user_id);
+    // Same activation as /api/billing/verify; only the first one counts.
+    await activatePaidPeriod(admin, {
+      subscriptionId: subscription.id,
+      userId: subscription.user_id,
+      paymentId: entity?.id ?? null,
+    });
   } else if (event.event === "payment.failed") {
+    // Never downgrade a period that is already paid and active.
     await admin
       .from("subscriptions")
       .update({ status: "halted", updated_at: new Date().toISOString() })
-      .eq("id", subscription.id);
+      .eq("id", subscription.id)
+      .neq("status", "active");
   }
 
   return NextResponse.json({ ok: true });

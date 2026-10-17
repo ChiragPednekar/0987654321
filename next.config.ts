@@ -26,14 +26,14 @@ const isProd = process.env.NODE_ENV === "production";
 const SUPABASE = "https://*.supabase.co";
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://checkout.razorpay.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  `connect-src 'self' ${SUPABASE} wss://*.supabase.co`,
+  `connect-src 'self' ${SUPABASE} wss://*.supabase.co https://lumberjack.razorpay.com https://api.razorpay.com`,
   "media-src 'self' blob: mediastream:",
   "worker-src 'self' blob:",
-  "frame-src 'none'",
+  "frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com",
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",
@@ -68,15 +68,7 @@ const nextConfig: NextConfig = {
     // Keep server action payloads generous — case answers are long-form essays.
     serverActions: { bodySizeLimit: "2mb" },
   },
-  /**
-   * The ₹499 retail plan is off the site while CaseCode sells campus licences,
-   * so its page is gone. Old links and bookmarks land on the home page rather
-   * than a 404. Temporary, not permanent: the page may come back, and a 308
-   * would be cached by browsers for good.
-   */
-  async redirects() {
-    return [{ source: "/pricing", destination: "/", permanent: false }];
-  },
+
   async headers() {
     return [
       {

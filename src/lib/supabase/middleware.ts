@@ -24,6 +24,7 @@ const PUBLIC_PATHS = [
   "/auth",
   "/terms",
   "/privacy",
+  "/pricing",
   "/how-grading-works",
 ];
 

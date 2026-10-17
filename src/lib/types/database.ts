@@ -1894,6 +1894,7 @@ export interface Database {
       has_pro: { Args: { p_user: string }; Returns: boolean };
       /** Entitlement to practise, not merely browse (20250101000032). */
       can_solve: { Args: { p_user: string }; Returns: boolean };
+      has_active_subscription: { Args: { p_user: string }; Returns: boolean };
       /**
        * Whether the address is on access_allowlist — invite-only entry
        * (20250101000060). Independent of has_pro/can_solve: this is "may you
@@ -2230,6 +2231,9 @@ export type SubscriptionRow = {
   razorpay_subscription_id: string | null;
   razorpay_payment_id: string | null;
   current_period_end: string | null;
+  /** 'razorpay' for a verified payment, 'manual' for an admin grant (069). */
+  source: "razorpay" | "manual";
+  granted_by: string | null;
   created_at: string;
   updated_at: string;
 };

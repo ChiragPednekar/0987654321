@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UserFilters } from "@/components/admin/user-filters";
 import { UserActions } from "@/components/admin/user-actions";
-import { formatNumber, plural, timeAgo } from "@/lib/utils";
+import { SubscriptionActions } from "@/components/admin/subscription-actions";
+import { formatDay, formatNumber, plural, timeAgo } from "@/lib/utils";
 import type { AdminUserRow } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Users" };
@@ -32,6 +33,26 @@ export default async function UsersPage({
   });
 
   const rows = (data ?? []) as AdminUserRow[];
+
+  // Live subscription periods for the accounts on this page: the latest end
+  // per account, and whether any of it was granted by hand.
+  const { data: subs } = rows.length
+    ? await admin
+        .from("subscriptions")
+        .select("user_id, current_period_end, source")
+        .in("user_id", rows.map((r) => r.id))
+        .eq("status", "active")
+        .gt("current_period_end", new Date().toISOString())
+    : { data: [] as { user_id: string; current_period_end: string | null; source: string }[] };
+  const subByUser = new Map<string, { endsAt: string; manual: boolean }>();
+  for (const sub of subs ?? []) {
+    if (!sub.current_period_end) continue;
+    const prev = subByUser.get(sub.user_id);
+    subByUser.set(sub.user_id, {
+      endsAt: !prev || sub.current_period_end > prev.endsAt ? sub.current_period_end : prev.endsAt,
+      manual: Boolean(prev?.manual) || sub.source === "manual",
+    });
+  }
   const deactivated = rows.filter((u) => u.deactivated_at).length;
   const total = rows[0]?.total_count ?? 0;
   const pages = Math.max(1, Math.ceil(Number(total) / PAGE_SIZE));
@@ -91,7 +112,12 @@ export default async function UsersPage({
                           {u.role}
                         </Badge>
                         {u.plan === "pro" ? (
-                          <Badge variant="secondary" className="ml-1">Pro</Badge>
+                          <Badge variant="secondary" className="ml-1" title="Granted by hand, no end date">Pro</Badge>
+                        ) : null}
+                        {subByUser.get(u.id) ? (
+                          <Badge variant="secondary" className="ml-1" title={subByUser.get(u.id)!.manual ? "Includes a hand-granted period" : "Paid subscription"}>
+                            Pro until {formatDay(subByUser.get(u.id)!.endsAt)}
+                          </Badge>
                         ) : null}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
@@ -103,6 +129,11 @@ export default async function UsersPage({
                         {u.last_active ? timeAgo(u.last_active) : "never"}
                       </td>
                       <td className="px-4 py-3 text-right">
+                        <SubscriptionActions
+                          userId={u.id}
+                          name={u.full_name ?? u.email}
+                          hasManualGrant={Boolean(subByUser.get(u.id)?.manual)}
+                        />
                         <UserActions
                           userId={u.id}
                           name={u.full_name ?? u.email}

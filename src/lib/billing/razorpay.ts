@@ -9,9 +9,11 @@ import crypto from "node:crypto";
  *
  *   1. The browser never states what was paid. It reports an order id and a
  *      signature; the server recomputes that signature and decides.
- *   2. `users.plan` is written only after a verified signature, and only by
- *      the service role — 20250101000017 revokes writes on subscriptions from
- *      both anon and authenticated, so a client cannot grant itself Pro.
+ *   2. A subscription period is activated only after a verified signature,
+ *      and only by the service role — 20250101000017 revokes writes on
+ *      subscriptions from anon and authenticated, so a client cannot grant
+ *      itself Pro. Payments no longer touch users.plan: the period is the
+ *      entitlement, and it ends on its own (src/lib/subscription.ts).
  */
 
 export const PRO_PRICE_PAISE = 49_900; // ₹499

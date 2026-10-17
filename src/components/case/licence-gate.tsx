@@ -1,56 +1,96 @@
 import Link from "next/link";
-import { Lock } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { UpgradeButton } from "@/components/billing/upgrade-button";
+import { razorpayConfigured } from "@/lib/billing/razorpay";
+import { QUOTA } from "@/lib/constants";
 
 /**
- * Shown in place of the answer editor when the account may browse but not
+ * Shown in place of the answer editor when the account may read but not
  * practise.
  *
- * Deliberately not a wall. The case, its data and the rubric are all still on
- * the page above this — someone evaluating CaseCode for a placement cell should
- * be able to read a real case and see exactly how it would be marked, because
- * that is the argument for buying. What is withheld is being graded.
+ * Two ways in, and this says exactly what each is:
+ *   1. An individual CaseCode Pro subscription (₹499/year) — for a student
+ *      whose college has not bought CaseCode.
+ *   2. A seat on the college's campus licence. A placement cell ADDS students
+ *      to its licence; an email address on the right domain does not unlock
+ *      anything by itself (public.can_solve matches on membership).
  *
- * The copy avoids "upgrade": this is not a consumer paywall, and the reader
- * usually cannot buy their own way past it. The action that actually unblocks
- * them is their college taking a licence, so that is what it asks for.
+ * Reading the case and its rubric stays open, so anyone deciding whether to
+ * subscribe can see the standard first.
  */
-export function LicenceGate() {
+export function LicenceGate({
+  signedIn = false,
+  userEmail,
+  userName,
+}: {
+  signedIn?: boolean;
+  userEmail?: string;
+  userName?: string | null;
+}) {
   return (
-    <Card>
-      <CardContent className="p-8 text-center">
-        <span className="mx-auto flex size-10 items-center justify-center rounded-full bg-muted">
-          <Lock className="size-4 text-muted-foreground" />
-        </span>
+    <section className="border-t-2 border-foreground pt-6">
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        Reading is open · practising needs access
+      </p>
+      <h3 className="mt-3 font-editorial text-[1.9rem] font-normal leading-tight">
+        Practise this with <em className="italic">CaseCode Pro</em>.
+      </h3>
+      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        You can read every case and see how it is marked. Writing an answer and
+        having it graded, drills, and mock interviews need access — your own
+        subscription, or a seat on your college&apos;s campus licence.
+      </p>
 
-        <h3 className="mt-4 text-base font-medium">
-          Solving is for licensed accounts
-        </h3>
-
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-          You can read every case, follow the learning paths and see how each one
-          is marked. Submitting an answer for AI grading needs an account covered
-          by a campus licence.
-        </p>
-
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-          {/* No public price list while licences are agreed per college: the
-              conversation is the next step, so this starts one. */}
-          <Button asChild>
-            <a href="mailto:chiragpednekar3@gmail.com?subject=CaseCode%20campus%20licence">
-              Licence your campus
-            </a>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/cases">Keep browsing</Link>
-          </Button>
+      <div className="mt-7 grid gap-x-12 gap-y-8 sm:grid-cols-2">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+            On your own
+          </p>
+          <p className="mt-2 font-editorial text-3xl">
+            ₹499 <span className="font-sans text-sm text-muted-foreground">/ year</span>
+          </p>
+          <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
+            <li>{QUOTA.pro.gradings} graded answers</li>
+            <li>{QUOTA.pro.interviews} AI mock interviews</li>
+            <li>SQL, Excel, aptitude, drills and peer interviews</li>
+          </ul>
+          <UpgradeButton
+            signedIn={signedIn}
+            paymentsOpen={razorpayConfigured()}
+            email={userEmail}
+            name={userName}
+            label="Subscribe — ₹499 a year"
+            variant="ink"
+            className="mt-5"
+          />
         </div>
 
-        <p className="mt-4 text-xs text-muted-foreground">
-          Already at a licensed college? Sign in with your college email address.
-        </p>
-      </CardContent>
-    </Card>
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+            Through your college
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            If your placement cell has a campus licence, they add you to it and
+            there is nothing to pay. Ask them — or have them get in touch about
+            licensing CaseCode for your batch.
+          </p>
+          <a
+            href="mailto:chiragpednekar3@gmail.com?subject=CaseCode%20campus%20licence"
+            className="mt-4 inline-block text-sm underline underline-offset-4"
+          >
+            Ask about a campus licence
+          </a>
+        </div>
+      </div>
+
+      <p className="mt-7 text-xs text-muted-foreground">
+        <Link href="/pricing" className="underline underline-offset-4 hover:text-foreground">
+          What each plan includes
+        </Link>
+        {" · "}
+        <Link href="/cases" className="underline underline-offset-4 hover:text-foreground">
+          Keep browsing
+        </Link>
+      </p>
+    </section>
   );
 }

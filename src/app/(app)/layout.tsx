@@ -91,6 +91,9 @@ export default async function AppLayout({
             <Link href="/how-grading-works" className="hover:text-foreground">
               How grading works
             </Link>
+            <Link href="/pricing" className="hover:text-foreground">
+              Pricing
+            </Link>
             <Link href="/terms" className="hover:text-foreground">
               Terms
             </Link>

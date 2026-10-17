@@ -13,6 +13,11 @@ import { PracticePreferences } from "@/components/settings/practice-preferences"
 import { NotificationSettings } from "@/components/settings/notification-settings";
 import { PrivacySettings } from "@/components/settings/privacy-settings";
 import { DataManagement } from "@/components/settings/data-management";
+import { UpgradeButton } from "@/components/billing/upgrade-button";
+import { createAdminClientOrNull } from "@/lib/supabase/admin";
+import { razorpayConfigured } from "@/lib/billing/razorpay";
+import { canRenew, getAccess, RENEWAL_WINDOW_DAYS } from "@/lib/subscription";
+import { formatDay } from "@/lib/utils";
 import type { UniversityRow } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -28,10 +33,16 @@ export default async function SettingsPage() {
   if (!profile) redirect("/login?next=/settings");
 
   const supabase = await createClient();
-  const { data: universities } = await supabase
-    .from("universities")
-    .select("id, name, short_name, domain, country, created_at")
-    .order("name");
+  const admin = createAdminClientOrNull();
+  const [{ data: universities }, access] = await Promise.all([
+    supabase
+      .from("universities")
+      .select("id, name, short_name, domain, country, created_at")
+      .order("name"),
+    // The same database checks every gated route uses, so this card can never
+    // say "Pro" while the routes say no — or the reverse.
+    admin ? getAccess(admin, profile.id) : Promise.resolve(null),
+  ]);
 
   /**
    * The real privacy state, so the toggles open showing what is actually true.
@@ -185,6 +196,71 @@ export default async function SettingsPage() {
                 </Link>{" "}
                 for what deletion removes.
               </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Subscription & Access</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              <Row label="Access">
+                <Badge variant={access?.pro ? "default" : "secondary"}>
+                  {access?.pro ? "CaseCode Pro" : access?.canSolve ? "Practice (through your college)" : "Reading only"}
+                </Badge>
+              </Row>
+              {access?.subscription && (
+                <Row label="Pro until">
+                  <span className="text-muted-foreground">
+                    {formatDay(access.subscription.endsAt)}
+                    {access.subscription.source === "manual" ? " · granted by CaseCode" : ""}
+                  </span>
+                </Row>
+              )}
+              {access?.subscription ? (
+                canRenew(access.subscription.endsAt) ? (
+                  <div className="space-y-2 border-l-2 border-foreground/40 pl-4">
+                    <p className="text-xs text-muted-foreground">Your year is nearly up — renewing adds a year to what is left.</p>
+                    <UpgradeButton
+                      signedIn
+                      paymentsOpen={razorpayConfigured()}
+                      email={profile.email}
+                      name={profile.full_name}
+                      label="Renew for a year — ₹499"
+                      variant="ink"
+                      size="sm"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">You can renew in the last {RENEWAL_WINDOW_DAYS} days.</p>
+                )
+              ) : access?.pro ? (
+                <p className="text-xs text-muted-foreground">
+                  Pro comes with your account through your college or the CaseCode team — nothing to pay.
+                </p>
+              ) : (
+                <div className="space-y-3 border-l-2 border-foreground/40 pl-4">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {access?.canSolve
+                      ? "You can practise through your college. Pro adds the AI interviewer and a larger allowance."
+                      : "Your college hasn't licensed CaseCode for you. Subscribe to practise: graded answers, drills and AI mock interviews."}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <UpgradeButton
+                      signedIn
+                      paymentsOpen={razorpayConfigured()}
+                      email={profile.email}
+                      name={profile.full_name}
+                      label="Subscribe — ₹499 a year"
+                      variant="ink"
+                      size="sm"
+                    />
+                    <Link href="/pricing" className="text-xs underline underline-offset-4">
+                      Compare plans
+                    </Link>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

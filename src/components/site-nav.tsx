@@ -36,6 +36,7 @@ import { roleHome } from "@/lib/role-home";
 const PUBLIC_LINKS = [
   { href: "/cases", label: "Cases" },
   { href: "/paths", label: "Paths" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/groups", label: "Groups" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
@@ -45,6 +46,7 @@ const STUDENT_LINKS = [
   { href: "/cases", label: "Cases" },
   { href: "/paths", label: "Paths" },
   { href: "/groups", label: "Groups" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/peer", label: "Peer interviews" },
   { href: "/progress", label: "Progress" },
   { href: "/bookmarks", label: "Bookmarks" },

@@ -12,10 +12,10 @@ type Admin = SupabaseClient<Database>;
  * cell to buy. Submitting an answer, running a drill, building a model or
  * talking to the interviewer are the licensed product.
  *
- * Entitlement lives in public.can_solve() (20250101000032) rather than here, so
+ * Entitlement lives in public.can_solve() (20250101000069) rather than here, so
  * one definition governs every route and there is no second copy to drift. It
- * covers three cases: an elevated role grant, a named individual, or membership
- * of an institution with a live licence.
+ * covers four cases: an elevated role grant, a named individual, an individual
+ * subscription (or Pro granted by hand), or a seat on a live campus licence.
  *
  * Called with the service-role client — can_solve() takes a user id as an
  * argument, so EXECUTE is deliberately withheld from anon and authenticated.
@@ -42,6 +42,6 @@ export async function canSolve(admin: Admin, userId: string): Promise<boolean> {
 /** The 403 body every gated route returns, so the client can render one state. */
 export const SOLVE_DENIAL = {
   error:
-    "Solving is available to licensed accounts. Ask your college to activate CaseCode, or sign in with your college email address.",
+    "Practising needs CaseCode access: subscribe to CaseCode Pro yourself, or use an account your college has licensed.",
   code: "not_entitled" as const,
 };

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyPaymentSignature } from "@/lib/billing/razorpay";
+import { activatePaidPeriod } from "@/lib/subscription";
 
 const bodySchema = z.object({
   razorpay_order_id: z.string().min(1),
@@ -65,20 +66,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
   }
 
-  const periodEnd = new Date();
-  periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+  // The period, not users.plan, is the entitlement: when it ends, access
+  // ends. Idempotent with the webhook — whichever arrives first activates.
+  const { endsAt } = await activatePaidPeriod(admin, {
+    subscriptionId: subscription.id,
+    userId: user.id,
+    paymentId: body.razorpay_payment_id,
+  });
 
-  await admin
-    .from("subscriptions")
-    .update({
-      status: "active",
-      razorpay_payment_id: body.razorpay_payment_id,
-      current_period_end: periodEnd.toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", subscription.id);
-
-  await admin.from("users").update({ plan: "pro" }).eq("id", user.id);
-
-  return NextResponse.json({ plan: "pro" });
+  return NextResponse.json({ plan: "pro", ends_at: endsAt });
 }

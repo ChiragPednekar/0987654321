@@ -99,10 +99,16 @@ export default async function CaseDetailPage({
   // Pro gate (spec §16). The flag existed and rendered a badge but let anyone
   // straight through; a plan that unlocks nothing is not a plan. Admins keep
   // access so they can review what they are selling.
-  const locked =
-    caseData.is_pro &&
-    profile?.plan !== "pro" &&
-    profile?.role !== "admin";
+  // "Pro" is has_pro(): a live subscription, a campus licence that grants it,
+  // Pro granted by hand, or an admin — not users.plan alone, which a paying
+  // subscriber does not have.
+  const proClient = profile ? createAdminClientOrNull() : null;
+  const isPro = Boolean(
+    profile &&
+      (profile.role === "admin" ||
+        (proClient && (await proClient.rpc("has_pro", { p_user: profile.id })).data === true)),
+  );
+  const locked = caseData.is_pro && !isPro;
 
   if (locked) {
     return (
@@ -515,7 +521,7 @@ export default async function CaseDetailPage({
             <CaseChat
               caseId={caseData.id}
               signedIn={Boolean(profile)}
-              isPro={profile?.plan === "pro" || profile?.role === "admin"}
+              isPro={isPro}
             />
           </div>
         </TabsContent>
@@ -554,7 +560,11 @@ export default async function CaseDetailPage({
                   storageKey={`casecode:draft:${caseData.id}`}
                 />
               ) : (
-                <LicenceGate />
+                <LicenceGate
+                  signedIn={Boolean(profile)}
+                  userEmail={profile?.email}
+                  userName={profile?.full_name}
+                />
               )}
             </div>
 

@@ -60,7 +60,11 @@ export default async function PeerLobbyPage() {
 
       {!entitled ? (
         <div className="mt-6">
-          <LicenceGate />
+          <LicenceGate
+            signedIn={true}
+            userEmail={profile.email}
+            userName={profile.full_name}
+          />
         </div>
       ) : (
         <>

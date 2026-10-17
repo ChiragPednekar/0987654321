@@ -7,6 +7,7 @@ import {
   PRO_PRICE_PAISE,
   PRO_CURRENCY,
 } from "@/lib/billing/razorpay";
+import { canRenew, getAccess, RENEWAL_WINDOW_DAYS } from "@/lib/subscription";
 
 export const dynamic = "force-dynamic";
 
@@ -30,15 +31,22 @@ export async function POST() {
 
   const admin = createAdminClient();
 
-  const { data: profile } = await admin
-    .from("users")
-    .select("plan")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profile?.plan === "pro") {
+  // Pro from somewhere other than a subscription — a campus licence that
+  // grants it, Pro granted by hand, an admin — needs no payment. A subscriber
+  // may renew in the last RENEWAL_WINDOW_DAYS of their period, and the new
+  // year is added on top of what is left (see nextPeriodEnd).
+  const access = await getAccess(admin, user.id);
+  if (access.pro && !access.subscription) {
     return NextResponse.json(
-      { error: "You are already on Pro." },
+      { error: "Your account already has CaseCode Pro." },
+      { status: 409 },
+    );
+  }
+  if (access.subscription && !canRenew(access.subscription.endsAt)) {
+    return NextResponse.json(
+      {
+        error: `Your Pro runs until ${new Date(access.subscription.endsAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" })}. You can renew in the last ${RENEWAL_WINDOW_DAYS} days.`,
+      },
       { status: 409 },
     );
   }
@@ -63,6 +71,7 @@ export async function POST() {
     user_id: user.id,
     plan: "pro",
     status: "created",
+    source: "razorpay",
     razorpay_subscription_id: order.id,
   });
 
