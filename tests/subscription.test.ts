@@ -3,6 +3,7 @@ import {
   activatePaidPeriod,
   canRenew,
   nextPeriodEnd,
+  purchaseBlock,
   RENEWAL_WINDOW_DAYS,
   SUBSCRIPTION_DAYS,
 } from "@/lib/subscription";
@@ -79,5 +80,31 @@ describe("activatePaidPeriod", () => {
     const r = await activatePaidPeriod(admin as never, { subscriptionId: "sub-1", userId: "u", paymentId: "pay_1" });
     expect(r.activated).toBe(false);
     expect(r.endsAt).toBe(stored);
+  });
+});
+
+describe("purchaseBlock", () => {
+  const now = new Date("2026-10-17T00:00:00Z");
+  const sub = (days: number) => ({
+    id: "s",
+    endsAt: new Date(now.getTime() + days * 86_400_000).toISOString(),
+    source: "demo" as const,
+  });
+
+  it("lets an account with no access buy", () => {
+    expect(purchaseBlock({ pro: false, canSolve: false, subscription: null }, now)).toBeNull();
+  });
+
+  it("lets a college-licensed student without Pro buy", () => {
+    expect(purchaseBlock({ pro: false, canSolve: true, subscription: null }, now)).toBeNull();
+  });
+
+  it("refuses Pro that does not come from a subscription", () => {
+    expect(purchaseBlock({ pro: true, canSolve: true, subscription: null }, now)).toMatch(/already has/);
+  });
+
+  it("refuses a subscriber until the renewal window, then allows it", () => {
+    expect(purchaseBlock({ pro: true, canSolve: true, subscription: sub(200) }, now)).toMatch(/renew in the last 30 days/);
+    expect(purchaseBlock({ pro: true, canSolve: true, subscription: sub(20) }, now)).toBeNull();
   });
 });

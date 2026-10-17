@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import type { CheckoutMode } from "@/lib/billing/checkout-mode";
 
 /**
  * Razorpay checkout for individual CaseCode Pro subscription (spec §16).
@@ -14,6 +16,10 @@ import { Button } from "@/components/ui/button";
  * inside Razorpay's hosted checkout widget. On completion, the order id,
  * payment id, and cryptographic HMAC signature are verified by /api/billing/verify
  * before Pro access is granted.
+ *
+ * Until Razorpay is connected the deployment runs a demo checkout instead
+ * (src/lib/billing/checkout-mode.ts): the button goes to /upgrade, which shows
+ * the amount and opens the subscription without taking money.
  */
 
 declare global {
@@ -26,11 +32,10 @@ export interface UpgradeButtonProps {
   signedIn: boolean;
   alreadyPro?: boolean;
   /**
-   * Razorpay keys are configured on this deployment. Read on the server
-   * (razorpayConfigured) and passed down; when false the button says payments
-   * are not open yet instead of failing after a click.
+   * How this deployment takes payment, read on the server (checkoutMode) and
+   * passed down so the button never offers a checkout the route will refuse.
    */
-  paymentsOpen?: boolean;
+  mode: CheckoutMode;
   email?: string;
   name?: string | null;
   label?: string;
@@ -43,7 +48,7 @@ export interface UpgradeButtonProps {
 export function UpgradeButton({
   signedIn,
   alreadyPro = false,
-  paymentsOpen = true,
+  mode,
   email,
   name,
   label = "Upgrade to Pro — ₹499/yr",
@@ -132,7 +137,18 @@ export function UpgradeButton({
     );
   }
 
-  if (!paymentsOpen) {
+  if (mode === "demo") {
+    return (
+      <Button className={className} variant={variant} size={size} asChild>
+        <Link href={signedIn ? "/upgrade" : "/login?next=/upgrade"}>
+          <Sparkles className="mr-1.5 size-3.5" />
+          {label}
+        </Link>
+      </Button>
+    );
+  }
+
+  if (mode === "closed") {
     return (
       <Button className={className} variant="outline" size={size} disabled>
         Payments open soon

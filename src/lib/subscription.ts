@@ -44,7 +44,7 @@ export function canRenew(endsAt: string | Date | null, now = new Date()): boolea
 export interface ActiveSubscription {
   id: string;
   endsAt: string;
-  source: "razorpay" | "manual";
+  source: "razorpay" | "manual" | "demo";
 }
 
 /** The live subscription period that ends last, if any. */
@@ -91,6 +91,29 @@ export async function getAccess(admin: Admin, userId: string): Promise<Access> {
     canSolve: !solve.error && solve.data === true,
     subscription,
   };
+}
+
+/**
+ * Why this account may not buy a period right now, or null if it may.
+ *
+ * Pro from somewhere other than a subscription — a campus licence that grants
+ * it, Pro granted by hand, an admin — needs no payment. A subscriber may renew
+ * in the last RENEWAL_WINDOW_DAYS of their period, and the new year is added
+ * on top of what is left (see nextPeriodEnd). Shared by the Razorpay and demo
+ * checkouts so the two can never disagree.
+ */
+export function purchaseBlock(access: Access, now = new Date()): string | null {
+  if (access.pro && !access.subscription) return "Your account already has CaseCode Pro.";
+  if (access.subscription && !canRenew(access.subscription.endsAt, now)) {
+    const day = new Date(access.subscription.endsAt).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "Asia/Kolkata",
+    });
+    return `Your Pro runs until ${day}. You can renew in the last ${RENEWAL_WINDOW_DAYS} days.`;
+  }
+  return null;
 }
 
 /**

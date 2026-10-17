@@ -15,7 +15,7 @@ import { PrivacySettings } from "@/components/settings/privacy-settings";
 import { DataManagement } from "@/components/settings/data-management";
 import { UpgradeButton } from "@/components/billing/upgrade-button";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
-import { razorpayConfigured } from "@/lib/billing/razorpay";
+import { checkoutMode } from "@/lib/billing/checkout-mode";
 import { canRenew, getAccess, RENEWAL_WINDOW_DAYS } from "@/lib/subscription";
 import { formatDay } from "@/lib/utils";
 import type { UniversityRow } from "@/lib/types/database";
@@ -213,7 +213,7 @@ export default async function SettingsPage() {
                 <Row label="Pro until">
                   <span className="text-muted-foreground">
                     {formatDay(access.subscription.endsAt)}
-                    {access.subscription.source === "manual" ? " · granted by CaseCode" : ""}
+                    {access.subscription.source === "manual" ? " · granted by CaseCode" : access.subscription.source === "demo" ? " · demo payment" : ""}
                   </span>
                 </Row>
               )}
@@ -223,7 +223,7 @@ export default async function SettingsPage() {
                     <p className="text-xs text-muted-foreground">Your year is nearly up — renewing adds a year to what is left.</p>
                     <UpgradeButton
                       signedIn
-                      paymentsOpen={razorpayConfigured()}
+                      mode={checkoutMode()}
                       email={profile.email}
                       name={profile.full_name}
                       label="Renew for a year — ₹499"
@@ -248,10 +248,10 @@ export default async function SettingsPage() {
                   <div className="flex flex-wrap items-center gap-3">
                     <UpgradeButton
                       signedIn
-                      paymentsOpen={razorpayConfigured()}
+                      mode={checkoutMode()}
                       email={profile.email}
                       name={profile.full_name}
-                      label="Subscribe — ₹499 a year"
+                      label="Upgrade — ₹499 a year"
                       variant="ink"
                       size="sm"
                     />

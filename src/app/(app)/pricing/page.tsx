@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { UpgradeButton } from "@/components/billing/upgrade-button";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
-import { razorpayConfigured } from "@/lib/billing/razorpay";
+import { checkoutMode, type CheckoutMode } from "@/lib/billing/checkout-mode";
 import { canRenew, getAccess, RENEWAL_WINDOW_DAYS, type Access } from "@/lib/subscription";
 import { DOMAINS, MARKETED_CASE_FLOOR, QUOTA } from "@/lib/constants";
 import { formatDay } from "@/lib/utils";
@@ -65,7 +65,7 @@ export default async function PricingPage() {
   const profile = await getCurrentUser();
   const admin = createAdminClientOrNull();
   const access: Access | null = profile && admin ? await getAccess(admin, profile.id) : null;
-  const paymentsOpen = razorpayConfigured();
+  const mode = checkoutMode();
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-20 pt-10 sm:px-6">
@@ -99,7 +99,7 @@ export default async function PricingPage() {
             ))}
           </ul>
           <div className="mt-6">
-            <IndividualStatus access={access} signedIn={Boolean(profile)} paymentsOpen={paymentsOpen} email={profile?.email} name={profile?.full_name} />
+            <IndividualStatus access={access} signedIn={Boolean(profile)} mode={mode} email={profile?.email} name={profile?.full_name} />
           </div>
         </section>
 
@@ -155,24 +155,24 @@ export default async function PricingPage() {
 function IndividualStatus({
   access,
   signedIn,
-  paymentsOpen,
+  mode,
   email,
   name,
 }: {
   access: Access | null;
   signedIn: boolean;
-  paymentsOpen: boolean;
+  mode: CheckoutMode;
   email?: string;
   name?: string | null;
 }) {
   const button = (label: string) => (
-    <UpgradeButton signedIn={signedIn} paymentsOpen={paymentsOpen} email={email} name={name} label={label} variant="ink" size="lg" />
+    <UpgradeButton signedIn={signedIn} mode={mode} email={email} name={name} label={label} variant="ink" size="lg" />
   );
 
   if (!signedIn) {
     return (
       <>
-        {button("Sign in to subscribe")}
+        {button("Sign in to upgrade")}
         <p className="mt-3 text-xs text-muted-foreground">CaseCode is invite-only: sign in with the address you were invited with.</p>
       </>
     );
@@ -186,7 +186,7 @@ function IndividualStatus({
           <span className="font-medium">You have Pro</span>
           <span className="text-muted-foreground">
             {" "}until {formatDay(access.subscription.endsAt)}
-            {access.subscription.source === "manual" ? " (granted by CaseCode)" : ""}.
+            {access.subscription.source === "manual" ? " (granted by CaseCode)" : access.subscription.source === "demo" ? " (demo payment)" : ""}.
           </span>
         </p>
         {renewable ? (
@@ -204,13 +204,13 @@ function IndividualStatus({
 
   return (
     <>
-      {button("Subscribe — ₹499 a year")}
+      {button("Upgrade — ₹499 a year")}
       {access?.canSolve ? (
         <p className="mt-3 text-xs text-muted-foreground">
           You can already practise through your college; Pro adds the AI interviewer and the larger allowance.
         </p>
       ) : null}
-      {!paymentsOpen ? (
+      {mode === "closed" ? (
         <p className="mt-3 text-xs text-muted-foreground">Online payment isn&apos;t switched on yet.</p>
       ) : null}
     </>

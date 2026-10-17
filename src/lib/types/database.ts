@@ -2232,7 +2232,7 @@ export type SubscriptionRow = {
   razorpay_payment_id: string | null;
   current_period_end: string | null;
   /** 'razorpay' for a verified payment, 'manual' for an admin grant (069). */
-  source: "razorpay" | "manual";
+  source: "razorpay" | "manual" | "demo";
   granted_by: string | null;
   created_at: string;
   updated_at: string;
