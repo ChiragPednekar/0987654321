@@ -9,11 +9,9 @@ export const metadata: Metadata = { title: "Access" };
 /**
  * Two questions, deliberately answered by two lists on one page.
  *
- * The lower panel is who may sign in at all — 20250101000060 made the platform
- * invite-only, so an address absent from it cannot create an account. The
- * upper panel is which dashboard they land on once they can. Both exist so
- * that neither onboarding a teacher nor inviting a batch requires handing out
- * database credentials.
+ * The upper panel is which dashboard an account lands on. The lower panel
+ * used to be who may sign in at all; sign-up is open since 071, and the list
+ * now names the testers allowed to use the demo checkout on production.
  */
 export default async function AccessPage() {
   const admin = createAdminClient();

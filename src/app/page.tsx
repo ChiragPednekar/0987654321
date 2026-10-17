@@ -16,8 +16,8 @@ import { roleHome } from "@/lib/role-home";
  * short note for the placement cells who license it. Section titles share the
  * hero's serif so the page reads as one piece.
  *
- * Access is through a college licence (invite-only), so the page never offers
- * a free sign-up it cannot honour.
+ * Anyone can sign up (071) and read the library; practising is CaseCode Pro,
+ * bought individually or through a college licence.
  */
 
 const STEPS = [
@@ -63,7 +63,7 @@ export default async function LandingPage() {
 
   const primary = profile
     ? { href: roleHome(profile.role), label: "Go to your dashboard" }
-    : { href: "/login", label: "Sign in" };
+    : { href: "/signup", label: "Create a free account" };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -107,8 +107,9 @@ export default async function LandingPage() {
           </div>
           {!profile && (
             <p className="mt-6 text-xs text-subtle-foreground md:text-right">
-              Access comes through your college — sign in with the address you
-              were invited with.
+              Reading is free. Practising is CaseCode Pro, from ₹299 a month —{" "}
+              <Link href="/pricing" className="underline underline-offset-4">see plans</Link>. Already have an account?{" "}
+              <Link href="/login" className="underline underline-offset-4">Sign in</Link>.
             </p>
           )}
         </section>

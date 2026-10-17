@@ -30,7 +30,7 @@ export interface UsageEvent {
    * uses any of it up. Typed as a union so a misspelling fails to compile
    * instead of quietly going uncounted.
    */
-  feature?: "competition_entry" | "simulation_debrief" | "group_discussion";
+  feature?: "competition_entry" | "simulation_debrief" | "group_discussion" | "certification";
   model: string | null;
   inputTokens: number;
   outputTokens: number;

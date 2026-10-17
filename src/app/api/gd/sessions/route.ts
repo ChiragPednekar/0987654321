@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
-import { getQuotaStatus, quotaDenial } from "@/lib/quota";
+import { chargeQuota, getQuotaStatus, quotaDenial } from "@/lib/quota";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +52,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No topics available yet." }, { status: 404 });
     }
     topicId = topics[Math.floor(Math.random() * topics.length)].id;
+  }
+
+  // Spends a top-up credit when the plan no longer covers this use (src/lib/quota.ts).
+  if (!(await chargeQuota(admin, user.id, "interviews", quota))) {
+    return NextResponse.json(quotaDenial("interviews", quota), { status: 402 });
   }
 
   const { data: session, error } = await admin

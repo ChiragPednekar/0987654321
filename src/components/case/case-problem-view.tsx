@@ -164,7 +164,7 @@ export function CaseProblemView({
 }
 
 /** Renders the case's `supporting_data` JSON as readable tables. */
-function SupportingData({ data }: { data: Record<string, unknown> }) {
+export function SupportingData({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="space-y-5">
       {Object.entries(data).map(([key, value]) => {

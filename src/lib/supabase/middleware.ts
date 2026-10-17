@@ -5,14 +5,12 @@ import { ROLE_HOMES, mustRedirectFromHome, roleHome } from "@/lib/role-home";
 import { SESSION_COOKIE_OPTIONS } from "./cookie-options";
 
 /**
- * The platform is invite-only: everything is closed except the way in.
+ * Anyone can sign up (071), but the app is still behind a session: the list
+ * below is the complete set of paths that may be seen without an account.
+ * Anything else needs a signed-in, live (not deactivated) account.
  *
- * This used to be the other way round — a short PROTECTED_PREFIXES list, with
- * the library, paths, contests and leaderboard left public as the top of the
- * funnel. 20250101000060 ended that, so the list below is now the complete set
- * of paths that may be seen without an account.
- *
- * Anything not listed here needs a session AND an address on access_allowlist.
+ * /certificate/<code> is public on purpose — it is the verification page an
+ * employer opens from a CV.
  */
 const PUBLIC_PATHS = [
   "/",
@@ -26,6 +24,7 @@ const PUBLIC_PATHS = [
   "/privacy",
   "/pricing",
   "/how-grading-works",
+  "/certificate",
 ];
 
 function isPublic(pathname: string): boolean {

@@ -1,40 +1,24 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { UpgradeButton } from "@/components/billing/upgrade-button";
+import { PlanTable, TopupList } from "@/components/billing/plan-table";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
-import { checkoutMode, type CheckoutMode } from "@/lib/billing/checkout-mode";
-import { canRenew, getAccess, RENEWAL_WINDOW_DAYS, type Access } from "@/lib/subscription";
-import { DOMAINS, MARKETED_CASE_FLOOR, QUOTA } from "@/lib/constants";
-import { formatDay } from "@/lib/utils";
+import { checkoutMode, checkoutModeFor } from "@/lib/billing/checkout-mode";
+import { getAccess, purchaseBlock, type Access } from "@/lib/subscription";
+import { DOMAINS, MARKETED_CASE_FLOOR } from "@/lib/constants";
+import { EXPERT_COMMISSION_BPS, EXPERT_PRICE_RANGE_PAISE, PLANS, USAGE_WINDOW, rupees } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "Subscribe to CaseCode Pro on your own, or practise through your college's campus licence.",
+  description: "CaseCode Pro plans from ₹299 a month, top-up packs, certificate exams and expert mock interviews.",
 };
 
 /**
- * Two ways to practise: an individual subscription for a student whose college
- * has not bought CaseCode, and a campus licence for colleges. Reading the
- * library is free for everyone.
- *
- * Set like the front page — type, rules and space, no boxed price cards — and
- * every line is something the product actually does.
+ * Everything CaseCode sells, on one page: the three plans, top-ups, the
+ * certificate exams and expert mock interviews — then the campus licence for
+ * colleges. Set like the front page: type, rules and space, no boxed price
+ * cards, and every line is something the product actually does.
  */
-
-const PRO = [
-  `${QUOTA.pro.gradings} graded answers a year, marked against each case's rubric`,
-  `${QUOTA.pro.interviews} AI mock interviews with follow-up questions`,
-  "SQL and Excel exercises, aptitude quizzes and quantitative drills",
-  "Peer interview rooms, daily quizzes, CV and slide-deck reviews",
-];
-
-const CAMPUS = [
-  "Every student your placement cell adds can practise — no payment from them",
-  "Teacher pages: batches, assignments, your own questions, marking",
-  "Proctored tests with camera, microphone and window checks",
-  "Batch analytics before placement week",
-];
 
 const FREE = [
   `Read all ${MARKETED_CASE_FLOOR}+ cases across ${DOMAINS.length} domains`,
@@ -44,90 +28,145 @@ const FREE = [
 
 const FAQ: { q: string; a: string }[] = [
   {
-    q: "My college hasn't bought CaseCode. Can I still use it?",
-    a: "Yes — subscribe to CaseCode Pro yourself for ₹499 a year. Access starts as soon as the payment is confirmed.",
+    q: "Do I need a college ID?",
+    a: "No. Sign up with any email address and pick a plan. If your college has a campus licence, your placement cell can add you to it instead.",
   },
   {
-    q: "My college has a campus licence. How do I get in?",
-    a: "Your placement cell adds you to the licence; then you sign in as usual and can practise straight away. Signing up with a college email address does not add you by itself — ask your placement cell.",
+    q: "What is the 5-hour limit?",
+    a: `Like Claude's usage limit: within any 5-hour window you can have up to ${USAGE_WINDOW.gradings} answers graded and take ${USAGE_WINDOW.interviews} mock interviews. The window opens with your first one and resets five hours later. It stops one sitting from using up a month's allowance — and top-up credits keep working past it.`,
   },
   {
-    q: "What happens when my year ends?",
-    a: `Practising stops on the day your year ends; everything you have done stays on your account. You can renew in the last ${RENEWAL_WINDOW_DAYS} days, and the new year is added to whatever is left.`,
+    q: "Does a plan renew automatically?",
+    a: "No. Each plan is a fixed period you pay for once. Near the end you can buy the next one, and it starts the day the current one ends, so you never lose days.",
+  },
+  {
+    q: "What happens when my plan ends?",
+    a: "Practising stops on the day it ends; everything you have done stays on your account. Unused top-up credits stay valid for a year and work again as soon as you have a plan.",
   },
   {
     q: "How do I pay?",
-    a: "Through Razorpay: UPI, cards or net banking. Card details go to Razorpay, never to CaseCode.",
+    a: "Through Razorpay: UPI, cards or net banking. Card details go to Razorpay, never to CaseCode. Prices include GST.",
   },
 ];
 
 export default async function PricingPage() {
   const profile = await getCurrentUser();
   const admin = createAdminClientOrNull();
-  const access: Access | null = profile && admin ? await getAccess(admin, profile.id) : null;
-  const mode = checkoutMode();
+  const [access, mode, exams] = await Promise.all([
+    profile && admin ? getAccess(admin, profile.id) : Promise.resolve(null as Access | null),
+    profile && admin ? checkoutModeFor(admin, profile) : Promise.resolve(checkoutMode()),
+    admin
+      ? admin.from("cert_exams").select("slug, title, track, price_paise, duration_minutes").eq("is_published", true).order("title")
+      : Promise.resolve({ data: [] as { slug: string; title: string; track: string; price_paise: number; duration_minutes: number }[] }),
+  ]);
+
+  const buyer = {
+    signedIn: Boolean(profile),
+    mode,
+    email: profile?.email,
+    name: profile?.full_name,
+    blocked: access ? purchaseBlock(access) : null,
+    access,
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-20 pt-10 sm:px-6">
       <header>
         <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Pricing</p>
         <h1 className="mt-4 font-editorial text-[2.8rem] font-normal leading-[0.98] tracking-[-0.02em] sm:text-[3.8rem]">
-          Practise on your own, <em className="italic">or with your college</em>.
+          Practise properly, <em className="italic">from {rupees(PLANS.monthly.pricePaise)} a month</em>.
         </h1>
         <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-          Reading the library is free for everyone. Writing answers and having
-          them graded, drills and mock interviews come with CaseCode Pro — your
-          own subscription, or a seat on your college&apos;s campus licence.
+          Reading the library is free. CaseCode Pro adds graded answers, AI mock interviews and every drill. Sign up
+          with any email — no college ID needed.
         </p>
       </header>
 
-      <div className="mt-14 grid gap-x-14 gap-y-12 lg:grid-cols-2">
-        {/* ------------------------------------------------ individual --- */}
-        <section className="border-t-2 border-foreground pt-5">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-            CaseCode Pro · on your own
-          </p>
-          <p className="mt-3 font-editorial text-5xl">
-            ₹499 <span className="font-sans text-base text-muted-foreground">/ year</span>
-          </p>
-          <p className="mt-3 text-sm text-muted-foreground">
-            For a student whose college hasn&apos;t bought CaseCode.
-          </p>
-          <ul className="mt-5 divide-y divide-border border-y border-border text-sm">
-            {PRO.map((line) => (
-              <li key={line} className="py-2.5">{line}</li>
-            ))}
-          </ul>
-          <div className="mt-6">
-            <IndividualStatus access={access} signedIn={Boolean(profile)} mode={mode} email={profile?.email} name={profile?.full_name} />
-          </div>
-        </section>
+      <div className="mt-14">
+        <PlanTable buyer={buyer} loginNext="/pricing" />
+      </div>
 
-        {/* ---------------------------------------------------- campus --- */}
-        <section className="border-t-2 border-foreground pt-5">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-            Campus licence · for colleges
+      {/* ------------------------------------------------------- top-ups --- */}
+      <section className="mt-16 grid gap-6 border-t border-border pt-6 lg:grid-cols-[18rem_1fr]">
+        <div>
+          <h2 className="font-editorial text-3xl font-normal">Top-up packs</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Run low before your plan renews? Top up. Credits keep working past the 5-hour limit.
           </p>
-          <p className="mt-3 font-editorial text-5xl">Per seat</p>
-          <p className="mt-3 text-sm text-muted-foreground">
-            For placement cells licensing CaseCode for a batch or a whole cohort.
+        </div>
+        <TopupList buyer={buyer} canTopUp={Boolean(access?.canSolve)} />
+      </section>
+
+      {/* -------------------------------------------------- certificates --- */}
+      <section className="mt-12 grid gap-6 border-t border-border pt-6 lg:grid-cols-[18rem_1fr]">
+        <div>
+          <h2 className="font-editorial text-3xl font-normal">Certificate exams</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            A timed, proctored case exam. Pass it and get a certificate with a verification link for your CV and
+            LinkedIn. You pay per attempt, pass or not.
           </p>
-          <ul className="mt-5 divide-y divide-border border-y border-border text-sm">
-            {CAMPUS.map((line) => (
-              <li key={line} className="py-2.5">{line}</li>
+        </div>
+        <div>
+          <ul className="divide-y divide-border border-y border-border">
+            {(exams.data ?? []).map((exam) => (
+              <li key={exam.slug} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div>
+                  <Link href={`/certificates/${exam.slug}`} className="text-sm font-medium hover:underline">
+                    {exam.title}
+                  </Link>
+                  <p className="text-xs text-muted-foreground">
+                    {exam.track} · {exam.duration_minutes} minutes · proctored
+                  </p>
+                </div>
+                <span className="font-editorial text-2xl">{rupees(exam.price_paise)}</span>
+              </li>
             ))}
           </ul>
+          <Link href="/certificates" className="mt-3 inline-block text-sm underline underline-offset-4">
+            See the exams
+          </Link>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------- experts --- */}
+      <section className="mt-12 grid gap-6 border-t border-border pt-6 lg:grid-cols-[18rem_1fr]">
+        <div>
+          <h2 className="font-editorial text-3xl font-normal">Mock interviews with experts</h2>
+        </div>
+        <div className="text-sm leading-relaxed text-muted-foreground">
+          <p>
+            A live case or fit interview with an ex-consultant, banker or product lead, then written feedback.
+            Sessions are {rupees(EXPERT_PRICE_RANGE_PAISE.min)}–{rupees(EXPERT_PRICE_RANGE_PAISE.max)}, set by each
+            expert, and you pay when you book.
+          </p>
+          <p className="mt-3">
+            <Link href="/experts" className="text-foreground underline underline-offset-4">Browse experts</Link>
+            {" · "}
+            <Link href="/experts/apply" className="underline underline-offset-4 hover:text-foreground">
+              Become an expert
+            </Link>{" "}
+            (you keep {100 - EXPERT_COMMISSION_BPS / 100}% of each session)
+          </p>
+        </div>
+      </section>
+
+      {/* -------------------------------------------------------- campus --- */}
+      <section className="mt-12 grid gap-6 border-t border-border pt-6 lg:grid-cols-[18rem_1fr]">
+        <h2 className="font-editorial text-3xl font-normal">For colleges</h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          A campus licence covers every student your placement cell adds — they pay nothing — with teacher pages,
+          proctored tests and batch analytics.{" "}
           <a
             href="mailto:chiragpednekar3@gmail.com?subject=CaseCode%20campus%20licence"
-            className="mt-6 inline-block text-sm underline underline-offset-4"
+            className="text-foreground underline underline-offset-4"
           >
             Ask about a campus licence
           </a>
-        </section>
-      </div>
+        </p>
+      </section>
 
       {/* --------------------------------------------------------- free --- */}
-      <section className="mt-16 grid gap-6 border-t border-border pt-6 lg:grid-cols-[18rem_1fr]">
+      <section className="mt-12 grid gap-6 border-t border-border pt-6 lg:grid-cols-[18rem_1fr]">
         <h2 className="font-editorial text-3xl font-normal">Free, for everyone</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
           {FREE.join(" · ")}.{" "}
@@ -148,71 +187,5 @@ export default async function PricingPage() {
         </dl>
       </section>
     </div>
-  );
-}
-
-/** Where this account stands, and the one thing it can do next. */
-function IndividualStatus({
-  access,
-  signedIn,
-  mode,
-  email,
-  name,
-}: {
-  access: Access | null;
-  signedIn: boolean;
-  mode: CheckoutMode;
-  email?: string;
-  name?: string | null;
-}) {
-  const button = (label: string) => (
-    <UpgradeButton signedIn={signedIn} mode={mode} email={email} name={name} label={label} variant="ink" size="lg" />
-  );
-
-  if (!signedIn) {
-    return (
-      <>
-        {button("Sign in to upgrade")}
-        <p className="mt-3 text-xs text-muted-foreground">CaseCode is invite-only: sign in with the address you were invited with.</p>
-      </>
-    );
-  }
-
-  if (access?.subscription) {
-    const renewable = canRenew(access.subscription.endsAt);
-    return (
-      <>
-        <p className="text-sm">
-          <span className="font-medium">You have Pro</span>
-          <span className="text-muted-foreground">
-            {" "}until {formatDay(access.subscription.endsAt)}
-            {access.subscription.source === "manual" ? " (granted by CaseCode)" : access.subscription.source === "demo" ? " (demo payment)" : ""}.
-          </span>
-        </p>
-        {renewable ? (
-          <div className="mt-4">{button("Renew for another year — ₹499")}</div>
-        ) : (
-          <p className="mt-2 text-xs text-muted-foreground">You can renew in the last {RENEWAL_WINDOW_DAYS} days.</p>
-        )}
-      </>
-    );
-  }
-
-  if (access?.pro) {
-    return <p className="text-sm text-muted-foreground">Your account already has Pro through your college or the CaseCode team — nothing to pay.</p>;
-  }
-
-  return (
-    <>
-      {button("Upgrade — ₹499 a year")}
-      {access?.canSolve ? (
-        <p className="mt-3 text-xs text-muted-foreground">
-          You can already practise through your college; Pro adds the AI interviewer and the larger allowance.
-        </p>
-      ) : null}
-      {mode === "closed" ? (
-        <p className="mt-3 text-xs text-muted-foreground">Online payment isn&apos;t switched on yet.</p>
-      ) : null}
-    </>
   );
 }

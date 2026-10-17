@@ -19,11 +19,11 @@ export default async function NoAccessPage() {
     <div className="space-y-6">
       <div className="space-y-2">
         <h1>
-          This account does not have access yet
+          This account is closed
         </h1>
         <p className="text-sm text-muted-foreground">
-          CaseCode is invite-only. Signing in worked — the address simply has
-          not been granted access to the case library.
+          Signing in worked, but this account has been deactivated, so it
+          cannot open the case library.
         </p>
       </div>
 
@@ -35,9 +35,8 @@ export default async function NoAccessPage() {
       )}
 
       <p className="text-sm text-muted-foreground">
-        Ask the platform owner to add this address, then sign in again. If you
-        have more than one Google account, check you used the one that was
-        invited.
+        If you think that is a mistake, contact the CaseCode team from the
+        address on this account.
       </p>
 
       <SignOutButton />

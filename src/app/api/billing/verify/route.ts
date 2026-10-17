@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyPaymentSignature } from "@/lib/billing/razorpay";
-import { activatePaidPeriod } from "@/lib/subscription";
+import { fulfilPurchase, receiptPath } from "@/lib/billing/purchases";
 
 const bodySchema = z.object({
   razorpay_order_id: z.string().min(1),
@@ -19,17 +19,14 @@ export const dynamic = "force-dynamic";
  * The signature is the whole security model: the browser hands over an order
  * id, a payment id and an HMAC that only Razorpay and this server can produce.
  * Without recomputing it, anyone could POST an arbitrary order id and be
- * upgraded. The webhook is the backstop for when the browser never gets here.
+ * credited. The webhook is the backstop for when the browser never gets here.
  */
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
   let body: z.infer<typeof bodySchema>;
   try {
@@ -43,36 +40,23 @@ export async function POST(request: NextRequest) {
     paymentId: body.razorpay_payment_id,
     signature: body.razorpay_signature,
   });
-
-  if (!valid) {
-    return NextResponse.json(
-      { error: "Payment could not be verified." },
-      { status: 400 },
-    );
-  }
+  if (!valid) return NextResponse.json({ error: "Payment could not be verified." }, { status: 400 });
 
   const admin = createAdminClient();
 
   // The order must belong to this user. A valid signature proves the payment
   // is real, not that it is theirs — without this check one user could claim
   // another's completed order.
-  const { data: subscription } = await admin
-    .from("subscriptions")
+  const { data: purchase } = await admin
+    .from("purchases")
     .select("id, user_id")
-    .eq("razorpay_subscription_id", body.razorpay_order_id)
+    .eq("razorpay_order_id", body.razorpay_order_id)
     .maybeSingle();
-
-  if (!subscription || subscription.user_id !== user.id) {
+  if (!purchase || purchase.user_id !== user.id) {
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
   }
 
-  // The period, not users.plan, is the entitlement: when it ends, access
-  // ends. Idempotent with the webhook — whichever arrives first activates.
-  const { endsAt } = await activatePaidPeriod(admin, {
-    subscriptionId: subscription.id,
-    userId: user.id,
-    paymentId: body.razorpay_payment_id,
-  });
-
-  return NextResponse.json({ plan: "pro", ends_at: endsAt });
+  // Idempotent with the webhook — whichever arrives first fulfils.
+  const done = await fulfilPurchase(admin, purchase.id, body.razorpay_payment_id);
+  return NextResponse.json({ status: done?.status ?? "paid", redirect: receiptPath(purchase.id) });
 }

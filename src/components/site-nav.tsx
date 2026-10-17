@@ -47,6 +47,8 @@ const STUDENT_LINKS = [
   { href: "/paths", label: "Paths" },
   { href: "/groups", label: "Groups" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/certificates", label: "Certificates" },
+  { href: "/experts", label: "Expert mocks" },
   { href: "/peer", label: "Peer interviews" },
   { href: "/progress", label: "Progress" },
   { href: "/bookmarks", label: "Bookmarks" },

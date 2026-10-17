@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { callChat, interviewerSystemPrompt, type ChatTurn } from "@/lib/ai/chat";
 import { RATE_LIMIT } from "@/lib/constants";
-import { getQuotaStatus, quotaDenial } from "@/lib/quota";
+import { chargeQuota, getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { recordUsage } from "@/lib/usage";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { ROLEPLAY_GUARD } from "@/lib/ai/untrusted";
@@ -157,6 +157,11 @@ export async function POST(request: NextRequest) {
       );
     }
   } else {
+    // Spends a top-up credit when the plan no longer covers this use (src/lib/quota.ts).
+    if (!(await chargeQuota(admin, user.id, "interviews", quota))) {
+      return NextResponse.json(quotaDenial("interviews", quota), { status: 402 });
+    }
+
     const { data: created, error } = await admin
       .from("chat_sessions")
       .insert({ user_id: user.id, case_id: caseData.id })

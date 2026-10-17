@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
-import { getQuotaStatus, quotaDenial } from "@/lib/quota";
+import { chargeQuota, getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { debriefRun } from "@/lib/ai/sim-debrief";
 import { RateLimitError } from "@/lib/ai/errors";
 import { recordUsage } from "@/lib/usage";
@@ -72,6 +72,11 @@ export async function POST(
 
   const quota = await getQuotaStatus(admin, user.id);
   if (quota.gradingsLeft <= 0) {
+    return NextResponse.json(quotaDenial("gradings", quota), { status: 402 });
+  }
+
+  // Spends a top-up credit when the plan no longer covers this use (src/lib/quota.ts).
+  if (!(await chargeQuota(admin, user.id, "gradings", quota))) {
     return NextResponse.json(quotaDenial("gradings", quota), { status: 402 });
   }
 

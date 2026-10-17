@@ -29,6 +29,9 @@ import {
   Gauge,
   ListOrdered,
   SquarePlus,
+  Award,
+  Sparkles,
+  UserRoundCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types/database";
@@ -90,6 +93,9 @@ const STUDENT_GROUPS: { heading: string; items: Item[] }[] = [
     items: [
       { href: "/progress", label: "Progress", icon: BarChart3 },
       { href: "/bookmarks", label: "Bookmarks", icon: BookMarked },
+      { href: "/certificates", label: "Certificates", icon: Award },
+      { href: "/experts", label: "Expert mocks", icon: UserRoundCheck },
+      { href: "/upgrade", label: "Upgrade", icon: Sparkles },
     ],
   },
   {
@@ -153,6 +159,7 @@ const ADMIN_GROUPS: { heading: string; items: Item[] }[] = [
       { href: "/admin/licences", label: "Licences", icon: Building2 },
       { href: "/admin/renewals", label: "Renewals", icon: BarChart3 },
       { href: "/admin/usage", label: "AI usage", icon: Gauge },
+      { href: "/admin/experts", label: "Experts & sales", icon: UserRoundCheck },
     ],
   },
   {

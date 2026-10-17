@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyWebhookSignature } from "@/lib/billing/razorpay";
-import { activatePaidPeriod } from "@/lib/subscription";
+import { fulfilPurchase } from "@/lib/billing/purchases";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  *
  * Unauthenticated by necessity — Razorpay has no session — so the signature is
  * the only thing standing between this endpoint and anyone on the internet
- * granting themselves Pro. The raw body must be hashed exactly as received,
+ * crediting themselves a purchase. The raw body must be hashed exactly as received,
  * which is why this reads text() and parses afterwards rather than using
  * request.json().
  */
@@ -45,13 +45,13 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient();
 
-  const { data: subscription } = await admin
-    .from("subscriptions")
-    .select("id, user_id")
-    .eq("razorpay_subscription_id", orderId)
+  const { data: purchase } = await admin
+    .from("purchases")
+    .select("id")
+    .eq("razorpay_order_id", orderId)
     .maybeSingle();
 
-  if (!subscription) {
+  if (!purchase) {
     return NextResponse.json({ ok: true, ignored: "unknown order" });
   }
 
@@ -59,19 +59,15 @@ export async function POST(request: NextRequest) {
     event.event === "payment.captured" || event.event === "order.paid";
 
   if (captured) {
-    // Same activation as /api/billing/verify; only the first one counts.
-    await activatePaidPeriod(admin, {
-      subscriptionId: subscription.id,
-      userId: subscription.user_id,
-      paymentId: entity?.id ?? null,
-    });
+    // Same fulfilment as /api/billing/verify; only the first one counts.
+    await fulfilPurchase(admin, purchase.id, entity?.id ?? null);
   } else if (event.event === "payment.failed") {
-    // Never downgrade a period that is already paid and active.
+    // Never mark failed a purchase that is already paid.
     await admin
-      .from("subscriptions")
-      .update({ status: "halted", updated_at: new Date().toISOString() })
-      .eq("id", subscription.id)
-      .neq("status", "active");
+      .from("purchases")
+      .update({ status: "failed" })
+      .eq("id", purchase.id)
+      .eq("status", "created");
   }
 
   return NextResponse.json({ ok: true });

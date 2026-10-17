@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateSubmission } from "@/lib/ai/evaluate";
 import { MAX_ANSWER_CHARS, MIN_ANSWER_CHARS, RATE_LIMIT } from "@/lib/constants";
-import { getQuotaStatus, quotaDenial } from "@/lib/quota";
+import { chargeQuota, getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { recordUsage } from "@/lib/usage";
 import type { RubricRow } from "@/lib/types/database";
 import { wantsAssignmentNotices } from "@/lib/notify";
@@ -253,6 +253,11 @@ export async function POST(request: NextRequest) {
         });
       }
     }
+  }
+
+  // Spends a top-up credit when the plan no longer covers this use (src/lib/quota.ts).
+  if (!(await chargeQuota(admin, user.id, "gradings", quota))) {
+    return NextResponse.json(quotaDenial("gradings", quota), { status: 402 });
   }
 
   // ---- record the attempt --------------------------------------------------

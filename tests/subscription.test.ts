@@ -1,110 +1,168 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  activatePaidPeriod,
   canRenew,
   nextPeriodEnd,
+  nextPeriodStart,
+  planForDays,
   purchaseBlock,
-  RENEWAL_WINDOW_DAYS,
-  SUBSCRIPTION_DAYS,
+  renewalWindowDays,
+  type Access,
+  type ActiveSubscription,
 } from "@/lib/subscription";
+import { PLANS, PLAN_ORDER, TOPUPS, TOPUP_ORDER, perMonth, rupees, splitExpertPrice } from "@/lib/pricing";
+import { attemptState, linkedInAddUrl, overallPercentage, SUBMIT_GRACE_SECONDS } from "@/lib/certificates";
 
 const DAY = 86_400_000;
 const NOW = new Date("2026-10-17T06:00:00Z");
 const days = (a: Date, b: Date) => Math.round((a.getTime() - b.getTime()) / DAY);
 
-describe("nextPeriodEnd", () => {
-  it("starts a first subscription today and runs a year", () => {
-    expect(days(nextPeriodEnd(null, SUBSCRIPTION_DAYS, NOW), NOW)).toBe(365);
+describe("plan periods", () => {
+  it("starts now when nothing is running", () => {
+    expect(nextPeriodStart(null, NOW)).toEqual(NOW);
+    expect(days(nextPeriodEnd(null, 30, NOW), NOW)).toBe(30);
   });
 
-  it("adds a renewal to whatever is left, so renewing early loses nothing", () => {
+  it("queues a renewal behind the running period, losing no days", () => {
     const left20 = new Date(NOW.getTime() + 20 * DAY);
-    expect(days(nextPeriodEnd(left20, SUBSCRIPTION_DAYS, NOW), NOW)).toBe(385);
+    expect(nextPeriodStart(left20, NOW)).toEqual(left20);
+    expect(days(nextPeriodEnd(left20, 90, NOW), NOW)).toBe(110);
   });
 
-  it("starts from today when the old period has already ended", () => {
-    const ended = new Date(NOW.getTime() - 40 * DAY);
-    expect(days(nextPeriodEnd(ended, SUBSCRIPTION_DAYS, NOW), NOW)).toBe(365);
+  it("ignores a period that has already ended", () => {
+    const ended = new Date(NOW.getTime() - 3 * DAY);
+    expect(days(nextPeriodEnd(ended, 365, NOW), NOW)).toBe(365);
+  });
+
+  it("maps a manual grant to the closest plan's allowance", () => {
+    expect(planForDays(7)).toBe("monthly");
+    expect(planForDays(30)).toBe("monthly");
+    expect(planForDays(60)).toBe("season");
+    expect(planForDays(365)).toBe("annual");
   });
 });
 
-describe("canRenew", () => {
-  it(`opens in the last ${RENEWAL_WINDOW_DAYS} days`, () => {
-    expect(canRenew(new Date(NOW.getTime() + 200 * DAY), NOW)).toBe(false);
-    expect(canRenew(new Date(NOW.getTime() + RENEWAL_WINDOW_DAYS * DAY), NOW)).toBe(true);
-    expect(canRenew(new Date(NOW.getTime() + 5 * DAY), NOW)).toBe(true);
-  });
+const sub = (planCode: ActiveSubscription["planCode"], daysLeft: number): ActiveSubscription => ({
+  id: "s",
+  planCode,
+  source: "demo",
+  startsAt: new Date(NOW.getTime() - DAY).toISOString(),
+  endsAt: new Date(NOW.getTime() + daysLeft * DAY).toISOString(),
 });
 
-/** A minimal stand-in for the two queries activatePaidPeriod makes. */
-function fakeDb({ alreadyActive }: { alreadyActive: boolean }) {
-  const updates: unknown[] = [];
-  const stored = "2027-10-17T06:00:00.000Z";
-  const chain = (result: unknown) => {
-    const c: Record<string, unknown> = {};
-    for (const m of ["select", "eq", "neq", "gt", "order", "limit", "update", "insert"]) c[m] = vi.fn(() => c);
-    c.maybeSingle = vi.fn(async () => result);
-    c.then = (resolve: (v: unknown) => void) => resolve(result);
-    return c;
-  };
-  let call = 0;
-  const admin = {
-    from: vi.fn(() => {
-      call += 1;
-      if (call === 1) return chain({ data: null }); // activeSubscription: none live yet
-      if (call === 2) {
-        const c = chain({ data: alreadyActive ? [] : [{ id: "sub-1" }] });
-        c.update = vi.fn((v: unknown) => {
-          updates.push(v);
-          return c;
-        });
-        return c;
-      }
-      return chain({ data: { current_period_end: stored } }); // read-back
-    }),
-  };
-  return { admin, updates, stored };
-}
-
-describe("activatePaidPeriod", () => {
-  it("activates a verified payment once, with a year's period", async () => {
-    const { admin, updates } = fakeDb({ alreadyActive: false });
-    const r = await activatePaidPeriod(admin as never, { subscriptionId: "sub-1", userId: "u", paymentId: "pay_1" });
-    expect(r.activated).toBe(true);
-    expect(updates).toHaveLength(1);
-    expect((updates[0] as { status: string }).status).toBe("active");
-  });
-
-  it("does not credit the same payment twice when the webhook and the browser both confirm it", async () => {
-    const { admin, stored } = fakeDb({ alreadyActive: true });
-    const r = await activatePaidPeriod(admin as never, { subscriptionId: "sub-1", userId: "u", paymentId: "pay_1" });
-    expect(r.activated).toBe(false);
-    expect(r.endsAt).toBe(stored);
+describe("renewal window", () => {
+  it("depends on the plan", () => {
+    expect(renewalWindowDays(sub("monthly", 1))).toBe(PLANS.monthly.renewalWindowDays);
+    expect(canRenew(sub("monthly", 4), NOW)).toBe(true);
+    expect(canRenew(sub("monthly", 20), NOW)).toBe(false);
+    expect(canRenew(sub("annual", 25), NOW)).toBe(true);
+    expect(canRenew(sub("annual", 200), NOW)).toBe(false);
   });
 });
 
 describe("purchaseBlock", () => {
-  const now = new Date("2026-10-17T00:00:00Z");
-  const sub = (days: number) => ({
-    id: "s",
-    endsAt: new Date(now.getTime() + days * 86_400_000).toISOString(),
-    source: "demo" as const,
-  });
+  const access = (over: Partial<Access>): Access => ({ pro: false, canSolve: false, subscription: null, queued: null, ...over });
 
   it("lets an account with no access buy", () => {
-    expect(purchaseBlock({ pro: false, canSolve: false, subscription: null }, now)).toBeNull();
+    expect(purchaseBlock(access({}), NOW)).toBeNull();
   });
 
   it("lets a college-licensed student without Pro buy", () => {
-    expect(purchaseBlock({ pro: false, canSolve: true, subscription: null }, now)).toBeNull();
+    expect(purchaseBlock(access({ canSolve: true }), NOW)).toBeNull();
   });
 
   it("refuses Pro that does not come from a subscription", () => {
-    expect(purchaseBlock({ pro: true, canSolve: true, subscription: null }, now)).toMatch(/already has/);
+    expect(purchaseBlock(access({ pro: true, canSolve: true }), NOW)).toMatch(/already has/);
   });
 
   it("refuses a subscriber until the renewal window, then allows it", () => {
-    expect(purchaseBlock({ pro: true, canSolve: true, subscription: sub(200) }, now)).toMatch(/renew in the last 30 days/);
-    expect(purchaseBlock({ pro: true, canSolve: true, subscription: sub(20) }, now)).toBeNull();
+    expect(purchaseBlock(access({ pro: true, subscription: sub("season", 60) }), NOW)).toMatch(/renew in the last 14 days/);
+    expect(purchaseBlock(access({ pro: true, subscription: sub("season", 10) }), NOW)).toBeNull();
+  });
+
+  it("allows only one queued period", () => {
+    const queued = { ...sub("monthly", 40), startsAt: new Date(NOW.getTime() + 10 * DAY).toISOString() };
+    expect(purchaseBlock(access({ pro: true, subscription: sub("monthly", 2), queued }), NOW)).toMatch(/already lined up/);
+  });
+});
+
+/**
+ * The prices are a promise to the business, not just numbers on a page: every
+ * plan and pack must stay profitable for a student who uses all of it, at the
+ * model rates that apply from 1 Jan 2027 (twice today's).
+ */
+describe("pricing stays profitable at the 2027 model rates", () => {
+  const GRADING_2027 = 1.44; // ₹, worst case
+  const INTERVIEW_2027 = 4.32;
+  const kept = (paise: number) => paise / 100 / 1.18 - (paise / 100) * 0.02; // GST-inclusive, ~2% gateway
+
+  it.each(PLAN_ORDER)("the %s plan makes money at full use", (code) => {
+    const plan = PLANS[code];
+    const cost = plan.gradings * GRADING_2027 + plan.interviews * INTERVIEW_2027;
+    expect(kept(plan.pricePaise)).toBeGreaterThan(cost * 1.3);
+  });
+
+  it.each(TOPUP_ORDER)("the %s top-up makes money", (code) => {
+    const pack = TOPUPS[code];
+    const cost = pack.gradings * GRADING_2027 + pack.interviews * INTERVIEW_2027;
+    expect(kept(pack.pricePaise)).toBeGreaterThan(cost * 1.3);
+  });
+
+  it("prices the season pass above a month and below three", () => {
+    expect(PLANS.season.pricePaise).toBeGreaterThan(PLANS.monthly.pricePaise);
+    expect(PLANS.season.pricePaise).toBeLessThan(PLANS.monthly.pricePaise * 3);
+  });
+
+  it("makes longer plans cheaper per month", () => {
+    const daily = (c: keyof typeof PLANS) => PLANS[c].pricePaise / PLANS[c].days;
+    expect(daily("season")).toBeLessThan(daily("monthly"));
+    expect(daily("annual")).toBeLessThan(daily("season"));
+  });
+
+  it("formats rupees the Indian way", () => {
+    expect(rupees(249_900)).toBe("₹2,499");
+    expect(perMonth(PLANS.monthly)).toBe("₹299");
+  });
+});
+
+describe("expert session split", () => {
+  it("keeps 25% for CaseCode and pays out the rest, to the paisa", () => {
+    const { commissionPaise, payoutPaise } = splitExpertPrice(150_000);
+    expect(commissionPaise).toBe(37_500);
+    expect(payoutPaise).toBe(112_500);
+    const odd = splitExpertPrice(199_999);
+    expect(odd.commissionPaise + odd.payoutPaise).toBe(199_999);
+  });
+});
+
+describe("certificate attempts", () => {
+  const base = { status: "in_progress" as const, submitted_at: null };
+
+  it("knows when the time ran out without a submission", () => {
+    const deadline = new Date(NOW.getTime() - (SUBMIT_GRACE_SECONDS + 5) * 1000).toISOString();
+    expect(attemptState({ ...base, deadline_at: deadline }, NOW)).toBe("expired");
+  });
+
+  it("still accepts a submission inside the grace period", () => {
+    const deadline = new Date(NOW.getTime() - 30 * 1000).toISOString();
+    expect(attemptState({ ...base, deadline_at: deadline }, NOW)).toBe("in_progress");
+  });
+
+  it("treats a submitted but unmarked attempt as grading", () => {
+    expect(attemptState({ ...base, deadline_at: null, submitted_at: NOW.toISOString() }, NOW)).toBe("grading");
+  });
+
+  it("weights the overall score by each case's marks", () => {
+    expect(overallPercentage([{ total: 30, max: 40 }, { total: 30, max: 60 }])).toBe(60);
+    expect(overallPercentage([])).toBe(0);
+  });
+
+  it("builds a pre-filled LinkedIn add-certification link", () => {
+    const url = new URL(
+      linkedInAddUrl({ title: "Finance", issuedAt: "2026-10-17T00:00:00Z", url: "https://x.test/certificate/CC-AAAAA-BBBBB", code: "CC-AAAAA-BBBBB" }),
+    );
+    expect(url.hostname).toBe("www.linkedin.com");
+    expect(url.searchParams.get("organizationName")).toBe("CaseCode");
+    expect(url.searchParams.get("certId")).toBe("CC-AAAAA-BBBBB");
+    expect(url.searchParams.get("issueMonth")).toBe("10");
   });
 });

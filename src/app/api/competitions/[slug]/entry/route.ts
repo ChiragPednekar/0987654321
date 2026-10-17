@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
-import { getQuotaStatus, quotaDenial } from "@/lib/quota";
+import { chargeQuota, getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { evaluateSubmission } from "@/lib/ai/evaluate";
 import { RateLimitError } from "@/lib/ai/errors";
 import { recordUsage } from "@/lib/usage";
@@ -126,6 +126,11 @@ export async function POST(
       },
       { status: 409 },
     );
+  }
+
+  // Spends a top-up credit when the plan no longer covers this use (src/lib/quota.ts).
+  if (!(await chargeQuota(admin, user.id, "gradings", quota))) {
+    return NextResponse.json(quotaDenial("gradings", quota), { status: 402 });
   }
 
   /**

@@ -62,7 +62,8 @@ export type IntegrityActivity =
   | "simulation"
   | "competition"
   | "group_discussion"
-  | "sales";
+  | "sales"
+  | "certification";
 
 /**
  * Stamps the server's clock for an activity that is not a case.

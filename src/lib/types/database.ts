@@ -326,7 +326,8 @@ export type IntegrityActivityKind =
   | "simulation"
   | "competition"
   | "group_discussion"
-  | "sales";
+  | "sales"
+  | "certification";
 
 /** Server-stamped open time for a non-case activity (20250101000057). */
 export type ActivityAttemptRow = {
@@ -1232,6 +1233,60 @@ export interface Database {
         Update: Partial<SubscriptionRow>;
         Relationships: [];
       };
+      purchases: {
+        Row: PurchaseRow;
+        Insert: Partial<PurchaseRow>;
+        Update: Partial<PurchaseRow>;
+        Relationships: [];
+      };
+      usage_credits: {
+        Row: UsageCreditRow;
+        Insert: Partial<UsageCreditRow>;
+        Update: Partial<UsageCreditRow>;
+        Relationships: [];
+      };
+      usage_credit_debits: {
+        Row: UsageCreditDebitRow;
+        Insert: Partial<UsageCreditDebitRow>;
+        Update: Partial<UsageCreditDebitRow>;
+        Relationships: [];
+      };
+      cert_exams: {
+        Row: CertExamRow;
+        Insert: Partial<CertExamRow>;
+        Update: Partial<CertExamRow>;
+        Relationships: [];
+      };
+      cert_attempts: {
+        Row: CertAttemptRow;
+        Insert: Partial<CertAttemptRow>;
+        Update: Partial<CertAttemptRow>;
+        Relationships: [];
+      };
+      cert_answers: {
+        Row: CertAnswerRow;
+        Insert: Partial<CertAnswerRow>;
+        Update: Partial<CertAnswerRow>;
+        Relationships: [];
+      };
+      experts: {
+        Row: ExpertRow;
+        Insert: Partial<ExpertRow>;
+        Update: Partial<ExpertRow>;
+        Relationships: [];
+      };
+      expert_slots: {
+        Row: ExpertSlotRow;
+        Insert: Partial<ExpertSlotRow>;
+        Update: Partial<ExpertSlotRow>;
+        Relationships: [];
+      };
+      expert_bookings: {
+        Row: ExpertBookingRow;
+        Insert: Partial<ExpertBookingRow>;
+        Update: Partial<ExpertBookingRow>;
+        Relationships: [];
+      };
       drill_questions: {
         Row: DrillQuestionRow;
         Insert: Partial<DrillQuestionRow>;
@@ -1896,11 +1951,18 @@ export interface Database {
       can_solve: { Args: { p_user: string }; Returns: boolean };
       has_active_subscription: { Args: { p_user: string }; Returns: boolean };
       /**
-       * Whether the address is on access_allowlist — invite-only entry
-       * (20250101000060). Independent of has_pro/can_solve: this is "may you
-       * see anything", not "may you spend AI budget".
+       * Whether the account is live (not deactivated). Sign-up is open since
+       * 071; this used to read access_allowlist. Independent of
+       * has_pro/can_solve: "may you see anything", not "may you spend AI budget".
        */
       has_access: { Args: { p_user: string }; Returns: boolean };
+      /** Spends one top-up credit; false when none is left (071). */
+      consume_usage_credit: { Args: { p_user: string; p_kind: "gradings" | "interviews" }; Returns: boolean };
+      /** Every metered AI use since a moment (071). */
+      ai_usage_since: {
+        Args: { p_user: string; p_since: string };
+        Returns: { kind: "gradings" | "interviews"; at: string }[];
+      };
       /** Uncleared severe integrity findings in the last year (20250101000035). */
       integrity_strikes: { Args: { p_user: string }; Returns: number };
       /** Per-track objective accuracy for one account (20250101000037). */
@@ -2234,8 +2296,153 @@ export type SubscriptionRow = {
   /** 'razorpay' for a verified payment, 'manual' for an admin grant (069). */
   source: "razorpay" | "manual" | "demo";
   granted_by: string | null;
+  /** Which plan this period is (071); sets its allowance. */
+  plan_code: "monthly" | "season" | "annual" | null;
+  /** When the period starts — later than now for a renewal queued behind a live one. */
+  period_start: string | null;
+  purchase_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// -------------------------------------------------------------- §purchases --
+
+export type PurchaseKind = "plan" | "topup" | "exam" | "expert_session";
+
+export type PurchaseRow = {
+  id: string;
+  user_id: string;
+  kind: PurchaseKind;
+  item_code: string;
+  item_ref: string | null;
+  description: string;
+  amount_paise: number;
+  currency: string;
+  status: "created" | "paid" | "failed" | "needs_refund" | "refunded";
+  source: "razorpay" | "demo";
+  razorpay_order_id: string | null;
+  razorpay_payment_id: string | null;
+  fulfilled_ref: string | null;
+  meta: Record<string, unknown>;
+  created_at: string;
+  paid_at: string | null;
+};
+
+export type UsageCreditRow = {
+  id: string;
+  user_id: string;
+  purchase_id: string | null;
+  kind: "gradings" | "interviews";
+  amount: number;
+  used: number;
+  granted_at: string;
+  expires_at: string;
+};
+
+export type UsageCreditDebitRow = {
+  id: string;
+  user_id: string;
+  credit_id: string;
+  kind: "gradings" | "interviews";
+  created_at: string;
+};
+
+// ----------------------------------------------------------- §certificates --
+
+export type CertExamRow = {
+  id: string;
+  slug: string;
+  title: string;
+  track: string;
+  summary: string;
+  case_ids: string[];
+  duration_minutes: number;
+  pass_pct: number;
+  price_paise: number;
+  is_published: boolean;
+  created_at: string;
+};
+
+export type CertAttemptStatus = "ready" | "in_progress" | "graded" | "voided";
+
+export type CertAttemptRow = {
+  id: string;
+  exam_id: string;
+  user_id: string;
+  purchase_id: string | null;
+  status: CertAttemptStatus;
+  started_at: string | null;
+  deadline_at: string | null;
+  submitted_at: string | null;
+  graded_at: string | null;
+  total_score: number | null;
+  max_score: number | null;
+  percentage: number | null;
+  passed: boolean | null;
+  certificate_code: string | null;
+  void_reason: string | null;
+  created_at: string;
+};
+
+export type CertAnswerRow = {
+  attempt_id: string;
+  case_id: string;
+  answer: string;
+  breakdown: Record<string, number> | null;
+  total_score: number | null;
+  max_score: number | null;
+  percentage: number | null;
+  feedback: Record<string, unknown> | null;
+};
+
+// ---------------------------------------------------------------- §experts --
+
+export type ExpertRow = {
+  id: string;
+  user_id: string;
+  display_name: string;
+  headline: string;
+  bio: string;
+  expertise: string[];
+  linkedin_url: string | null;
+  meeting_url: string | null;
+  price_paise: number;
+  commission_bps: number;
+  status: "pending" | "approved" | "suspended";
+  approved_at: string | null;
+  approved_by: string | null;
+  created_at: string;
+};
+
+export type ExpertSlotRow = {
+  id: string;
+  expert_id: string;
+  starts_at: string;
+  duration_minutes: number;
+  status: "open" | "held" | "booked" | "cancelled";
+  held_by: string | null;
+  held_until: string | null;
+  created_at: string;
+};
+
+export type ExpertBookingRow = {
+  id: string;
+  slot_id: string;
+  expert_id: string;
+  student_id: string;
+  purchase_id: string | null;
+  price_paise: number;
+  commission_paise: number;
+  payout_paise: number;
+  status: "confirmed" | "completed" | "cancelled" | "no_show";
+  student_notes: string;
+  expert_feedback: string | null;
+  rating: number | null;
+  review: string | null;
+  payout_status: "pending" | "paid";
+  paid_out_at: string | null;
+  completed_at: string | null;
+  created_at: string;
 };
 
 // ---------------------------------------------------------- §institutions --
@@ -2333,7 +2540,7 @@ export type UsageEventRow = {
   total_tokens: number;
   cost_inr: number;
   /** See 20250101000063. Null except for features the quota has no other way to count. */
-  feature: "competition_entry" | "simulation_debrief" | "group_discussion" | null;
+  feature: "competition_entry" | "simulation_debrief" | "group_discussion" | "certification" | null;
   created_at: string;
 };
 

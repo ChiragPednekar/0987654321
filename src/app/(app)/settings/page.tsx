@@ -13,10 +13,9 @@ import { PracticePreferences } from "@/components/settings/practice-preferences"
 import { NotificationSettings } from "@/components/settings/notification-settings";
 import { PrivacySettings } from "@/components/settings/privacy-settings";
 import { DataManagement } from "@/components/settings/data-management";
-import { UpgradeButton } from "@/components/billing/upgrade-button";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
-import { checkoutMode } from "@/lib/billing/checkout-mode";
-import { canRenew, getAccess, RENEWAL_WINDOW_DAYS } from "@/lib/subscription";
+import { canRenew, getAccess, renewalWindowDays } from "@/lib/subscription";
+import { PLANS, rupees } from "@/lib/pricing";
 import { formatDay } from "@/lib/utils";
 import type { UniversityRow } from "@/lib/types/database";
 
@@ -34,7 +33,7 @@ export default async function SettingsPage() {
 
   const supabase = await createClient();
   const admin = createAdminClientOrNull();
-  const [{ data: universities }, access] = await Promise.all([
+  const [{ data: universities }, access, { data: purchases }] = await Promise.all([
     supabase
       .from("universities")
       .select("id, name, short_name, domain, country, created_at")
@@ -42,6 +41,15 @@ export default async function SettingsPage() {
     // The same database checks every gated route uses, so this card can never
     // say "Pro" while the routes say no — or the reverse.
     admin ? getAccess(admin, profile.id) : Promise.resolve(null),
+    admin
+      ? admin
+          .from("purchases")
+          .select("id, description, amount_paise, created_at, source")
+          .eq("user_id", profile.id)
+          .in("status", ["paid", "needs_refund", "refunded"])
+          .order("created_at", { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] as { id: string; description: string; amount_paise: number; created_at: string; source: string }[] }),
   ]);
 
   /**
@@ -210,30 +218,34 @@ export default async function SettingsPage() {
                 </Badge>
               </Row>
               {access?.subscription && (
-                <Row label="Pro until">
+                <Row label="Plan">
                   <span className="text-muted-foreground">
-                    {formatDay(access.subscription.endsAt)}
+                    {PLANS[access.subscription.planCode].name} · until {formatDay(access.subscription.endsAt)}
                     {access.subscription.source === "manual" ? " · granted by CaseCode" : access.subscription.source === "demo" ? " · demo payment" : ""}
                   </span>
                 </Row>
               )}
+              {access?.queued && (
+                <Row label="Next period">
+                  <span className="text-muted-foreground">
+                    {PLANS[access.queued.planCode].name} from {formatDay(access.queued.startsAt)}
+                  </span>
+                </Row>
+              )}
               {access?.subscription ? (
-                canRenew(access.subscription.endsAt) ? (
+                canRenew(access.subscription) && !access.queued ? (
                   <div className="space-y-2 border-l-2 border-foreground/40 pl-4">
-                    <p className="text-xs text-muted-foreground">Your year is nearly up — renewing adds a year to what is left.</p>
-                    <UpgradeButton
-                      signedIn
-                      mode={checkoutMode()}
-                      email={profile.email}
-                      name={profile.full_name}
-                      label="Renew for a year — ₹499"
-                      variant="ink"
-                      size="sm"
-                    />
+                    <p className="text-xs text-muted-foreground">Your plan is nearly up — the next period starts the day this one ends.</p>
+                    <Button variant="ink" size="sm" asChild>
+                      <Link href="/upgrade">Renew</Link>
+                    </Button>
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">You can renew in the last {RENEWAL_WINDOW_DAYS} days.</p>
-                )
+                ) : !access.queued ? (
+                  <p className="text-xs text-muted-foreground">
+                    You can renew in the last {renewalWindowDays(access.subscription)} days.{" "}
+                    <Link href="/upgrade#topups" className="underline underline-offset-4">Top up</Link> if you run low.
+                  </p>
+                ) : null
               ) : access?.pro ? (
                 <p className="text-xs text-muted-foreground">
                   Pro comes with your account through your college or the CaseCode team — nothing to pay.
@@ -243,22 +255,34 @@ export default async function SettingsPage() {
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     {access?.canSolve
                       ? "You can practise through your college. Pro adds the AI interviewer and a larger allowance."
-                      : "Your college hasn't licensed CaseCode for you. Subscribe to practise: graded answers, drills and AI mock interviews."}
+                      : "Upgrade to practise: graded answers, drills and AI mock interviews. No college ID needed."}
                   </p>
                   <div className="flex flex-wrap items-center gap-3">
-                    <UpgradeButton
-                      signedIn
-                      mode={checkoutMode()}
-                      email={profile.email}
-                      name={profile.full_name}
-                      label="Upgrade — ₹499 a year"
-                      variant="ink"
-                      size="sm"
-                    />
+                    <Button variant="ink" size="sm" asChild>
+                      <Link href="/upgrade">Upgrade — from {rupees(PLANS.monthly.pricePaise)} a month</Link>
+                    </Button>
                     <Link href="/pricing" className="text-xs underline underline-offset-4">
                       Compare plans
                     </Link>
                   </div>
+                </div>
+              )}
+              {(purchases ?? []).length > 0 && (
+                <div className="border-t border-border pt-3">
+                  <p className="text-xs font-medium">Payments</p>
+                  <ul className="mt-2 divide-y divide-border text-xs">
+                    {(purchases ?? []).map((p) => (
+                      <li key={p.id} className="flex items-baseline justify-between gap-3 py-1.5">
+                        <Link href={`/purchases/${p.id}`} className="truncate hover:underline">
+                          {p.description}
+                        </Link>
+                        <span className="shrink-0 font-mono text-muted-foreground">
+                          {rupees(p.amount_paise)} · {formatDay(p.created_at)}
+                          {p.source === "demo" ? " · demo" : ""}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </CardContent>

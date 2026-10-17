@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
-import { getQuotaStatus, quotaDenial } from "@/lib/quota";
+import { chargeQuota, getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { callChat } from "@/lib/ai/chat";
 import { buildPiSystemPrompt } from "@/lib/ai/pi-interview";
 import { PI_MAX_QUESTIONS } from "@/lib/pi";
@@ -60,6 +60,11 @@ export async function POST(request: NextRequest) {
     .select("background, target_role")
     .eq("user_id", user.id)
     .maybeSingle();
+
+  // Spends a top-up credit when the plan no longer covers this use (src/lib/quota.ts).
+  if (!(await chargeQuota(admin, user.id, "interviews", quota))) {
+    return NextResponse.json(quotaDenial("interviews", quota), { status: 402 });
+  }
 
   const { data: session, error } = await admin
     .from("pi_sessions")

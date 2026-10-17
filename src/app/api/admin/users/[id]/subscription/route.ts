@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { audit, authzResponse, requireAdminActor } from "@/lib/authz";
 import { internalError } from "@/lib/http-errors";
-import { activeSubscription, nextPeriodEnd } from "@/lib/subscription";
+import { nextPeriodEnd, planForDays } from "@/lib/subscription";
 
 export const dynamic = "force-dynamic";
 
@@ -44,8 +44,10 @@ export async function POST(request: NextRequest, { params }: Params) {
   const { data: target } = await admin.from("users").select("id").eq("id", id).maybeSingle();
   if (!target) return NextResponse.json({ error: "User not found." }, { status: 404 });
 
-  const current = await activeSubscription(admin, id);
-  const endsAt = nextPeriodEnd(current?.endsAt ?? null, body.days).toISOString();
+  // A grant starts now, so it takes effect at once; its allowance is that of
+  // the plan whose length it is closest to.
+  const startsAt = new Date();
+  const endsAt = nextPeriodEnd(null, body.days, startsAt).toISOString();
 
   const { data: row, error } = await admin
     .from("subscriptions")
@@ -55,6 +57,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       status: "active",
       source: "manual",
       granted_by: actor.id,
+      plan_code: planForDays(body.days),
+      period_start: startsAt.toISOString(),
       current_period_end: endsAt,
     })
     .select("id")

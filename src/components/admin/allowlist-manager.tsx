@@ -87,12 +87,12 @@ export function AllowlistManager({
       <div>
         <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
           <KeyRound className="size-4" aria-hidden />
-          Who may sign in at all
+          Demo-checkout testers
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          CaseCode is invite-only. An address that is not listed here cannot
-          create an account, and an account removed from this list stops seeing
-          the questions on its next page load.
+          Anyone can sign up now. Until Razorpay is connected, the addresses
+          listed here (and admins) may use the demo checkout on the live site —
+          everyone else sees payments as opening soon.
         </p>
       </div>
 

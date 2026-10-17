@@ -9,15 +9,17 @@ import crypto from "node:crypto";
  *
  *   1. The browser never states what was paid. It reports an order id and a
  *      signature; the server recomputes that signature and decides.
- *   2. A subscription period is activated only after a verified signature,
- *      and only by the service role — 20250101000017 revokes writes on
- *      subscriptions from anon and authenticated, so a client cannot grant
- *      itself Pro. Payments no longer touch users.plan: the period is the
- *      entitlement, and it ends on its own (src/lib/subscription.ts).
+ *   2. A purchase is fulfilled only after a verified signature, and only by
+ *      the service role — the purchase, subscription and credit tables are
+ *      closed to anon and authenticated, so a client cannot grant itself
+ *      anything. Payments never touch users.plan: a plan is a period, and it
+ *      ends on its own (src/lib/subscription.ts).
  */
 
-export const PRO_PRICE_PAISE = 49_900; // ₹499
-export const PRO_CURRENCY = "INR";
+// Prices live in src/lib/pricing.ts (plans, top-ups) and on the rows they sell
+// (exam attempts, expert sessions); the amount charged is always resolved on
+// the server from those, never taken from the browser.
+export const CURRENCY = "INR";
 
 export function razorpayConfigured() {
   return Boolean(
@@ -39,8 +41,8 @@ export interface RazorpayOrder {
   status: string;
 }
 
-/** Creates an order for a one-off Pro purchase. */
-export async function createOrder(receipt: string): Promise<RazorpayOrder> {
+/** Creates an order for one purchase (src/lib/billing/purchases.ts). */
+export async function createOrder(amountPaise: number, receipt: string): Promise<RazorpayOrder> {
   const response = await fetch("https://api.razorpay.com/v1/orders", {
     method: "POST",
     headers: {
@@ -48,8 +50,8 @@ export async function createOrder(receipt: string): Promise<RazorpayOrder> {
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      amount: PRO_PRICE_PAISE,
-      currency: PRO_CURRENCY,
+      amount: amountPaise,
+      currency: CURRENCY,
       // Razorpay caps receipts at 40 characters.
       receipt: receipt.slice(0, 40),
     }),
