@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canOpenExercise } from "@/lib/teacher-exercises";
+import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { Badge } from "@/components/ui/badge";
 import { ExcelWorkbench } from "@/components/excel/excel-workbench";
 import { ALLOWED } from "@/lib/excel/functions";
@@ -46,6 +47,9 @@ export default async function ExcelExercisePage({
     .limit(1);
 
   const last = attempts?.[0];
+  // Checked before the workbench renders, so an account without access is
+  // told so here — not after switching the camera on and pressing Start.
+  const entitled = await canSolve(admin, user.id);
 
   return (
     <div className="mx-auto w-full max-w-4xl">
@@ -62,12 +66,19 @@ export default async function ExcelExercisePage({
         {/* The allow-list is passed down rather than imported by the client
             component: importing it there would ship both formula libraries
             to the browser for the sake of a list of names. */}
-        <ExcelWorkbench
-          slug={slug}
-          functions={[...ALLOWED].sort()}
-          initialFormula={last?.formula ?? ""}
-          alreadySolved={Boolean(last?.correct)}
-        />
+        {entitled ? (
+          <ExcelWorkbench
+            slug={slug}
+            functions={[...ALLOWED].sort()}
+            initialFormula={last?.formula ?? ""}
+            alreadySolved={Boolean(last?.correct)}
+          />
+        ) : (
+          <div className="border-l-2 border-foreground/40 bg-card/60 px-4 py-3 text-sm">
+            <p className="font-medium">This question needs CaseCode access</p>
+            <p className="mt-1 text-muted-foreground">{SOLVE_DENIAL.error}</p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canOpenExercise } from "@/lib/teacher-exercises";
+import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { Badge } from "@/components/ui/badge";
 import { SqlWorkbench } from "@/components/sql/sql-workbench";
 
@@ -45,6 +46,9 @@ export default async function SqlExercisePage({
     .limit(1);
 
   const last = attempts?.[0];
+  // Checked before the workbench renders, so an account without access is
+  // told so here — not after switching the camera on and pressing Start.
+  const entitled = await canSolve(admin, user.id);
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -58,11 +62,18 @@ export default async function SqlExercisePage({
       </div>
 
       <div className="mt-5">
-        <SqlWorkbench
-          slug={slug}
-          initialQuery={last?.query ?? ""}
-          alreadySolved={Boolean(last?.correct)}
-        />
+        {entitled ? (
+          <SqlWorkbench
+            slug={slug}
+            initialQuery={last?.query ?? ""}
+            alreadySolved={Boolean(last?.correct)}
+          />
+        ) : (
+          <div className="border-l-2 border-foreground/40 bg-card/60 px-4 py-3 text-sm">
+            <p className="font-medium">This question needs CaseCode access</p>
+            <p className="mt-1 text-muted-foreground">{SOLVE_DENIAL.error}</p>
+          </div>
+        )}
       </div>
     </div>
   );

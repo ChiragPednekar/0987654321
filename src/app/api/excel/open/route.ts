@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { canOpenExercise } from "@/lib/teacher-exercises";
 import { startActivityAttempt } from "@/lib/proctoring";
 import { lockoutResponse, recordLockout, lockMessage } from "@/lib/exam-lockouts";
@@ -38,6 +39,13 @@ export async function POST(request: NextRequest) {
   if (locked) return locked;
 
   const admin = createAdminClient();
+
+  // The prompt, schema and data ARE the question. Run and submit already
+  // refused an unlicensed account, but this handed the question itself to
+  // anyone signed in, so it could be read and worked on elsewhere.
+  if (!(await canSolve(admin, user.id))) {
+    return NextResponse.json(SOLVE_DENIAL, { status: 403 });
+  }
 
   const { data: exercise } = await admin
     .from("excel_exercises")
