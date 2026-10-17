@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { BookOpen, CheckCircle2, ChevronRight, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CheckoutButton } from "@/components/billing/checkout-button";
 import { Section } from "@/components/section";
@@ -7,13 +8,14 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkoutMode, checkoutModeFor } from "@/lib/billing/checkout-mode";
 import { attemptState } from "@/lib/certificates";
+import { getCertCourse } from "@/lib/cert-courses";
 import { rupees } from "@/lib/pricing";
 import { formatDay } from "@/lib/utils";
 import type { CertAttemptRow, CertExamRow } from "@/lib/types/database";
 
 export const metadata: Metadata = {
-  title: "Certificate exams",
-  description: "Timed, proctored case exams with a verifiable certificate for your CV and LinkedIn.",
+  title: "Certificates & Courses",
+  description: "Structured preparation courses and timed proctored case exams with verifiable certificates for your CV and LinkedIn.",
 };
 
 const STATE_LABEL: Record<string, string> = {
@@ -45,44 +47,114 @@ export default async function CertificatesPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 pb-20 pt-10 sm:px-6">
+      {/* ---------------------------------------------------- Hero Header --- */}
       <header>
-        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Certificates</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+          Certifications &amp; Courses
+        </p>
         <h1 className="mt-4 font-editorial text-[2.6rem] font-normal leading-[0.98] tracking-[-0.02em] sm:text-[3.4rem]">
-          Prove it <em className="italic">under exam conditions</em>.
+          Learn the frameworks. <em className="italic">Prove it under exam conditions</em>.
         </h1>
         <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-          Each exam is two cases against the clock, proctored with your camera on and the page locked. Pass, and you
-          get a certificate with a public verification link for your CV and LinkedIn. You pay for the attempt, pass or
-          not — that is what makes the certificate mean something.
+          Each certification includes a structured preparation curriculum paired with real practice cases.
+          Study the core mental models and business arithmetic first, then sit for the proctored exam to earn a verifiable
+          credential with 1-click addition to your LinkedIn profile.
         </p>
       </header>
 
-      <Section title="Exams" count={(exams ?? []).length}>
+      {/* --------------------------------------- Certification Roadmap --- */}
+      <div className="mt-10 rounded-lg border border-border bg-card/40 p-6">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">How the Certification Works</p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-4">
+          <div className="rounded border border-border/80 bg-background p-4">
+            <span className="font-mono text-[10px] uppercase text-muted-foreground">Step 1</span>
+            <p className="mt-1 text-sm font-semibold">1. Study Curriculum</p>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              4 modules with framework guides, formula sheets, and common pitfalls.
+            </p>
+          </div>
+          <div className="rounded border border-border/80 bg-background p-4">
+            <span className="font-mono text-[10px] uppercase text-muted-foreground">Step 2</span>
+            <p className="mt-1 text-sm font-semibold">2. Solve Practice Cases</p>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              Apply frameworks to real library cases with immediate AI rubric grading.
+            </p>
+          </div>
+          <div className="rounded border border-border/80 bg-background p-4">
+            <span className="font-mono text-[10px] uppercase text-muted-foreground">Step 3</span>
+            <p className="mt-1 text-sm font-semibold">3. Proctored Exam</p>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              Two timed cases in 90 minutes under camera and window-lock proctoring.
+            </p>
+          </div>
+          <div className="rounded border border-border/80 bg-background p-4">
+            <span className="font-mono text-[10px] uppercase text-muted-foreground">Step 4</span>
+            <p className="mt-1 text-sm font-semibold">4. Verified Credential</p>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              Score 60%+ to earn a public certificate page and LinkedIn credential.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ------------------------------------------- Programs Catalog --- */}
+      <Section title="Certification Programs" count={(exams ?? []).length}>
         <ul className="divide-y divide-border">
           {((exams ?? []) as CertExamRow[]).map((exam) => {
             const open = openAttempts.get(exam.id);
+            const course = getCertCourse(exam.slug);
+
             return (
-              <li key={exam.id} className="grid gap-3 py-5 sm:grid-cols-[1fr_auto] sm:items-center">
+              <li key={exam.id} className="grid gap-4 py-7 sm:grid-cols-[1fr_auto] sm:items-center">
                 <div>
-                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{exam.track}</p>
-                  <Link href={`/certificates/${exam.slug}`} className="font-editorial text-2xl hover:underline">
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{exam.track}</p>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400">Course Included</span>
+                  </div>
+
+                  <Link href={`/certificates/${exam.slug}`} className="mt-1 inline-block font-editorial text-2xl hover:underline sm:text-3xl">
                     {exam.title}
                   </Link>
-                  <p className="mt-1 max-w-xl text-sm text-muted-foreground">{exam.summary}</p>
-                  <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    {exam.case_ids.length} cases · {exam.duration_minutes} min · pass {exam.pass_pct}%
+
+                  <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                    {course?.subtitle ?? exam.summary}
                   </p>
+
+                  {/* Course Feature Badges */}
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="rounded border border-border bg-card px-2.5 py-0.5 font-mono text-[11px] text-foreground">
+                      4 Prep Modules (~{course?.estimatedHours ?? 8}h)
+                    </span>
+                    <span className="rounded border border-border bg-card px-2.5 py-0.5 font-mono text-[11px] text-foreground">
+                      Frameworks &amp; Formula Sheets
+                    </span>
+                    <span className="rounded border border-border bg-card px-2.5 py-0.5 font-mono text-[11px] text-foreground">
+                      8 Practice Cases
+                    </span>
+                    <span className="rounded border border-border/60 bg-muted/40 px-2.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+                      Exam: 2 cases · {exam.duration_minutes} min · pass {exam.pass_pct}%
+                    </span>
+                  </div>
                 </div>
+
                 <div className="flex items-center gap-4 sm:flex-col sm:items-end">
-                  <span className="font-editorial text-3xl">{rupees(exam.price_paise)}</span>
-                  <div className="flex items-center gap-3">
-                    <Link href={`/certificates/${exam.slug}`} className="text-sm underline underline-offset-4">
-                      Details
-                    </Link>
+                  <div className="text-right">
+                    <span className="font-editorial text-3xl">{rupees(exam.price_paise)}</span>
+                    <p className="text-[11px] text-muted-foreground">course free · pay per exam attempt</p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="ink" size="sm" asChild>
+                      <Link href={`/certificates/${exam.slug}`}>
+                        Open Course &amp; Exam
+                      </Link>
+                    </Button>
+
                     {open ? (
-                      <Button variant="ink" size="sm" asChild>
+                      <Button variant="outline" size="sm" asChild>
                         <Link href={`/certificates/attempt/${open.id}`}>
-                          {attemptState(open) === "ready" ? "Start exam" : "Resume"}
+                          {attemptState(open) === "ready" ? "Start exam" : "Resume exam"}
                         </Link>
                       </Button>
                     ) : (
@@ -106,6 +178,7 @@ export default async function CertificatesPage() {
         </ul>
       </Section>
 
+      {/* ---------------------------------------------- Active Attempts --- */}
       {profile && (attempts ?? []).length > 0 && (
         <Section title="Your attempts" count={(attempts ?? []).length}>
           <ul className="divide-y divide-border text-sm">
@@ -129,6 +202,7 @@ export default async function CertificatesPage() {
         </Section>
       )}
 
+      {/* ------------------------------------------- Earned Credentials --- */}
       {earned.length > 0 && (
         <Section title="Your certificates" count={earned.length}>
           <ul className="divide-y divide-border text-sm">
