@@ -7,8 +7,9 @@ import { SESSION_COOKIE_OPTIONS } from "./cookie-options";
 /**
  * Anyone can sign up (071), but the app is still behind a session: the list
  * below is the complete set of paths that may be seen without an account.
- * Anything else needs a signed-in, live account — and, except for
- * OPEN_WITHOUT_PLAN, a plan or a campus licence (072).
+ * Anything else needs a signed-in, live (not deactivated) account. Every page
+ * is visible to such an account; SOLVING needs a plan or a campus licence, and
+ * that is enforced by each solve route (canSolve), not here.
  *
  * /certificate/<code> is public on purpose — it is the verification page an
  * employer opens from a CV.
@@ -28,46 +29,10 @@ const PUBLIC_PATHS = [
   "/certificate",
 ];
 
-/**
- * What a signed-in account without a plan or licence may still open: the ways
- * to pay, its own account, and the two products sold on their own — the
- * certificate exams and expert mock interviews, which anyone may buy without a
- * plan. Everything else redirects to /upgrade (072).
- *
- * /api/proctor is here because a certificate exam is proctored: the page
- * reports lockouts and camera evidence there, for the caller's own sitting.
- */
-const OPEN_WITHOUT_PLAN = [
-  "/upgrade",
-  "/pricing",
-  "/purchases",
-  "/settings",
-  "/profile",
-  "/notifications",
-  "/certificates",
-  "/experts",
-  "/api/billing",
-  "/api/settings",
-  "/api/notifications",
-  "/api/certificates",
-  "/api/experts",
-  "/api/proctor",
-];
-
-function isOpenWithoutPlan(pathname: string): boolean {
-  return OPEN_WITHOUT_PLAN.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-}
-
-function redirectTo(
-  request: NextRequest,
-  response: NextResponse,
-  pathname: string,
-  params: Record<string, string> = {},
-) {
+function redirectTo(request: NextRequest, response: NextResponse, pathname: string) {
   const url = request.nextUrl.clone();
   url.pathname = pathname;
   url.search = "";
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const redirectResponse = NextResponse.redirect(url);
   response.cookies.getAll().forEach((cookie) => {
     redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
@@ -148,16 +113,14 @@ export async function updateSession(request: NextRequest) {
   }
 
   /**
-   * Access gate: a live account, and a plan or licence (072).
+   * Access gate: the account must be live (not deactivated).
    *
-   * RLS already returns no content to an account without either, but almost
-   * every page under (app) renders through the service-role client, which
-   * bypasses RLS by design. So for those pages this check is the only thing
-   * standing between an unpaid account and the product.
+   * Almost every page under (app) renders through the service-role client,
+   * which bypasses RLS by design, so for those pages this check is the only
+   * thing between a deactivated account and the product. Viewing is open to
+   * any live account; solving is checked per route (canSolve).
    *
-   * Costs one RPC (app_gate) on non-public paths. That is the price of the
-   * service-role rendering; trusting the JWT instead would mean trusting a
-   * token issued before a plan ran out.
+   * Costs one RPC (app_gate) on non-public paths.
    */
   if (user && isProtected) {
     const { data: gate } = await supabase.rpc("app_gate");
@@ -176,29 +139,6 @@ export async function updateSession(request: NextRequest) {
         );
       }
       return redirectTo(request, response, "/no-access");
-    }
-
-    /**
-     * The paywall (072). Without a plan or a live campus licence, the only
-     * things an account may open are the ways to pay and its own account.
-     *
-     * This FAILS CLOSED: a lookup that errors is treated as unpaid. Almost
-     * every page renders through the service-role client, so RLS cannot hold
-     * the line behind a failed check. A paying student who hits a hiccup lands
-     * on /upgrade, which reads their plan through the service role and shows
-     * it — one click back.
-     */
-    if (row?.entitled !== true && !isOpenWithoutPlan(pathname)) {
-      if (isApi) {
-        return NextResponse.json(
-          {
-            error: "CaseCode needs a plan or your college's licence. Upgrade to continue.",
-            upgrade: true,
-          },
-          { status: 402 },
-        );
-      }
-      return redirectTo(request, response, "/upgrade", { from: pathname });
     }
   }
 

@@ -190,38 +190,13 @@ const RECRUITER_GROUPS: { heading: string; items: Item[] }[] = [
   },
 ];
 
-/**
- * The menu for an account with neither a plan nor a licence: the way to pay,
- * and the two products sold on their own. The middleware sends every other
- * page to /upgrade (072), so listing them would only be links that bounce.
- */
-const UNPAID_GROUPS: { heading: string; items: Item[] }[] = [
-  {
-    heading: "Get started",
-    items: [
-      { href: "/upgrade", label: "Upgrade", icon: Sparkles },
-      { href: "/pricing", label: "Plans & pricing", icon: ListOrdered },
-    ],
-  },
-  {
-    heading: "No plan needed",
-    items: [
-      { href: "/certificates", label: "Certificates", icon: Award },
-      { href: "/experts", label: "Expert mocks", icon: UserRoundCheck },
-    ],
-  },
-];
-
 export function AppSidebar({
   role,
   isInstitutionStaff = false,
-  entitled = true,
 }: {
   role: UserRole | null;
   /** Placement-cell staff on a campus licence. */
   isInstitutionStaff?: boolean;
-  /** Has a plan or a licence. Without one, only the way to pay is listed. */
-  entitled?: boolean;
 }) {
   const pathname = usePathname();
   // Rendered expanded on the server; the stored preference takes over on
@@ -248,9 +223,7 @@ export function AppSidebar({
    * `teacher` instead; that is what the role is for.
    */
   const groups = (
-    !entitled
-      ? UNPAID_GROUPS
-      : role === "admin"
+    role === "admin"
       ? ADMIN_GROUPS
       : role === "recruiter"
         ? RECRUITER_GROUPS

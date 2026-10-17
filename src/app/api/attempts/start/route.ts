@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,11 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient();
+
+  // Seeing is open; solving needs a plan or a campus licence (src/lib/entitlement.ts).
+  if (!(await canSolve(admin, user.id))) {
+    return NextResponse.json(SOLVE_DENIAL, { status: 403 });
+  }
 
   // No entitlement check here on purpose: this writes one timestamp and reveals
   // nothing. Gating it would only tell an unlicensed account that the case

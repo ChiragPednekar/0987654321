@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 
 /**
  * Claims the caller's personal contest timer.
@@ -24,6 +25,11 @@ export async function POST(
   }
 
   const admin = createAdminClient();
+
+  // Seeing is open; solving needs a plan or a campus licence (src/lib/entitlement.ts).
+  if (!(await canSolve(admin, user.id))) {
+    return NextResponse.json(SOLVE_DENIAL, { status: 403 });
+  }
 
   const { data: contest } = await admin
     .from("contests")

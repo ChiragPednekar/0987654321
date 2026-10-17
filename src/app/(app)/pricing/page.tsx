@@ -15,9 +15,8 @@ export const metadata: Metadata = {
 /**
  * Everything CaseCode sells, on one page: the three plans, top-ups, the
  * certificate exams and expert mock interviews — then the campus licence for
- * colleges. Nothing in the product opens without a plan or a licence (072),
- * except the pay-as-you-go package: exams and expert sessions are sold on
- * their own. Set like the front page: type, rules and space, no boxed price
+ * colleges. Every page is free to look at; solving needs a plan or a licence.
+ * Exams and expert sessions are a separate pay-as-you-go package. Set like the front page: type, rules and space, no boxed price
  * cards, and every line is something the product actually does.
  */
 
@@ -40,7 +39,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "What happens when my plan ends?",
-    a: "Access stops on the day it ends; everything you have done stays on your account and comes back when you renew. Unused top-up credits stay valid for a year.",
+    a: "Practising stops on the day it ends; everything you have done stays on your account. Unused top-up credits stay valid for a year and work again as soon as you have a plan.",
   },
   {
     q: "How do I pay?",
@@ -76,8 +75,8 @@ export default async function PricingPage() {
           Practise properly, <em className="italic">from {rupees(PLANS.monthly.pricePaise)} a month</em>.
         </h1>
         <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-          CaseCode Pro opens the whole library: every case, graded answers, AI mock interviews and every drill. Sign
-          up with any email — no college ID needed — or get it free through your college&apos;s licence.
+          Reading the library is free. CaseCode Pro adds graded answers, AI mock interviews and every drill. Sign up
+          with any email — no college ID needed — or get it through your college&apos;s licence.
         </p>
       </header>
 

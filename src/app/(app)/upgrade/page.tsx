@@ -18,8 +18,7 @@ export const metadata: Metadata = {
  * The store for a signed-in student: the three plans, top-up packs, and where
  * the account stands now. No college ID is needed for any of it.
  */
-export default async function UpgradePage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
-  const { from } = await searchParams;
+export default async function UpgradePage() {
   const profile = await getCurrentUser();
   if (!profile) redirect("/login?next=/upgrade");
 
@@ -58,16 +57,6 @@ export default async function UpgradePage({ searchParams }: { searchParams: Prom
           needed — pick the plan that fits how you prepare.
         </p>
       </header>
-
-      {from && !access?.canSolve ? (
-        <p className="mt-8 max-w-2xl border-l-2 border-foreground pl-4 text-sm">
-          <span className="font-medium">That page needs CaseCode Pro.</span>{" "}
-          <span className="text-muted-foreground">
-            CaseCode opens once you have a plan — or once your placement cell adds you to your college&apos;s
-            licence. Certificate exams and expert interviews can be bought on their own, below.
-          </span>
-        </p>
-      ) : null}
 
       {access?.pro && !access.subscription ? (
         <p className="mt-10 max-w-xl border-l-2 border-foreground/40 pl-4 text-sm text-muted-foreground">
