@@ -11,7 +11,7 @@ import type { CheckoutMode } from "@/lib/billing/checkout-mode";
 
 /**
  * The pay button for anything CaseCode sells: a plan, a top-up pack, a
- * certificate exam attempt or an expert mock interview.
+ * or a certificate exam attempt.
  *
  * It names the item; the server prices it (src/lib/billing/purchases.ts).
  * With Razorpay connected, card details go to Razorpay's hosted widget and
@@ -29,8 +29,7 @@ declare global {
 export type CheckoutItem =
   | { kind: "plan"; code: "monthly" | "season" | "annual" }
   | { kind: "topup"; code: "answers_25" | "interviews_10" | "combo" }
-  | { kind: "exam"; slug: string }
-  | { kind: "expert_session"; slotId: string; notes?: string };
+  | { kind: "exam"; slug: string };
 
 export interface CheckoutButtonProps {
   item: CheckoutItem;

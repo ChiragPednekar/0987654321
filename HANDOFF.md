@@ -33,10 +33,7 @@ Everything below is committed on `main` (remote `chirag`, repo `ChiragPednekar/0
   - A proctor lockout voids the attempt.
   - A score of 60% or more issues a public page at `/certificate/CC-XXXXX-XXXXX` with a LinkedIn "Add to profile" link.
   - Code: `src/lib/certificates.ts`, `src/app/(app)/certificates/**`, `src/app/api/certificates/**`, `src/components/certificates/exam-room.tsx`.
-- **Expert mock interviews, ₹1,000–₹5,000 per session** (the expert sets the price). CaseCode keeps 25%.
-  - Flow: an expert applies at `/experts/apply` → an admin approves at `/admin/experts` → the expert publishes slots → a student books and pays (the slot is held for 15 minutes) → the expert writes feedback → the student rates the session.
-  - Payouts are recorded manually by an admin ("Mark paid").
-  - Code: `src/lib/experts.ts`, `src/app/(app)/experts/**`, `src/app/api/experts/**`.
+- **Expert mock interviews: removed** (owner's decision, 17 Oct). The pages, API routes, components, `src/lib/experts.ts` and the checkout item were deleted. The empty database tables (`experts`, `expert_slots`, `expert_bookings`) were left in place; recover the code from commit `da6c47d` to bring it back.
 
 ### Payments
 
@@ -55,7 +52,7 @@ Everything below is committed on `main` (remote `chirag`, repo `ChiragPednekar/0
 - `/purchases/[id]`: receipts.
 - Settings: plan, next period and payment history.
 - Usage card (`src/components/quota-card.tsx`): plan allowance, the 5-hour window with its reset time, and top-up balance.
-- Admin: Users (grant/end Pro), Experts & sales.
+- Admin: Users (grant/end Pro), Sales (`/admin/sales`: revenue by product and the latest purchases).
 - The locked-case panel is `src/components/case/licence-gate.tsx`.
 
 ## Database migrations added today (all applied to production)
@@ -86,7 +83,7 @@ Earlier the same day: the editorial redesign of the teacher pages, dashboards, c
 
 ## Complimentary access (owner's account) — keep this working for future features
 
-`chiragpednekar3@gmail.com` is on `public.complimentary_access` (migration 074). That gives it every premium feature, now and in future: free, with no plan, allowance or 5-hour limit, and certificate exam attempts at no charge. Expert sessions stay paid, because that money goes to the expert.
+`chiragpednekar3@gmail.com` is on `public.complimentary_access` (migration 074). That gives it every premium feature, now and in future: free, with no plan, allowance or 5-hour limit, and certificate exam attempts at no charge.
 
 **Rule for every new premium feature:** gate it on `public.has_pro()` / `public.can_solve()` (in code: `canSolve()`, `getAccess()`, `getQuotaStatus()`), and treat `is_complimentary()` (or `QuotaStatus.exempt`) as "unlimited, never charge". Then complimentary accounts get the feature automatically. A feature that invents its own entitlement check, or charges for something CaseCode itself provides, must add a complimentary bypass.
 
@@ -101,11 +98,10 @@ Earlier the same day: the editorial redesign of the teacher pages, dashboards, c
 1. **Unpaid users need a clear in-page prompt on every solve surface.** Cases show the locked-case panel. The other features (SQL, Excel, aptitude, interviews, drills, simulation, negotiation, sales, resume, deck, GD, contests) currently only get a 403 response with a toast saying "Practising needs CaseCode access…". Each should show an upgrade panel in place of its start/submit button, like `LicenceGate`.
 2. **Follow-up routes for an existing session don't re-check entitlement.** These are the interview turn/reply/say/end routes, `sim/runs/[id]/round` and `sales .../debrief`. A plan that lapses mid-session can finish that session. Add `canSolve` if that matters.
 3. **Razorpay keys and launch clean-up**, as described above. Razorpay's KYC also needs Terms, Privacy, Refund/Cancellation and Contact pages.
-4. **Expert flow gaps:** no student or expert cancellation, refunds and payouts are manual, and notifications are in-app only (no email).
-5. **Group-discussion usage** is charged one credit when the session is created, but counted once per model call. This is a minor mismatch.
-6. **Uncommitted work by someone else, deliberately left out of every commit:** `src/components/proctor/camera-preview.tsx`, `src/hooks/use-camera-proctor.ts`, `src/lib/gaze-tracker.ts` and `src/lib/proctor-config.ts` (stricter thresholds; gaze dwell time cut from 3000 to 2000 ms). Review them before committing.
-7. **Production storage bucket `smartcart`:** empty, left by another project's migrations (`smartcart_*`). Not deleted.
-8. **Vercel deploys sometimes lag:** `71a08ff` sat "pending" for a long time. Check with `gh api repos/ChiragPednekar/0987654321/commits/<sha>/status`.
+4. **Group-discussion usage** is charged one credit when the session is created, but counted once per model call. This is a minor mismatch.
+5. **Proctoring threshold tweaks** (`camera-preview.tsx`, `use-camera-proctor.ts`, `gaze-tracker.ts`, `proctor-config.ts`) were committed in `db1a8dc`, not by Claude. Review them if proctoring misbehaves.
+6. **Production storage bucket `smartcart`:** empty, left by another project's migrations (`smartcart_*`). Not deleted.
+7. **Vercel deploys sometimes lag:** `71a08ff` sat "pending" for a long time. Check with `gh api repos/ChiragPednekar/0987654321/commits/<sha>/status`.
 
 ## How to verify
 

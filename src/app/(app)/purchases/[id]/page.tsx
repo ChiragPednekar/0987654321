@@ -23,8 +23,6 @@ function nextStep(p: PurchaseRow): { href: string; label: string; note: string }
         label: "Go to your exam",
         note: "Your attempt is ready. Start it when you have the full time free — the clock runs from the moment you begin.",
       };
-    case "expert_session":
-      return { href: "/experts/sessions", label: "See your booking", note: "Your session is booked. The meeting link is on your booking." };
   }
 }
 
@@ -49,7 +47,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-10 sm:px-6">
       <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Receipt</p>
       <h1 className="mt-4 font-editorial text-[2.4rem] font-normal leading-tight">
-        {paid ? <>Payment <em className="italic">received</em>.</> : purchase.status === "needs_refund" ? "That slot was taken." : "Payment pending."}
+        {paid ? <>Payment <em className="italic">received</em>.</> : "Payment pending."}
       </h1>
 
       <dl className="mt-8 divide-y divide-border border-y-2 border-foreground text-sm">
@@ -82,11 +80,6 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
             <Link href={step.href}>{step.label}</Link>
           </Button>
         </>
-      ) : purchase.status === "needs_refund" ? (
-        <p className="mt-8 text-sm text-muted-foreground">
-          Someone else booked that slot while your payment went through. You will be refunded in full —{" "}
-          <Link href="/experts" className="underline underline-offset-4">pick another time</Link>.
-        </p>
       ) : (
         <p className="mt-8 text-sm text-muted-foreground">
           We are waiting for the payment to be confirmed. This page updates once it is.

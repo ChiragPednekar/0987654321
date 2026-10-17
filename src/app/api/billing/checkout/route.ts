@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient();
 
   // Complimentary accounts (074) get CaseCode's own products free: an exam
-  // attempt is created directly, with no purchase. Expert sessions stay paid —
-  // that money is the expert's — and plans or top-ups are never needed.
+  // attempt is created directly, with no purchase. Plans and top-ups are never
+  // needed.
   if (parsed.data.kind === "exam") {
     const { data: comp } = await admin.rpc("is_complimentary", { p_user: user.id });
     if (comp === true) {

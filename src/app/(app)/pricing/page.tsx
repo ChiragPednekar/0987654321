@@ -15,11 +15,11 @@ export const metadata: Metadata = {
 };
 
 /**
- * Everything CaseCode sells, on one page: the three plans, top-ups, the
- * certificate exams and expert mock interviews — then the campus licence for
- * colleges. Every page is free to look at; solving needs a plan or a licence.
- * Exams and expert sessions are a separate pay-as-you-go package. Set like the front page: type, rules and space, no boxed price
- * cards, and every line is something the product actually does.
+ * Everything CaseCode sells, on one page: the three plans, top-ups and the
+ * certificate exams — then the campus licence for colleges. Every page is free
+ * to look at; solving needs a plan or a licence. Exams are a separate
+ * pay-as-you-go package. Set like the front page: type, rules and space, no
+ * boxed price cards, and every line is something the product actually does.
  */
 
 const FAQ: { q: string; a: string }[] = [

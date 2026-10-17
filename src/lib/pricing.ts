@@ -115,16 +115,6 @@ export function isTopupCode(value: unknown): value is TopupCode {
   return typeof value === "string" && value in TOPUPS;
 }
 
-/** CaseCode's share of an expert mock interview, in basis points (25%). */
-export const EXPERT_COMMISSION_BPS = 2500;
-export const EXPERT_PRICE_RANGE_PAISE = { min: 100_000, max: 500_000 } as const;
-
-/** Splits a session price into CaseCode's commission and the expert's payout. */
-export function splitExpertPrice(pricePaise: number, commissionBps = EXPERT_COMMISSION_BPS) {
-  const commission = Math.round((pricePaise * commissionBps) / 10_000);
-  return { commissionPaise: commission, payoutPaise: pricePaise - commission };
-}
-
 /** "₹2,499" from paise. */
 export function rupees(paise: number): string {
   return `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;

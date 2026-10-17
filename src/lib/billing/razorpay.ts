@@ -17,7 +17,7 @@ import crypto from "node:crypto";
  */
 
 // Prices live in src/lib/pricing.ts (plans, top-ups) and on the rows they sell
-// (exam attempts, expert sessions); the amount charged is always resolved on
+// (exam attempts); the amount charged is always resolved on
 // the server from those, never taken from the browser.
 export const CURRENCY = "INR";
 

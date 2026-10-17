@@ -9,7 +9,7 @@ import {
   type Access,
   type ActiveSubscription,
 } from "@/lib/subscription";
-import { PLANS, PLAN_ORDER, TOPUPS, TOPUP_ORDER, perMonth, rupees, splitExpertPrice } from "@/lib/pricing";
+import { PLANS, PLAN_ORDER, TOPUPS, TOPUP_ORDER, perMonth, rupees } from "@/lib/pricing";
 import { attemptState, linkedInAddUrl, overallPercentage, SUBMIT_GRACE_SECONDS } from "@/lib/certificates";
 
 const DAY = 86_400_000;
@@ -121,16 +121,6 @@ describe("pricing stays profitable at the 2027 model rates", () => {
   it("formats rupees the Indian way", () => {
     expect(rupees(249_900)).toBe("₹2,499");
     expect(perMonth(PLANS.monthly)).toBe("₹299");
-  });
-});
-
-describe("expert session split", () => {
-  it("keeps 25% for CaseCode and pays out the rest, to the paisa", () => {
-    const { commissionPaise, payoutPaise } = splitExpertPrice(150_000);
-    expect(commissionPaise).toBe(37_500);
-    expect(payoutPaise).toBe(112_500);
-    const odd = splitExpertPrice(199_999);
-    expect(odd.commissionPaise + odd.payoutPaise).toBe(199_999);
   });
 });
 

@@ -158,7 +158,7 @@ const ADMIN_GROUPS: { heading: string; items: Item[] }[] = [
       { href: "/admin/licences", label: "Licences", icon: Building2 },
       { href: "/admin/renewals", label: "Renewals", icon: BarChart3 },
       { href: "/admin/usage", label: "AI usage", icon: Gauge },
-      { href: "/admin/experts", label: "Experts & sales", icon: UserRoundCheck },
+      { href: "/admin/sales", label: "Sales", icon: UserRoundCheck },
     ],
   },
   {

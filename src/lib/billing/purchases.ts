@@ -9,23 +9,21 @@ import {
   TOPUPS,
   TOPUP_VALID_DAYS,
   rupees,
-  splitExpertPrice,
   type PlanCode,
   type TopupCode,
 } from "@/lib/pricing";
 import { activatePlanPeriod, getAccess, purchaseBlock } from "@/lib/subscription";
-import { BOOKING_LEAD_HOURS } from "@/lib/experts";
 
 type Admin = SupabaseClient<Database>;
 
 /**
  * Everything a student can buy goes through here: plans, top-up packs,
- * certificate exam attempts and expert mock interviews.
+ * and certificate exam attempts.
  *
  * Two rules:
  *   1. The browser names WHAT it wants, never what it costs. The amount is
- *      resolved on the server from src/lib/pricing.ts or from the exam / slot
- *      row being bought.
+ *      resolved on the server from src/lib/pricing.ts or from the exam row
+ *      being bought.
  *   2. A purchase is fulfilled once. fulfilPurchase() moves the row from
  *      'created' to 'paid' with a conditional update, and only the caller that
  *      wins that update delivers the goods — so the browser's verify call and
@@ -36,11 +34,6 @@ export const itemSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("plan"), code: z.enum(["monthly", "season", "annual"]) }),
   z.object({ kind: z.literal("topup"), code: z.enum(["answers_25", "interviews_10", "combo"]) }),
   z.object({ kind: z.literal("exam"), slug: z.string().min(1).max(120) }),
-  z.object({
-    kind: z.literal("expert_session"),
-    slotId: z.string().uuid(),
-    notes: z.string().max(1500).default(""),
-  }),
 ]);
 
 export type PurchaseItem = z.infer<typeof itemSchema>;
@@ -56,13 +49,7 @@ export interface ResolvedItem {
 
 export type Resolution = { ok: true; item: ResolvedItem } | { ok: false; status: number; error: string };
 
-/** How long a slot is held for someone at the checkout. */
-const SLOT_HOLD_MINUTES = 15;
-
-/**
- * Prices an item and checks this account may buy it. For an expert session it
- * also holds the slot, so two students cannot pay for the same hour.
- */
+/** Prices an item and checks this account may buy it. */
 export async function resolveItem(admin: Admin, userId: string, item: PurchaseItem): Promise<Resolution> {
   switch (item.kind) {
     case "plan": {
@@ -134,60 +121,6 @@ export async function resolveItem(admin: Admin, userId: string, item: PurchaseIt
           description: `Certificate exam — ${exam.title} (one attempt)`,
           amountPaise: exam.price_paise,
           meta: {},
-        },
-      };
-    }
-
-    case "expert_session": {
-      const { data: slot } = await admin
-        .from("expert_slots")
-        .select("id, expert_id, starts_at, duration_minutes, status, held_by, held_until")
-        .eq("id", item.slotId)
-        .maybeSingle();
-      if (!slot) return { ok: false, status: 404, error: "That slot no longer exists." };
-
-      const { data: expert } = await admin
-        .from("experts")
-        .select("id, user_id, display_name, price_paise, commission_bps, status")
-        .eq("id", slot.expert_id)
-        .maybeSingle();
-      if (!expert || expert.status !== "approved") {
-        return { ok: false, status: 404, error: "This expert is not taking bookings." };
-      }
-      if (expert.user_id === userId) return { ok: false, status: 409, error: "You cannot book your own slot." };
-      if (new Date(slot.starts_at).getTime() < Date.now() + BOOKING_LEAD_HOURS * 3_600_000) {
-        return { ok: false, status: 409, error: `Sessions must be booked at least ${BOOKING_LEAD_HOURS} hours ahead.` };
-      }
-
-      const now = new Date().toISOString();
-      const heldUntil = new Date(Date.now() + SLOT_HOLD_MINUTES * 60_000).toISOString();
-      const { data: held } = await admin
-        .from("expert_slots")
-        .update({ status: "held", held_by: userId, held_until: heldUntil })
-        .eq("id", slot.id)
-        .or(`status.eq.open,and(status.eq.held,held_until.lt."${now}"),and(status.eq.held,held_by.eq.${userId})`)
-        .select("id");
-      if (!held || held.length === 0) {
-        return { ok: false, status: 409, error: "Someone else has just booked that slot. Pick another time." };
-      }
-
-      const split = splitExpertPrice(expert.price_paise, expert.commission_bps);
-      const when = new Date(slot.starts_at).toLocaleString("en-IN", {
-        day: "numeric",
-        month: "short",
-        hour: "numeric",
-        minute: "2-digit",
-        timeZone: "Asia/Kolkata",
-      });
-      return {
-        ok: true,
-        item: {
-          kind: "expert_session",
-          itemCode: slot.id,
-          itemRef: slot.id,
-          description: `Mock interview with ${expert.display_name} — ${when} (${slot.duration_minutes} min)`,
-          amountPaise: expert.price_paise,
-          meta: { notes: item.notes, expert_id: expert.id, ...split },
         },
       };
     }
@@ -284,7 +217,7 @@ export async function fulfilPurchase(
   }
 
   let fulfilledRef: string | null = null;
-  let status: PurchaseRow["status"] = "paid";
+  const status: PurchaseRow["status"] = "paid";
 
   switch (purchase.kind) {
     case "plan": {
@@ -320,51 +253,6 @@ export async function fulfilPurchase(
         .select("id")
         .single();
       fulfilledRef = data?.id ?? null;
-      break;
-    }
-
-    case "expert_session": {
-      const meta = purchase.meta as { notes?: string; expert_id?: string; commissionPaise?: number; payoutPaise?: number };
-      // The hold may have lapsed while the student sat on the payment page and
-      // someone else booked the hour. Then the money has to go back.
-      const { data: booked } = await admin
-        .from("expert_slots")
-        .update({ status: "booked", held_until: null })
-        .eq("id", purchase.item_ref as string)
-        .eq("held_by", purchase.user_id)
-        .in("status", ["held", "open"])
-        .select("id, expert_id");
-      if (!booked || booked.length === 0) {
-        status = "needs_refund";
-        break;
-      }
-      const split = splitExpertPrice(purchase.amount_paise);
-      const { data } = await admin
-        .from("expert_bookings")
-        .insert({
-          slot_id: booked[0].id,
-          expert_id: booked[0].expert_id,
-          student_id: purchase.user_id,
-          purchase_id: purchase.id,
-          price_paise: purchase.amount_paise,
-          commission_paise: meta.commissionPaise ?? split.commissionPaise,
-          payout_paise: meta.payoutPaise ?? split.payoutPaise,
-          student_notes: meta.notes ?? "",
-        })
-        .select("id")
-        .single();
-      fulfilledRef = data?.id ?? null;
-
-      const { data: expert } = await admin.from("experts").select("user_id").eq("id", booked[0].expert_id).single();
-      if (expert) {
-        await admin.from("notifications").insert({
-          user_id: expert.user_id,
-          type: "system",
-          title: "New mock interview booked",
-          body: purchase.description,
-          href: "/experts/dashboard",
-        });
-      }
       break;
     }
   }

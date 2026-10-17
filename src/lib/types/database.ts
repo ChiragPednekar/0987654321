@@ -1269,24 +1269,6 @@ export interface Database {
         Update: Partial<CertAnswerRow>;
         Relationships: [];
       };
-      experts: {
-        Row: ExpertRow;
-        Insert: Partial<ExpertRow>;
-        Update: Partial<ExpertRow>;
-        Relationships: [];
-      };
-      expert_slots: {
-        Row: ExpertSlotRow;
-        Insert: Partial<ExpertSlotRow>;
-        Update: Partial<ExpertSlotRow>;
-        Relationships: [];
-      };
-      expert_bookings: {
-        Row: ExpertBookingRow;
-        Insert: Partial<ExpertBookingRow>;
-        Update: Partial<ExpertBookingRow>;
-        Relationships: [];
-      };
       drill_questions: {
         Row: DrillQuestionRow;
         Insert: Partial<DrillQuestionRow>;
@@ -2311,7 +2293,8 @@ export type SubscriptionRow = {
 
 // -------------------------------------------------------------- §purchases --
 
-export type PurchaseKind = "plan" | "topup" | "exam" | "expert_session";
+/** "expert_session" is still allowed by the table (071) but no longer sold. */
+export type PurchaseKind = "plan" | "topup" | "exam";
 
 export type PurchaseRow = {
   id: string;
@@ -2399,55 +2382,6 @@ export type CertAnswerRow = {
   feedback: Record<string, unknown> | null;
 };
 
-// ---------------------------------------------------------------- §experts --
-
-export type ExpertRow = {
-  id: string;
-  user_id: string;
-  display_name: string;
-  headline: string;
-  bio: string;
-  expertise: string[];
-  linkedin_url: string | null;
-  meeting_url: string | null;
-  price_paise: number;
-  commission_bps: number;
-  status: "pending" | "approved" | "suspended";
-  approved_at: string | null;
-  approved_by: string | null;
-  created_at: string;
-};
-
-export type ExpertSlotRow = {
-  id: string;
-  expert_id: string;
-  starts_at: string;
-  duration_minutes: number;
-  status: "open" | "held" | "booked" | "cancelled";
-  held_by: string | null;
-  held_until: string | null;
-  created_at: string;
-};
-
-export type ExpertBookingRow = {
-  id: string;
-  slot_id: string;
-  expert_id: string;
-  student_id: string;
-  purchase_id: string | null;
-  price_paise: number;
-  commission_paise: number;
-  payout_paise: number;
-  status: "confirmed" | "completed" | "cancelled" | "no_show";
-  student_notes: string;
-  expert_feedback: string | null;
-  rating: number | null;
-  review: string | null;
-  payout_status: "pending" | "paid";
-  paid_out_at: string | null;
-  completed_at: string | null;
-  created_at: string;
-};
 
 // ---------------------------------------------------------- §institutions --
 
