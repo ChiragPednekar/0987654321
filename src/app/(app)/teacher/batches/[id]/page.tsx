@@ -12,6 +12,7 @@ import { BatchControls } from "@/components/teacher/batch-controls";
 import { LockoutList } from "@/components/proctor/lockout-list";
 import { loadLockouts } from "@/lib/exam-lockouts";
 import { DOMAIN_LABEL } from "@/lib/constants";
+import { TeacherGdDialog } from "@/components/teacher/teacher-gd-dialog";
 import { formatDay, formatNumber } from "@/lib/utils";
 import type { Domain, InstitutionRosterRow } from "@/lib/types/database";
 
@@ -37,7 +38,7 @@ export default async function BatchDetail({
 
   const admin = createAdminClient();
 
-  const [{ data: batch }, { data: members }, { data: assignments }] =
+  const [{ data: batch }, { data: members }, { data: assignments }, { data: topics }] =
     await Promise.all([
       admin.from("classrooms").select("*").eq("id", id).maybeSingle(),
       admin
@@ -52,6 +53,12 @@ export default async function BatchDetail({
         .select("id, title, due_at, is_published, max_marks, cases(title)")
         .eq("classroom_id", id)
         .order("created_at", { ascending: false }),
+      admin
+        .from("gd_topics")
+        .select("id, title, prompt, category")
+        .eq("is_published", true)
+        .order("title")
+        .limit(100),
     ]);
 
   if (!batch) notFound();
@@ -162,6 +169,13 @@ export default async function BatchDetail({
               join code <span className="text-foreground">{batch.join_code}</span>
             </span>
           )}
+          <TeacherGdDialog
+            topics={topics ?? []}
+            batches={[{ id: batch.id, name: batch.name }]}
+            defaultBatchId={batch.id}
+            triggerLabel="Start GD with batch"
+            triggerVariant="outline"
+          />
           <BatchControls
             classroomId={id}
             name={batch.name}

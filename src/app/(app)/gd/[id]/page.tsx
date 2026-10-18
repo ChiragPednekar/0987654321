@@ -38,11 +38,45 @@ export default async function GdRoomPage({
     .select("user_id, admission_status, left_at, users(full_name, email)")
     .eq("session_id", id);
 
-  const people = (participants ?? []).filter(
+  let people = (participants ?? []).filter(
     (participant) => participant.admission_status === "approved" && !participant.left_at,
   );
-  const joined = user.id === session.host_id || people.some((person) => person.user_id === user.id);
-  const myStatus = (participants ?? []).find((person) => person.user_id === user.id)?.admission_status ?? null;
+  let joined = user.id === session.host_id || people.some((person) => person.user_id === user.id);
+  let myStatus = (participants ?? []).find((person) => person.user_id === user.id)?.admission_status ?? null;
+
+  // For open rooms: no permission needed, directly admit the visitor into the meeting
+  if (!joined && session.join_policy === "open" && people.length < session.max_participants) {
+    const { error: joinError } = await admin.from("gd_participants").upsert(
+      {
+        session_id: id,
+        user_id: user.id,
+        admission_status: "approved",
+        left_at: null,
+      },
+      { onConflict: "session_id,user_id" },
+    );
+    if (!joinError) {
+      joined = true;
+      myStatus = "approved";
+      const { data: profile } = await admin
+        .from("users")
+        .select("full_name, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      people = [
+        ...people,
+        {
+          user_id: user.id,
+          admission_status: "approved" as const,
+          left_at: null,
+          users: {
+            full_name: profile?.full_name ?? null,
+            email: profile?.email ?? user.email ?? "",
+          },
+        },
+      ];
+    }
+  }
 
   const names = people.map((p) => {
     const u = Array.isArray(p.users) ? p.users[0] : p.users;

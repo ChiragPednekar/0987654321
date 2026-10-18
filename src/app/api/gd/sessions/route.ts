@@ -8,6 +8,9 @@ export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   topic_id: z.string().uuid().optional(),
+  custom_topic_title: z.string().trim().min(3).max(200).optional(),
+  custom_topic_prompt: z.string().trim().max(1000).optional(),
+  classroom_id: z.string().uuid().optional(),
   join_policy: z.enum(["open", "approval"]).default("open"),
   max_participants: z.number().int().min(2).max(6).default(6),
   prep_seconds: z.number().int().min(0).max(600).default(120),
@@ -34,9 +37,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(SOLVE_DENIAL, { status: 403 });
   }
 
-  // A topic is picked at random when none is named, which is how a GD actually
-  // works — the panel gives you the topic, you do not choose it.
   let topicId = body.topic_id;
+  if (!topicId && body.custom_topic_title) {
+    const { data: newTopic } = await admin
+      .from("gd_topics")
+      .insert({
+        title: body.custom_topic_title,
+        prompt: body.custom_topic_prompt || undefined,
+        category: "business",
+        difficulty: "medium",
+        is_published: false,
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
+    if (newTopic) topicId = newTopic.id;
+  }
+
   if (!topicId) {
     const { data: topics } = await admin
       .from("gd_topics")
@@ -54,6 +71,7 @@ export async function POST(request: NextRequest) {
     .insert({
       topic_id: topicId,
       host_id: user.id,
+      classroom_id: body.classroom_id ?? null,
       join_policy: body.join_policy,
       max_participants: body.max_participants,
       prep_seconds: body.prep_seconds,

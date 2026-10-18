@@ -452,6 +452,7 @@ export type GdSessionRow = {
   id: string;
   topic_id: string;
   host_id: string;
+  classroom_id?: string | null;
   status: GdStatus;
   join_policy: "open" | "approval";
   /** Capped at 6 by the WebRTC mesh — see the migration. */

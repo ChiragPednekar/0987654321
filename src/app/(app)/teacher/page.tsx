@@ -143,7 +143,10 @@ export default async function TeacherDashboard() {
             {batchIds.length === 1 ? "batch" : "batches"}.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" className="rounded-none">
+            <Link href="/teacher/discussions">Group discussion</Link>
+          </Button>
           <Button asChild variant="outline" className="rounded-none">
             <Link href="/teacher/questions/new">New question</Link>
           </Button>
