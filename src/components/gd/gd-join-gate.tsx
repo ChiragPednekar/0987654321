@@ -2,82 +2,92 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, LockKeyhole, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useBrowserValue } from "@/hooks/use-browser-state";
 
-/**
- * The join step, which exists to do one thing before anyone is in the room:
- * find out whether this browser can transcribe, and tell the server.
- *
- * Asked here rather than discovered later because the answer decides whether
- * the student can be marked at all, and a student deserves to know that before
- * spending ten minutes in a discussion rather than after.
- */
 export function GdJoinGate({
   sessionId,
   occupied,
   capacity,
+  joinPolicy,
+  initialStatus,
 }: {
   sessionId: string;
   occupied: number;
   capacity: number;
+  joinPolicy: "open" | "approval";
+  initialStatus: "pending" | "approved" | "rejected" | null;
 }) {
   const router = useRouter();
+  const [status, setStatus] = React.useState(initialStatus);
   const [busy, setBusy] = React.useState(false);
-  // Unknown (null) on the server; answered by the browser on hydration.
-  const supported = useBrowserValue<boolean | null>(() => {
-    const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown };
-    return Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition);
-  }, null);
+  const full = occupied >= capacity;
+
+  React.useEffect(() => {
+    if (status !== "pending") return;
+    const timer = window.setInterval(async () => {
+      const response = await fetch(`/api/gd/sessions/${sessionId}/join`, { cache: "no-store" });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data.admission_status === "approved") {
+        setStatus("approved");
+        router.refresh();
+      } else if (data.admission_status === "rejected") {
+        setStatus("rejected");
+      }
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [router, sessionId, status]);
 
   async function join() {
     setBusy(true);
     try {
-      const response = await fetch(`/api/gd/sessions/${sessionId}/join`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ transcription_ok: supported === true }),
-      });
-      const payload = await response.json();
+      const response = await fetch(`/api/gd/sessions/${sessionId}/join`, { method: "POST" });
+      const data = await response.json();
       if (!response.ok) {
-        toast.error(payload.error ?? "Could not join.");
+        toast.error(data.error ?? "Could not join this meeting.");
         return;
       }
-      router.refresh();
+      setStatus(data.admission_status);
+      if (data.admission_status === "approved") router.refresh();
     } catch {
-      toast.error("Network error.");
+      toast.error("Network error. Please try again.");
     } finally {
       setBusy(false);
     }
   }
 
-  const full = occupied >= capacity;
-
   return (
-    <Card>
-      <CardContent className="space-y-4 p-8 text-center">
-        <Users className="mx-auto size-7 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          {occupied} of {capacity} seats taken.
-        </p>
-
-        {supported === false && (
-          <p className="mx-auto max-w-md text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">
-              This browser cannot transcribe your speech.
-            </span>{" "}
-            You can join and take part, but your contribution will not be marked.
-            Chrome or Edge on a laptop will work.
-          </p>
+    <Card className="mt-4">
+      <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+        {joinPolicy === "approval" ? (
+          <LockKeyhole className="size-6 text-muted-foreground" />
+        ) : (
+          <Users className="size-6 text-muted-foreground" />
         )}
-
-        <Button onClick={join} disabled={busy || full}>
-          {busy ? <Loader2 className="animate-spin" /> : <Users />}
-          {full ? "Room is full" : "Join the discussion"}
-        </Button>
+        <h2 className="text-lg font-semibold">
+          {status === "pending" ? "Waiting for the host" : status === "rejected" ? "Request not approved" : "Join this meeting"}
+        </h2>
+        <p className="max-w-md text-sm text-muted-foreground">
+          {status === "pending"
+            ? "Your request has been sent. This page will join the meeting as soon as the host lets you in."
+            : status === "rejected"
+              ? "The host did not approve your last request. You can ask again."
+              : joinPolicy === "approval"
+                ? "This is a private meeting. Ask the host to admit you."
+                : `${occupied} of ${capacity} people are in the meeting.`}
+        </p>
+        {status !== "pending" && (
+          <Button onClick={join} disabled={busy || full}>
+            {busy ? <Loader2 className="animate-spin" /> : <Users />}
+            {full ? "Meeting is full" : joinPolicy === "approval" ? "Request to join" : "Join meeting"}
+          </Button>
+        )}
+        {full && status !== "pending" && (
+          <p className="text-xs text-muted-foreground">This meeting has reached its {capacity}-person limit.</p>
+        )}
       </CardContent>
     </Card>
   );

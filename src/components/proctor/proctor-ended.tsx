@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEndedTest, type EndedTest } from "@/hooks/proctor-ended-store";
@@ -21,7 +22,10 @@ import { END_REASON_LABEL } from "@/lib/camera-proctor";
  */
 export function ProctorEndedHost() {
   const ended = useEndedTest();
-  if (!ended) return null;
+  const pathname = usePathname();
+  // Group discussions are collaborative meetings and never enforce test
+  // lockouts, including stale lockouts raised on another assessment page.
+  if (!ended || pathname === "/gd" || pathname.startsWith("/gd/")) return null;
 
   return (
     <div

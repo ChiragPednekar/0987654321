@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 export function OpenGdForm() {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
+  const [joinPolicy, setJoinPolicy] = React.useState<"open" | "approval">("open");
 
   async function open() {
     setBusy(true);
@@ -17,7 +18,7 @@ export function OpenGdForm() {
       const response = await fetch("/api/gd/sessions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ join_policy: joinPolicy }),
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -33,9 +34,22 @@ export function OpenGdForm() {
   }
 
   return (
-    <Button onClick={open} disabled={busy}>
-      {busy ? <Loader2 className="animate-spin" /> : <Users />}
-      Open a room
-    </Button>
+    <div className="flex flex-wrap items-end gap-2">
+      <label className="grid gap-1 text-xs text-muted-foreground">
+        Who can join
+        <select
+          value={joinPolicy}
+          onChange={(event) => setJoinPolicy(event.target.value as "open" | "approval")}
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+        >
+          <option value="open">Anyone with the link</option>
+          <option value="approval">Request to join</option>
+        </select>
+      </label>
+      <Button onClick={open} disabled={busy}>
+        {busy ? <Loader2 className="animate-spin" /> : <Users />}
+        Start a discussion
+      </Button>
+    </div>
   );
 }

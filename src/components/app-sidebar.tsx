@@ -135,6 +135,7 @@ const TEACHER_GROUPS: { heading: string; items: Item[] }[] = [
   {
     heading: "Community",
     items: [
+      { href: "/gd", label: "Group discussions", icon: Users },
       { href: "/classrooms", label: "Classrooms", icon: MessagesSquare },
       { href: "/institution", label: "Placement", icon: Building2 },
     ],

@@ -3,12 +3,12 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
-import { chargeQuota, getQuotaStatus, quotaDenial } from "@/lib/quota";
 
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   topic_id: z.string().uuid().optional(),
+  join_policy: z.enum(["open", "approval"]).default("open"),
   max_participants: z.number().int().min(2).max(6).default(6),
   prep_seconds: z.number().int().min(0).max(600).default(120),
   discussion_seconds: z.number().int().min(120).max(3600).default(600),
@@ -34,11 +34,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(SOLVE_DENIAL, { status: 403 });
   }
 
-  const quota = await getQuotaStatus(admin, user.id);
-  if (quota.interviewsLeft <= 0) {
-    return NextResponse.json(quotaDenial("interviews", quota), { status: 402 });
-  }
-
   // A topic is picked at random when none is named, which is how a GD actually
   // works — the panel gives you the topic, you do not choose it.
   let topicId = body.topic_id;
@@ -54,16 +49,12 @@ export async function POST(request: NextRequest) {
     topicId = topics[Math.floor(Math.random() * topics.length)].id;
   }
 
-  // Spends a top-up credit when the plan no longer covers this use (src/lib/quota.ts).
-  if (!(await chargeQuota(admin, user.id, "interviews", quota))) {
-    return NextResponse.json(quotaDenial("interviews", quota), { status: 402 });
-  }
-
   const { data: session, error } = await admin
     .from("gd_sessions")
     .insert({
       topic_id: topicId,
       host_id: user.id,
+      join_policy: body.join_policy,
       max_participants: body.max_participants,
       prep_seconds: body.prep_seconds,
       discussion_seconds: body.discussion_seconds,
@@ -76,9 +67,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Could not open the room." }, { status: 500 });
   }
 
-  await admin
-    .from("gd_participants")
-    .insert({ session_id: session.id, user_id: user.id });
+  const { error: participantError } = await admin.from("gd_participants").insert({
+    session_id: session.id,
+    user_id: user.id,
+    admission_status: "approved",
+  });
+  if (participantError) {
+    console.error("[gd] host membership insert failed", participantError.message);
+    await admin.from("gd_sessions").delete().eq("id", session.id);
+    return NextResponse.json({ error: "Could not open the room." }, { status: 500 });
+  }
 
   return NextResponse.json({ id: session.id }, { status: 201 });
 }

@@ -7,11 +7,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { OpenGdForm } from "@/components/gd/open-gd-form";
-import { plural, timeAgo } from "@/lib/utils";
+import { timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Group discussions" };
 
-/** The GD lobby: open rooms to join, and your own past discussions. */
+/** The GD lobby: public meetings to join, and your past discussions. */
 export default async function GdLobbyPage() {
   const supabase = await createClient();
   const {
@@ -24,8 +24,9 @@ export default async function GdLobbyPage() {
   const [{ data: open }, { data: mine }] = await Promise.all([
     admin
       .from("gd_sessions")
-      .select("id, created_at, max_participants, gd_topics(title), gd_participants(user_id)")
+      .select("id, created_at, max_participants, gd_topics(title)")
       .eq("status", "open")
+      .eq("join_policy", "open")
       .order("created_at", { ascending: false })
       .limit(20),
     admin
@@ -37,6 +38,17 @@ export default async function GdLobbyPage() {
   ]);
 
   const rooms = open ?? [];
+  const { data: activeParticipants } = rooms.length > 0
+    ? await admin.from("gd_participants")
+      .select("session_id")
+      .in("session_id", rooms.map((room) => room.id))
+      .eq("admission_status", "approved")
+      .is("left_at", null)
+    : { data: [] };
+  const countByRoom = new Map<string, number>();
+  for (const participant of activeParticipants ?? []) {
+    countByRoom.set(participant.session_id, (countByRoom.get(participant.session_id) ?? 0) + 1);
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -44,28 +56,22 @@ export default async function GdLobbyPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Group discussions</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Six people, one topic, ten minutes. Everyone is marked separately on
-            what they contributed.
+            Meet your group, talk through a topic, and share notes in chat. Use
+            an open link or let the host approve each person.
           </p>
         </div>
         <OpenGdForm />
       </div>
 
-      {/*
-        Said before anyone joins, because it decides whether a student can be
-        marked at all and there is nothing we can do about it from here.
-      */}
       <Card className="mt-6 border-muted">
         <CardContent className="p-4 text-xs text-muted-foreground">
-          Use Chrome or Edge on a laptop. Marking works by each browser
-          transcribing its own microphone, and Firefox and Safari cannot do it —
-          you can still take part, but your contribution will show as
-          &ldquo;not transcribed&rdquo; rather than being marked.
+          Your camera and microphone are optional. Share the room link with your
+          group; private rooms ask the host to admit each guest.
         </CardContent>
       </Card>
 
       <h2 className="mt-8 text-sm font-semibold text-foreground">
-        Rooms waiting
+        Open rooms
       </h2>
       {rooms.length === 0 ? (
         <Card className="mt-3">
@@ -77,7 +83,7 @@ export default async function GdLobbyPage() {
         <div className="mt-3 space-y-2">
           {rooms.map((room) => {
             const topic = Array.isArray(room.gd_topics) ? room.gd_topics[0] : room.gd_topics;
-            const count = (room.gd_participants ?? []).length;
+            const count = countByRoom.get(room.id) ?? 0;
             const full = count >= room.max_participants;
             return (
               <Card key={room.id}>
@@ -109,7 +115,7 @@ export default async function GdLobbyPage() {
       {(mine ?? []).length > 0 && (
         <>
           <h2 className="mt-8 text-sm font-semibold text-foreground">
-            Your discussions
+            Past marked practice
           </h2>
           <div className="mt-3 space-y-2">
             {(mine ?? []).map((row) => {
@@ -141,7 +147,8 @@ export default async function GdLobbyPage() {
             })}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            {plural((mine ?? []).length, "discussion")} marked.
+            These are results from earlier assessed discussions. New meetings are
+            private calls and are not recorded or graded.
           </p>
         </>
       )}

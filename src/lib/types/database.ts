@@ -453,6 +453,7 @@ export type GdSessionRow = {
   topic_id: string;
   host_id: string;
   status: GdStatus;
+  join_policy: "open" | "approval";
   /** Capped at 6 by the WebRTC mesh — see the migration. */
   max_participants: number;
   prep_seconds: number;
@@ -467,7 +468,8 @@ export type GdParticipantRow = {
   user_id: string;
   joined_at: string;
   left_at: string | null;
-  /** False means their browser could not transcribe — not that they were quiet. */
+  admission_status: "pending" | "approved" | "rejected";
+  /** Retained for results from assessed GD sessions created before live meetings. */
   transcription_ok: boolean;
 }
 
@@ -477,6 +479,17 @@ export type GdUtteranceRow = {
   user_id: string;
   text: string;
   said_at: string;
+}
+
+export type GdMessageRow = {
+  id: string;
+  session_id: string;
+  user_id: string;
+  body: string | null;
+  media_path: string | null;
+  media_kind: "image" | "video" | null;
+  media_name: string | null;
+  created_at: string;
 }
 
 /** `silent` is a judgement about the student; `not_transcribed` is not. */
@@ -1449,6 +1462,27 @@ export interface Database {
             columns: ["session_id"];
             isOneToOne: false;
             referencedRelation: "gd_sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      gd_messages: {
+        Row: GdMessageRow;
+        Insert: Partial<GdMessageRow>;
+        Update: Partial<GdMessageRow>;
+        Relationships: [
+          {
+            foreignKeyName: "gd_messages_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "gd_sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "gd_messages_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
         ];

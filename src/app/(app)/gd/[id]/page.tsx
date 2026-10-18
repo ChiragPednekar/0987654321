@@ -24,22 +24,25 @@ export default async function GdRoomPage({
 
   const { data: session } = await admin
     .from("gd_sessions")
-    .select("id, status, prep_seconds, discussion_seconds, started_at, max_participants, gd_topics(title, prompt)")
+    .select("id, status, host_id, join_policy, max_participants, gd_topics(title, prompt)")
     .eq("id", id)
     .maybeSingle();
 
   if (!session) notFound();
-  if (session.status === "completed") redirect(`/gd/${id}/result`);
+  if (session.status === "completed" || session.status === "cancelled") redirect("/gd");
 
   const topic = Array.isArray(session.gd_topics) ? session.gd_topics[0] : session.gd_topics;
 
   const { data: participants } = await admin
     .from("gd_participants")
-    .select("user_id, users(full_name, email)")
+    .select("user_id, admission_status, left_at, users(full_name, email)")
     .eq("session_id", id);
 
-  const people = participants ?? [];
-  const joined = people.some((p) => p.user_id === user.id);
+  const people = (participants ?? []).filter(
+    (participant) => participant.admission_status === "approved" && !participant.left_at,
+  );
+  const joined = user.id === session.host_id || people.some((person) => person.user_id === user.id);
+  const myStatus = (participants ?? []).find((person) => person.user_id === user.id)?.admission_status ?? null;
 
   const names = people.map((p) => {
     const u = Array.isArray(p.users) ? p.users[0] : p.users;
@@ -68,16 +71,17 @@ export default async function GdRoomPage({
           <GdRoom
             sessionId={id}
             userId={user.id}
+            hostId={session.host_id}
+            joinPolicy={session.join_policy}
             names={names}
-            prepSeconds={session.prep_seconds}
-            discussionSeconds={session.discussion_seconds}
-            startedAt={session.started_at}
           />
         ) : (
           <GdJoinGate
             sessionId={id}
             occupied={people.length}
             capacity={session.max_participants}
+            joinPolicy={session.join_policy}
+            initialStatus={myStatus}
           />
         )}
       </div>
