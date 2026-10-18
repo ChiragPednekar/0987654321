@@ -21,36 +21,28 @@ import { Badge } from "@/components/ui/badge";
 import type { CertCourse, CourseModule } from "@/lib/cert-courses";
 import { DIFFICULTY_CLASS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { ModuleCheck, type CheckQuestionView } from "@/components/certificates/module-check";
 
 interface CertCourseViewerProps {
   course: CertCourse;
   examTitle: string;
+  /** Modules whose knowledge check this account has passed, from the server (075). */
+  passedIds: string[];
+  /** Each module's check, without answers. */
+  checks: Record<string, CheckQuestionView[]>;
+  signedIn: boolean;
 }
 
-export function CertCourseViewer({ course, examTitle }: CertCourseViewerProps) {
-  const [completedIds, setCompletedIds] = React.useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const stored = localStorage.getItem(`cert_course_${course.examSlug}`);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [activeModuleId, setActiveModuleId] = React.useState<string>(course.modules[0]?.id ?? "");
+/**
+ * The prep course. A module is complete only when its knowledge check is
+ * passed — the server records it — and the exam unlocks when all are.
+ */
+export function CertCourseViewer({ course, examTitle, passedIds, checks, signedIn }: CertCourseViewerProps) {
+  const [completedIds, setCompletedIds] = React.useState<string[]>(passedIds);
+  const firstOpen = course.modules.find((m) => !passedIds.includes(m.id))?.id ?? course.modules[0]?.id ?? "";
+  const [activeModuleId, setActiveModuleId] = React.useState<string>(firstOpen);
 
-  const toggleModuleComplete = (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setCompletedIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id];
-      try {
-        localStorage.setItem(`cert_course_${course.examSlug}`, JSON.stringify(next));
-      } catch {
-        // Ignore storage errors
-      }
-      return next;
-    });
-  };
+  const markPassed = (id: string) => setCompletedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
 
   const total = course.modules.length;
   const completedCount = completedIds.filter((id) => course.modules.some((m) => m.id === id)).length;
@@ -93,14 +85,14 @@ export function CertCourseViewer({ course, examTitle }: CertCourseViewerProps) {
             <div className="flex items-center gap-2.5 text-xs text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="size-4 shrink-0" />
               <span>
-                <strong>Curriculum 100% completed.</strong> You have reviewed all key frameworks and practice cases. You are in prime shape for the timed exam.
+                <strong>Course complete.</strong> Every module&apos;s knowledge check is passed — the exam is unlocked.
               </span>
             </div>
           ) : (
             <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
               <ShieldCheck className="size-4 shrink-0 text-foreground" />
               <span>
-                <strong>Recommended study flow:</strong> Work through each module, review the framework cheat sheet, and solve the practice cases before clicking &quot;Start exam&quot;.
+                <strong>How it works:</strong> study each module, practise on the recommended cases, then pass the module&apos;s knowledge check. The exam unlocks when all {total} modules are passed.
               </span>
             </div>
           )}
@@ -128,18 +120,13 @@ export function CertCourseViewer({ course, examTitle }: CertCourseViewerProps) {
                   className="flex w-full items-center justify-between gap-4 p-5 text-left"
                 >
                   <div className="flex items-start gap-3.5">
-                    <button
-                      type="button"
-                      onClick={(e) => toggleModuleComplete(module.id, e)}
-                      title={isCompleted ? "Mark as unstudied" : "Mark as studied"}
-                      className="mt-0.5 text-muted-foreground transition-colors hover:text-foreground"
-                    >
+                    <span className="mt-0.5 text-muted-foreground" aria-label={isCompleted ? "Passed" : "Not passed yet"}>
                       {isCompleted ? (
                         <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400" />
                       ) : (
                         <Circle className="size-5" />
                       )}
-                    </button>
+                    </span>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -152,7 +139,7 @@ export function CertCourseViewer({ course, examTitle }: CertCourseViewerProps) {
                         </span>
                         {isCompleted && (
                           <Badge variant="secondary" className="px-1.5 py-0 text-[10px] text-emerald-600 dark:text-emerald-400">
-                            Completed
+                            Passed
                           </Badge>
                         )}
                       </div>
@@ -276,37 +263,30 @@ export function CertCourseViewer({ course, examTitle }: CertCourseViewerProps) {
                       </div>
                     </div>
 
-                    {/* Checkpoints & Completion Action */}
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/80 pt-4">
-                      <div className="space-y-1">
-                        <p className="font-mono text-[11px] uppercase text-muted-foreground">Checkpoints</p>
-                        <ul className="text-xs text-muted-foreground space-y-1">
-                          {module.checkpoints.map((cp, i) => (
-                            <li key={i} className="flex items-center gap-1.5">
-                              <span className="text-emerald-500">✓</span> {cp}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <Button
-                        variant={isCompleted ? "outline" : "ink"}
-                        size="sm"
-                        onClick={(e) => toggleModuleComplete(module.id, e)}
-                      >
-                        {isCompleted ? (
-                          <>
-                            <CheckCircle2 className="mr-1.5 size-4 text-emerald-500" />
-                            Completed (Click to undo)
-                          </>
-                        ) : (
-                          <>
-                            <Circle className="mr-1.5 size-4" />
-                            Mark Module {module.order} Complete
-                          </>
-                        )}
-                      </Button>
+                    {/* Self-check, then the graded knowledge check */}
+                    <div className="space-y-1 border-t border-border/80 pt-4">
+                      <p className="font-mono text-[11px] uppercase text-muted-foreground">Before the check, can you say yes to these?</p>
+                      <ul className="space-y-1 text-xs text-muted-foreground">
+                        {module.checkpoints.map((cp, i) => (
+                          <li key={i} className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">•</span> {cp}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
+
+                    {checks[module.id]?.length ? (
+                      <div className="rounded-lg border border-border bg-card p-5">
+                        <ModuleCheck
+                          examSlug={course.examSlug}
+                          moduleId={module.id}
+                          questions={checks[module.id]}
+                          passed={isCompleted}
+                          signedIn={signedIn}
+                          onPassed={markPassed}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -327,11 +307,13 @@ export function CertCourseViewer({ course, examTitle }: CertCourseViewerProps) {
             </div>
             <h3 className="mt-1 font-editorial text-2xl font-normal">{examTitle}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              When you feel ready, take the 2-case 90-minute proctored exam to earn your verifiable LinkedIn certificate.
+              {isFullyPrepared
+                ? "The course is done. Take the 2-case, 90-minute proctored exam to earn your verifiable certificate."
+                : `Unlocks when all ${total} modules are passed — ${completedCount} of ${total} so far.`}
             </p>
           </div>
-          <Button asChild variant="ink" size="lg">
-            <a href="#exam-sitting">Take the Exam</a>
+          <Button asChild variant={isFullyPrepared ? "ink" : "outline"} size="lg">
+            <a href="#exam-sitting">{isFullyPrepared ? "Take the exam" : "See the exam"}</a>
           </Button>
         </div>
       </div>

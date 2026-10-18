@@ -13,6 +13,7 @@ import {
   type TopupCode,
 } from "@/lib/pricing";
 import { activatePlanPeriod, getAccess, purchaseBlock } from "@/lib/subscription";
+import { getCourseProgress } from "@/lib/course-progress";
 
 type Admin = SupabaseClient<Database>;
 
@@ -99,6 +100,16 @@ export async function resolveItem(admin: Admin, userId: string, item: PurchaseIt
         .eq("slug", item.slug)
         .maybeSingle();
       if (!exam || !exam.is_published) return { ok: false, status: 404, error: "Exam not found." };
+
+      // The prep course comes first: every module's knowledge check passed.
+      const progress = await getCourseProgress(admin, userId, exam.slug);
+      if (!progress.complete) {
+        return {
+          ok: false,
+          status: 409,
+          error: `Finish the prep course first: ${progress.passed.length} of ${progress.total} modules passed.`,
+        };
+      }
 
       const { data: open } = await admin
         .from("cert_attempts")

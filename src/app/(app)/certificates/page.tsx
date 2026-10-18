@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { checkoutMode, checkoutModeFor } from "@/lib/billing/checkout-mode";
 import { attemptState } from "@/lib/certificates";
 import { getCertCourse } from "@/lib/cert-courses";
+import { getCourseProgress, type CourseProgress } from "@/lib/course-progress";
 import { rupees } from "@/lib/pricing";
 import { formatDay } from "@/lib/utils";
 import type { CertAttemptRow, CertExamRow } from "@/lib/types/database";
@@ -38,6 +39,15 @@ export default async function CertificatesPage() {
     profile ? checkoutModeFor(admin, profile) : Promise.resolve(checkoutMode()),
   ]);
   const examById = new Map(((exams ?? []) as CertExamRow[]).map((e) => [e.id, e]));
+  const progressBySlug = new Map<string, CourseProgress>(
+    profile
+      ? await Promise.all(
+          ((exams ?? []) as CertExamRow[]).map(
+            async (e) => [e.slug, await getCourseProgress(admin, profile.id, e.slug)] as const,
+          ),
+        )
+      : [],
+  );
   const earned = ((attempts ?? []) as CertAttemptRow[]).filter((a) => a.passed && a.certificate_code);
   const openAttempts = new Map(
     ((attempts ?? []) as CertAttemptRow[])
@@ -103,6 +113,7 @@ export default async function CertificatesPage() {
           {((exams ?? []) as CertExamRow[]).map((exam) => {
             const open = openAttempts.get(exam.id);
             const course = getCertCourse(exam.slug);
+            const progress = progressBySlug.get(exam.slug);
 
             return (
               <li key={exam.id} className="grid gap-4 py-7 sm:grid-cols-[1fr_auto] sm:items-center">
@@ -136,6 +147,12 @@ export default async function CertificatesPage() {
                       Exam: 2 cases · {exam.duration_minutes} min · pass {exam.pass_pct}%
                     </span>
                   </div>
+                  {progress && progress.total > 0 && (
+                    <p className="mt-3 font-mono text-xs text-muted-foreground">
+                      Course: {progress.passed.length} of {progress.total} modules passed
+                      {progress.complete ? " · exam unlocked" : " · exam unlocks when all are passed"}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-4 sm:flex-col sm:items-end">
@@ -147,11 +164,15 @@ export default async function CertificatesPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Button variant="ink" size="sm" asChild>
                       <Link href={`/certificates/${exam.slug}`}>
-                        Open Course &amp; Exam
+                        {!progress || progress.passed.length === 0
+                          ? "Start course"
+                          : progress.complete
+                            ? "Open course & exam"
+                            : "Continue course"}
                       </Link>
                     </Button>
 
-                    {open ? (
+                    {!open && (!profile || !progress?.complete) ? null : open ? (
                       <Button variant="outline" size="sm" asChild>
                         <Link href={`/certificates/attempt/${open.id}`}>
                           {attemptState(open) === "ready" ? "Start exam" : "Resume exam"}

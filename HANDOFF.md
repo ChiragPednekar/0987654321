@@ -33,6 +33,11 @@ Everything below is committed on `main` (remote `chirag`, repo `ChiragPednekar/0
   - A proctor lockout voids the attempt.
   - A score of 60% or more issues a public page at `/certificate/CC-XXXXX-XXXXX` with a LinkedIn "Add to profile" link.
   - Code: `src/lib/certificates.ts`, `src/app/(app)/certificates/**`, `src/app/api/certificates/**`, `src/components/certificates/exam-room.tsx`.
+- **Prep courses come first (migration 075).** Each exam has a four-module prep course: the content in `src/lib/cert-courses.ts`, written by Antigravity in `e3d2d51`. Each module ends with a graded four-question knowledge check in `src/lib/cert-course-checks.ts` (server-only; the answers never reach the browser). Passing 3 of 4 completes the module, and a pass is never revoked by a later retake.
+  - Progress is stored in `course_progress` and read through `src/lib/course-progress.ts`.
+  - An exam attempt cannot be bought, even by a complimentary account, until every module is passed. The check is in `resolveItem`.
+  - The exam page hides any recommended case that belongs to the exam itself.
+  - In 075 the consulting and product exams were moved to `market-entry-10` + `operations-capacity-3` and `prioritization-11` + `product-launch-10`, because their courses recommended the old exam cases as practice. `tests/cert-courses.test.ts` stops this happening again: **when you change an exam's cases, update `EXAM_CASES` in that test.**
 - **Expert mock interviews: removed** (owner's decision, 17 Oct). The pages, API routes, components, `src/lib/experts.ts` and the checkout item were deleted. The empty database tables (`experts`, `expert_slots`, `expert_bookings`) were left in place; recover the code from commit `da6c47d` to bring it back.
 
 ### Payments
@@ -64,6 +69,7 @@ Everything below is committed on `main` (remote `chirag`, repo `ChiragPednekar/0
 | `071_open_signup_and_paid_products` | Drops the invite-only sign-up trigger. Adds plan columns, `purchases`, `usage_credits`/`usage_credit_debits`, `consume_usage_credit()`, `ai_usage_since()`, exams (`cert_*`, 3 seeded) and experts (`experts`, `expert_slots`, `expert_bookings`). All new tables are service-role only. |
 | `072_paywall_everything` | Added `app_gate()`, which reports for the caller only whether the account is live and entitled; still used by the middleware. 072 also hid all content from unpaid accounts; that was **reverted by 073** at the owner's request. |
 | `073_view_open_solve_paid` | `has_access()` again means "live account", so every page is visible. |
+| `075_course_progress` | The `course_progress` table, plus the consulting and product exams moved off cases their courses recommend. |
 | `074_complimentary_access` | The `complimentary_access` table and `is_complimentary()`; `has_pro` and `can_solve` include it. The owner's account was added. |
 
 After applying a migration with the Supabase MCP tool, rename its ledger version to match the file name: `update supabase_migrations.schema_migrations set version='2025010100007X' where name='...'`.

@@ -1239,6 +1239,12 @@ export interface Database {
         Update: Partial<PurchaseRow>;
         Relationships: [];
       };
+      course_progress: {
+        Row: CourseProgressRow;
+        Insert: Partial<CourseProgressRow>;
+        Update: Partial<CourseProgressRow>;
+        Relationships: [];
+      };
       usage_credits: {
         Row: UsageCreditRow;
         Insert: Partial<UsageCreditRow>;
@@ -2313,6 +2319,18 @@ export type PurchaseRow = {
   meta: Record<string, unknown>;
   created_at: string;
   paid_at: string | null;
+};
+
+export type CourseProgressRow = {
+  user_id: string;
+  exam_slug: string;
+  module_id: string;
+  correct: number;
+  total: number;
+  passed: boolean;
+  attempts: number;
+  passed_at: string | null;
+  updated_at: string;
 };
 
 export type UsageCreditRow = {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { BookOpen, CheckCircle2, ChevronRight, ShieldCheck, Sparkles, Video } from "lucide-react";
+import { CheckCircle2, ChevronRight, Lock, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CheckoutButton } from "@/components/billing/checkout-button";
 import { CertCourseViewer } from "@/components/certificates/cert-course-viewer";
@@ -10,6 +10,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { checkoutMode, checkoutModeFor } from "@/lib/billing/checkout-mode";
 import { attemptState } from "@/lib/certificates";
 import { getCertCourse } from "@/lib/cert-courses";
+import { publicCheck } from "@/lib/cert-course-checks";
+import { getCourseProgress } from "@/lib/course-progress";
 import { rupees } from "@/lib/pricing";
 import type { CertAttemptRow, CertExamRow } from "@/lib/types/database";
 
@@ -32,15 +34,33 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
   const exam = data as CertExamRow | null;
   if (!exam || !exam.is_published) notFound();
 
-  const course = getCertCourse(exam.slug);
+  const fullCourse = getCertCourse(exam.slug);
 
-  const [{ data: attempts }, mode, comp] = await Promise.all([
+  const [{ data: attempts }, mode, comp, progress, { data: examCases }] = await Promise.all([
     profile
       ? admin.from("cert_attempts").select("*").eq("exam_id", exam.id).eq("user_id", profile.id).order("created_at", { ascending: false })
       : Promise.resolve({ data: [] as CertAttemptRow[] }),
     profile ? checkoutModeFor(admin, profile) : Promise.resolve(checkoutMode()),
     profile ? admin.rpc("is_complimentary", { p_user: profile.id }) : Promise.resolve({ data: false }),
+    profile
+      ? getCourseProgress(admin, profile.id, exam.slug)
+      : Promise.resolve({ passed: [] as string[], total: fullCourse?.modules.length ?? 0, complete: !fullCourse }),
+    admin.from("cases").select("slug").in("id", exam.case_ids),
   ]);
+
+  // Never recommend the exam's own cases as practice, whatever the course file
+  // says: that would hand out the exam.
+  const examSlugs = new Set((examCases ?? []).map((c) => c.slug));
+  const course = fullCourse
+    ? {
+        ...fullCourse,
+        modules: fullCourse.modules.map((m) => ({
+          ...m,
+          recommendedCases: m.recommendedCases.filter((rc) => !examSlugs.has(rc.slug)),
+        })),
+      }
+    : null;
+  const checks = Object.fromEntries((course?.modules ?? []).map((m) => [m.id, publicCheck(m.id)]));
 
   const included = comp.data === true;
   const open = ((attempts ?? []) as CertAttemptRow[]).find((a) => ["ready", "in_progress"].includes(attemptState(a)));
@@ -105,7 +125,13 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
       {/* ------------------------------------ Section 1: The Course --- */}
       <section className="mt-10">
         {course ? (
-          <CertCourseViewer course={course} examTitle={exam.title} />
+          <CertCourseViewer
+            course={course}
+            examTitle={exam.title}
+            passedIds={progress.passed}
+            checks={checks}
+            signedIn={Boolean(profile)}
+          />
         ) : null}
       </section>
 
@@ -123,7 +149,7 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
           The Proctored Examination
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Take the official examination when you have completed your preparation. The cases are held until the clock starts, and your attempt is evaluated against the firm rubric.
+          The exam unlocks once every module of the prep course is passed. The cases are held until the clock starts, and your answers are marked against each case&apos;s rubric.
         </p>
 
         <div className="mt-8 grid gap-x-12 gap-y-10 lg:grid-cols-[1fr_22rem]">
@@ -166,7 +192,17 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
             <p className="mt-1 text-xs text-muted-foreground">Pass or retake — each sitting is an independent attempt.</p>
 
             <div className="mt-6 space-y-3">
-              {open ? (
+              {!open && profile && !progress.complete ? (
+                <div className="space-y-2">
+                  <Button variant="outline" size="lg" className="w-full text-sm" disabled>
+                    <Lock className="mr-1.5 size-4" />
+                    Finish the course to unlock
+                  </Button>
+                  <p className="text-center font-mono text-[11px] text-muted-foreground">
+                    {progress.passed.length} of {progress.total} modules passed
+                  </p>
+                </div>
+              ) : open ? (
                 <Button variant="ink" size="lg" className="w-full text-sm" asChild>
                   <Link href={`/certificates/attempt/${open.id}`}>
                     {attemptState(open) === "ready" ? "Start exam attempt" : "Resume exam in progress"}
@@ -186,7 +222,7 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
                 />
               )}
 
-              {included ? (
+              {!progress.complete && profile && !open ? null : included ? (
                 <p className="text-center font-mono text-[11px] text-muted-foreground">
                   Complimentary access granted — no charge.
                 </p>
