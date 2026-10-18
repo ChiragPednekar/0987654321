@@ -12,9 +12,9 @@ Everything below is committed on `main` (remote `chirag`, repo `ChiragPednekar/0
 
 | Plan | Price (GST incl.) | Length | Allowance |
 |---|---|---|---|
-| Monthly | ₹299 | 30 days | 50 graded answers + 10 interviews |
-| Placement Season Pass | ₹799 | 90 days | 160 + 35 |
-| Annual | ₹2,499 | 365 days | 500 + 100 |
+| Monthly | ₹499 | 30 days | 50 graded answers + 10 interviews |
+| Placement Season Pass | ₹999 | 90 days | 160 + 35 |
+| Annual | ₹4,999 | 365 days | 500 + 100 |
 
 - Each plan stays profitable even at full use after Gemini doubles its prices on 1 Jan 2027. `tests/subscription.test.ts` pins this.
 - Plans don't auto-renew. Buying in the renewal window (5/14/30 days) queues the next period to start when the current one ends. Logic is in `src/lib/subscription.ts`; subscriptions have `plan_code` and `period_start`.

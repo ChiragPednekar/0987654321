@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Markdown } from "@/components/markdown";
 import { cn } from "@/lib/utils";
+import { PLANS, rupees } from "@/lib/pricing";
 import type { ChatResponse } from "@/app/api/chat/route";
 import { useCaseProctor } from "./case-proctor-shell";
 
@@ -108,8 +109,9 @@ export function CaseChat({
             written feedback.
           </p>
           <p className="text-muted-foreground">
-            The live interviewer is part of CaseCode Pro. You can subscribe individually
-            for ₹499/year, or access it through your college&apos;s campus licence.
+            The live interviewer is part of CaseCode Pro. Plans start at{" "}
+            {rupees(PLANS.monthly.pricePaise)} a month, or you can access it through
+            your college&apos;s campus licence.
           </p>
           <Button asChild size="sm">
             <Link href="/pricing">See Pro plans</Link>

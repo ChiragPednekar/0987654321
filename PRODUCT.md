@@ -251,7 +251,7 @@ more than one score on one case.
 
 ## Commercial model
 
-**Colleges buy seats; students use it free.**
+**Colleges buy seats; students can also subscribe individually.**
 
 A licence carries a seat count, a date range and a price. Students signing up
 with an address on the college's email domain are enrolled automatically — no
@@ -266,8 +266,9 @@ year, roughly four times what an engaged student uses. It exists to bound the
 tail, not to ration normal use, and it is what makes a fixed-price contract safe
 to sign. Individual licences can carry a higher allowance as a contract term.
 
-**Retail Pro** exists alongside for individual buyers at ₹499/year, which unlocks
-the live interviewer. Every case stays free to solve and get graded.
+**CaseCode Pro** is also available to individuals: ₹499 monthly, ₹999 for the
+90-day Placement Season Pass, or ₹4,999 annually. Reading the library is free;
+submitting answers and using practice tools requires a plan or campus licence.
 
 ---
 

@@ -11,7 +11,7 @@ import { PLANS, USAGE_WINDOW, rupees } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "CaseCode Pro plans from ₹299 a month, top-up packs and certificate exams.",
+  description: "CaseCode Pro plans from ₹499 a month, top-up packs and certificate exams.",
 };
 
 /**

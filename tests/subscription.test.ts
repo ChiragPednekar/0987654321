@@ -112,15 +112,21 @@ describe("pricing stays profitable at the 2027 model rates", () => {
     expect(PLANS.season.pricePaise).toBeLessThan(PLANS.monthly.pricePaise * 3);
   });
 
-  it("makes longer plans cheaper per month", () => {
+  it("prices the plans at the current amounts", () => {
+    expect(PLANS.monthly.pricePaise).toBe(49_900);
+    expect(PLANS.season.pricePaise).toBe(99_900);
+    expect(PLANS.annual.pricePaise).toBe(499_900);
+  });
+
+  it("discounts the season and annual plans against paying monthly", () => {
     const daily = (c: keyof typeof PLANS) => PLANS[c].pricePaise / PLANS[c].days;
     expect(daily("season")).toBeLessThan(daily("monthly"));
-    expect(daily("annual")).toBeLessThan(daily("season"));
+    expect(daily("annual")).toBeLessThan(daily("monthly"));
   });
 
   it("formats rupees the Indian way", () => {
-    expect(rupees(249_900)).toBe("₹2,499");
-    expect(perMonth(PLANS.monthly)).toBe("₹299");
+    expect(rupees(499_900)).toBe("₹4,999");
+    expect(perMonth(PLANS.monthly)).toBe("₹499");
   });
 });
 

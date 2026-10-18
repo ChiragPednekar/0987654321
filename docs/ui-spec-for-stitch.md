@@ -17,7 +17,7 @@ platform and sells campus licences.
 
 - Audience: Indian MBA students and campus placement cells; consulting, finance
   and product interview prep.
-- Currency ₹ (INR). Pro is ₹499/year.
+- Currency ₹ (INR). CaseCode Pro costs ₹499 monthly, ₹999 for 90 days, or ₹4,999 yearly.
 - Library: **508 published cases across 6 domains**.
 - Tone: direct, unsentimental, slightly blunt. Copy sounds like a good coach,
   never like a marketing site. Examples of the actual voice:

@@ -10,12 +10,12 @@
  * What we keep from a price: it is GST-inclusive (÷1.18), less ~2% gateway fee.
  *
  *   plan      price    allowance          full-use cost   kept    margin
- *   monthly   ₹299     50 + 10 interviews   ₹115           ₹247    ₹132
- *   season    ₹799     160 + 35             ₹382           ₹661    ₹280
- *   annual    ₹2,499   500 + 100            ₹1,152         ₹2,068  ₹916
+ *   monthly   ₹499     50 + 10 interviews   ₹115           ₹413    ₹298
+ *   season    ₹999     160 + 35             ₹382           ₹827    ₹445
+ *   annual    ₹4,999   500 + 100            ₹1,152         ₹4,136  ₹2,984
  *
  * So every plan is profitable even for a student who uses every last answer,
- * which the old ₹499 / 250 + 50 plan was not.
+ * unlike the previous low-price, high-allowance plan.
  */
 
 export type PlanCode = "monthly" | "season" | "annual";
@@ -38,7 +38,7 @@ export const PLANS: Record<PlanCode, Plan> = {
     code: "monthly",
     name: "Monthly",
     tagline: "Month to month, for a steady routine.",
-    pricePaise: 29_900,
+    pricePaise: 49_900,
     days: 30,
     gradings: 50,
     interviews: 10,
@@ -48,7 +48,7 @@ export const PLANS: Record<PlanCode, Plan> = {
     code: "season",
     name: "Placement Season Pass",
     tagline: "Three months, timed for placement season.",
-    pricePaise: 79_900,
+    pricePaise: 99_900,
     days: 90,
     gradings: 160,
     interviews: 35,
@@ -57,8 +57,8 @@ export const PLANS: Record<PlanCode, Plan> = {
   annual: {
     code: "annual",
     name: "Annual",
-    tagline: "The whole year, at the lowest monthly price.",
-    pricePaise: 249_900,
+    tagline: "One purchase for year-round practice.",
+    pricePaise: 499_900,
     days: 365,
     gradings: 500,
     interviews: 100,
@@ -115,7 +115,7 @@ export function isTopupCode(value: unknown): value is TopupCode {
   return typeof value === "string" && value in TOPUPS;
 }
 
-/** "₹2,499" from paise. */
+/** A formatted rupee amount from paise. */
 export function rupees(paise: number): string {
   return `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 }

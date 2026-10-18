@@ -107,7 +107,7 @@ export default async function LandingPage() {
           </div>
           {!profile && (
             <p className="mt-6 text-xs text-subtle-foreground md:text-right">
-              Reading is free. Practising is CaseCode Pro, from ₹299 a month —{" "}
+              Reading is free. Practising is CaseCode Pro, from ₹499 a month —{" "}
               <Link href="/pricing" className="underline underline-offset-4">see plans</Link>. Already have an account?{" "}
               <Link href="/login" className="underline underline-offset-4">Sign in</Link>.
             </p>

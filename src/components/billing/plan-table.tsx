@@ -46,7 +46,7 @@ export function PlanTable({ buyer, loginNext = "/upgrade" }: { buyer: Buyer; log
               className={cn("border-t-2 pt-5", featured ? "border-foreground" : "border-foreground/30")}
             >
               <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                {featured ? "Built for placement season" : code === "annual" ? "Best value" : "Flexible"}
+                {featured ? "Built for placement season" : code === "annual" ? "Year-round prep" : "Flexible"}
                 {current === code ? " · your plan" : ""}
               </p>
               <h3 className="mt-2 font-editorial text-[1.7rem] font-normal leading-tight">{plan.name}</h3>

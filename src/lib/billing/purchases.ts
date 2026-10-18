@@ -281,7 +281,7 @@ export async function fulfilPurchase(
   return (final as PurchaseRow | null) ?? purchase;
 }
 
-/** "₹2,499 · CaseCode Pro — Annual (365 days)" — for receipts and logs. */
+/** Formatted CaseCode Pro plan amount and period — for receipts and logs. */
 export function purchaseLabel(p: Pick<PurchaseRow, "amount_paise" | "description">) {
   return `${rupees(p.amount_paise)} · ${p.description}`;
 }
