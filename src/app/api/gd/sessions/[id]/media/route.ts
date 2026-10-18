@@ -37,13 +37,22 @@ export async function POST(
   }
 
   const admin = createAdminClient();
-  const { data: member } = await admin.from("gd_participants")
+  let { data: member } = await admin.from("gd_participants")
     .select("user_id")
     .eq("session_id", id)
     .eq("user_id", user.id)
     .eq("admission_status", "approved")
     .is("left_at", null)
     .maybeSingle();
+  if (!member) {
+    const legacy = await admin.from("gd_participants")
+      .select("user_id")
+      .eq("session_id", id)
+      .eq("user_id", user.id)
+      .is("left_at", null)
+      .maybeSingle();
+    member = legacy.data;
+  }
   if (!member) return NextResponse.json({ error: "You are not in this meeting." }, { status: 403 });
 
   const extension = types[body.contentType];

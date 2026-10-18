@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     topicId = topics[Math.floor(Math.random() * topics.length)].id;
   }
 
-  const { data: session, error } = await admin
+  let sessionResult = await admin
     .from("gd_sessions")
     .insert({
       topic_id: topicId,
@@ -80,16 +80,41 @@ export async function POST(request: NextRequest) {
     .select("id")
     .single();
 
+  if (sessionResult.error && (sessionResult.error.code === "42703" || sessionResult.error.message?.includes("column"))) {
+    sessionResult = await admin
+      .from("gd_sessions")
+      .insert({
+        topic_id: topicId,
+        host_id: user.id,
+        max_participants: body.max_participants,
+        prep_seconds: body.prep_seconds,
+        discussion_seconds: body.discussion_seconds,
+      })
+      .select("id")
+      .single();
+  }
+
+  const session = sessionResult.data;
+  const error = sessionResult.error;
+
   if (error || !session) {
     console.error("[gd] create failed", error?.message);
     return NextResponse.json({ error: "Could not open the room." }, { status: 500 });
   }
 
-  const { error: participantError } = await admin.from("gd_participants").insert({
+  let participantError = (await admin.from("gd_participants").insert({
     session_id: session.id,
     user_id: user.id,
     admission_status: "approved",
-  });
+  })).error;
+
+  if (participantError && (participantError.code === "42703" || participantError.message?.includes("column"))) {
+    participantError = (await admin.from("gd_participants").insert({
+      session_id: session.id,
+      user_id: user.id,
+    })).error;
+  }
+
   if (participantError) {
     console.error("[gd] host membership insert failed", participantError.message);
     await admin.from("gd_sessions").delete().eq("id", session.id);

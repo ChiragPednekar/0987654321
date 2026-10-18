@@ -7,13 +7,23 @@ export const dynamic = "force-dynamic";
 
 async function activeMember(sessionId: string, userId: string) {
   const admin = createAdminClient();
-  const { data } = await admin.from("gd_participants")
+  let { data } = await admin.from("gd_participants")
     .select("user_id")
     .eq("session_id", sessionId)
     .eq("user_id", userId)
     .eq("admission_status", "approved")
     .is("left_at", null)
     .maybeSingle();
+
+  if (!data) {
+    const legacy = await admin.from("gd_participants")
+      .select("user_id")
+      .eq("session_id", sessionId)
+      .eq("user_id", userId)
+      .is("left_at", null)
+      .maybeSingle();
+    data = legacy.data;
+  }
   return data ? admin : null;
 }
 

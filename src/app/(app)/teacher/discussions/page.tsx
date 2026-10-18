@@ -41,17 +41,42 @@ export default async function TeacherDiscussionsPage() {
       .limit(30),
   ]);
 
-  const sessions = teacherSessions ?? [];
+  let sessions = teacherSessions ?? [];
+  if (!teacherSessions) {
+    const { data: legacySessions } = await admin
+      .from("gd_sessions")
+      .select("id, topic_id, host_id, status, max_participants, created_at, gd_topics(title, prompt)")
+      .eq("host_id", actor.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    sessions = (legacySessions ?? []).map((s) => ({
+      ...s,
+      classroom_id: null,
+      join_policy: "open" as const,
+    }));
+  }
   const sessionIds = sessions.map((s) => s.id);
 
-  const { data: participants } = sessionIds.length
-    ? await admin
+  let participants: { session_id: string; user_id: string; admission_status?: string; left_at: string | null }[] = [];
+  if (sessionIds.length) {
+    const { data: modernParticipants } = await admin
+      .from("gd_participants")
+      .select("session_id, user_id, admission_status, left_at")
+      .in("session_id", sessionIds)
+      .eq("admission_status", "approved")
+      .is("left_at", null);
+
+    if (modernParticipants) {
+      participants = modernParticipants;
+    } else {
+      const { data: legacyParticipants } = await admin
         .from("gd_participants")
-        .select("session_id, user_id, admission_status, left_at")
+        .select("session_id, user_id, left_at")
         .in("session_id", sessionIds)
-        .eq("admission_status", "approved")
-        .is("left_at", null)
-    : { data: [] };
+        .is("left_at", null);
+      participants = legacyParticipants ?? [];
+    }
+  }
 
   const countBySession = new Map<string, number>();
   for (const p of participants ?? []) {

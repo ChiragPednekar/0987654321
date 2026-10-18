@@ -31,10 +31,21 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
   const admin = createAdminClient();
-  const { data: session } = await admin.from("gd_sessions")
+  let { data: session } = await admin.from("gd_sessions")
     .select("id, status, host_id, join_policy, max_participants")
     .eq("id", id)
     .maybeSingle();
+
+  if (!session) {
+    const { data: legacySession } = await admin.from("gd_sessions")
+      .select("id, status, host_id, max_participants")
+      .eq("id", id)
+      .maybeSingle();
+    if (legacySession) {
+      session = { ...legacySession, join_policy: "open" as const };
+    }
+  }
+
   if (!session) return NextResponse.json({ error: "Meeting not found." }, { status: 404 });
   if (session.status === "completed" || session.status === "cancelled") {
     return NextResponse.json({ error: "This meeting has ended." }, { status: 409 });
@@ -45,10 +56,10 @@ export async function POST(
     .eq("session_id", id)
     .eq("user_id", user.id)
     .maybeSingle();
-  if (existing?.admission_status === "approved" && !existing.left_at) {
+  if (existing && existing.admission_status === "approved" && !existing.left_at) {
     return NextResponse.json({ admission_status: "approved" });
   }
-  if (existing?.admission_status === "pending") {
+  if (existing && existing.admission_status === "pending") {
     return NextResponse.json({ admission_status: "pending" });
   }
 
@@ -64,12 +75,21 @@ export async function POST(
   const admissionStatus = session.join_policy === "approval" && user.id !== session.host_id
     ? "pending"
     : "approved";
-  const { error } = await admin.from("gd_participants").upsert({
+  let { error } = await admin.from("gd_participants").upsert({
     session_id: id,
     user_id: user.id,
     admission_status: admissionStatus,
     left_at: null,
   }, { onConflict: "session_id,user_id" });
+
+  if (error && (error.code === "42703" || error.message?.includes("column"))) {
+    const fallbackUpsert = await admin.from("gd_participants").upsert({
+      session_id: id,
+      user_id: user.id,
+      left_at: null,
+    }, { onConflict: "session_id,user_id" });
+    error = fallbackUpsert.error;
+  }
   if (error) {
     console.error("[gd] join request failed", error.message);
     return NextResponse.json({ error: "Could not join this meeting." }, { status: 500 });

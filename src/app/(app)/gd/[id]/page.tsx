@@ -22,31 +22,73 @@ export default async function GdRoomPage({
 
   const admin = createAdminClient();
 
-  const { data: session } = await admin
+  let session: {
+    id: string;
+    status: "open" | "live" | "completed" | "cancelled";
+    host_id: string;
+    join_policy: "open" | "approval";
+    max_participants: number;
+    gd_topics: { title: string; prompt: string | null } | { title: string; prompt: string | null }[] | null;
+  } | null = null;
+
+  const { data: sessionWithPolicy } = await admin
     .from("gd_sessions")
     .select("id, status, host_id, join_policy, max_participants, gd_topics(title, prompt)")
     .eq("id", id)
     .maybeSingle();
+
+  if (sessionWithPolicy) {
+    session = sessionWithPolicy;
+  } else {
+    const { data: legacySession } = await admin
+      .from("gd_sessions")
+      .select("id, status, host_id, max_participants, gd_topics(title, prompt)")
+      .eq("id", id)
+      .maybeSingle();
+    if (legacySession) {
+      session = { ...legacySession, join_policy: "open" as const };
+    }
+  }
 
   if (!session) notFound();
   if (session.status === "completed" || session.status === "cancelled") redirect("/gd");
 
   const topic = Array.isArray(session.gd_topics) ? session.gd_topics[0] : session.gd_topics;
 
-  const { data: participants } = await admin
+  let participants: {
+    user_id: string;
+    admission_status: "pending" | "approved" | "rejected";
+    left_at: string | null;
+    users: { full_name: string | null; email: string };
+  }[] = [];
+
+  const { data: modernParticipants } = await admin
     .from("gd_participants")
     .select("user_id, admission_status, left_at, users(full_name, email)")
     .eq("session_id", id);
 
-  let people = (participants ?? []).filter(
+  if (modernParticipants) {
+    participants = modernParticipants;
+  } else {
+    const { data: legacyParticipants } = await admin
+      .from("gd_participants")
+      .select("user_id, left_at, users(full_name, email)")
+      .eq("session_id", id);
+    participants = (legacyParticipants ?? []).map((p) => ({
+      ...p,
+      admission_status: "approved" as const,
+    }));
+  }
+
+  let people = participants.filter(
     (participant) => participant.admission_status === "approved" && !participant.left_at,
   );
   let joined = user.id === session.host_id || people.some((person) => person.user_id === user.id);
-  let myStatus = (participants ?? []).find((person) => person.user_id === user.id)?.admission_status ?? null;
+  let myStatus = participants.find((person) => person.user_id === user.id)?.admission_status ?? null;
 
   // For open rooms: no permission needed, directly admit the visitor into the meeting
   if (!joined && session.join_policy === "open" && people.length < session.max_participants) {
-    const { error: joinError } = await admin.from("gd_participants").upsert(
+    let { error: joinError } = await admin.from("gd_participants").upsert(
       {
         session_id: id,
         user_id: user.id,
@@ -55,6 +97,17 @@ export default async function GdRoomPage({
       },
       { onConflict: "session_id,user_id" },
     );
+    if (joinError && (joinError.code === "42703" || joinError.message?.includes("column"))) {
+      const fallbackJoin = await admin.from("gd_participants").upsert(
+        {
+          session_id: id,
+          user_id: user.id,
+          left_at: null,
+        },
+        { onConflict: "session_id,user_id" },
+      );
+      joinError = fallbackJoin.error;
+    }
     if (!joinError) {
       joined = true;
       myStatus = "approved";
