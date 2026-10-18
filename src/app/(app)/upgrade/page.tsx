@@ -23,13 +23,15 @@ export default async function UpgradePage() {
   if (!profile) redirect("/login?next=/upgrade");
 
   const admin = createAdminClientOrNull();
-  const [access, mode, quota] = admin
+  const [access, mode, quota, comp] = admin
     ? await Promise.all([
         getAccess(admin, profile.id),
         checkoutModeFor(admin, profile),
         getQuotaStatus(admin, profile.id),
+        admin.rpc("is_complimentary", { p_user: profile.id }),
       ])
-    : [null, "closed" as const, null];
+    : [null, "closed" as const, null, { data: false }];
+  const isComplimentary = Boolean(profile.role === "admin" || comp?.data === true);
 
   const blocked = access ? purchaseBlock(access) : null;
   const buyer = {
@@ -94,7 +96,9 @@ export default async function UpgradePage() {
           <Link href="/certificates" className="group block border-b border-border pb-4">
             <p className="font-editorial text-2xl group-hover:underline">Certificate exams</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              A proctored case exam with a verifiable certificate — ₹399 an attempt.
+              {isComplimentary
+                ? "A proctored case exam with a verifiable certificate — included with your account."
+                : "A proctored case exam with a verifiable certificate — ₹399 an attempt."}
             </p>
           </Link>
         </div>

@@ -62,7 +62,7 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
     : null;
   const checks = Object.fromEntries((course?.modules ?? []).map((m) => [m.id, publicCheck(m.id)]));
 
-  const included = comp.data === true;
+  const included = Boolean(profile?.role === "admin" || comp.data === true);
   const open = ((attempts ?? []) as CertAttemptRow[]).find((a) => ["ready", "in_progress"].includes(attemptState(a)));
   const passed = ((attempts ?? []) as CertAttemptRow[]).find((a) => a.passed && a.certificate_code);
 
@@ -187,9 +187,33 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
 
           {/* Pricing & Checkout Card */}
           <aside className="h-fit rounded-lg border-2 border-foreground bg-card p-6 shadow-sm">
-            <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">One Exam Sitting</p>
-            <p className="mt-2 font-editorial text-5xl font-normal">{rupees(exam.price_paise)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Pass or retake — each sitting is an independent attempt.</p>
+            {open ? (
+              <>
+                <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Your Exam Sitting</p>
+                <p className="mt-2 font-editorial text-4xl font-normal text-emerald-600 dark:text-emerald-400">
+                  {attemptState(open) === "ready" ? "Attempt Ready" : "In Progress"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {attemptState(open) === "ready"
+                    ? "Your exam attempt is waiting. The clock starts when you begin."
+                    : "Your attempt is currently running. Return before your time expires."}
+                </p>
+              </>
+            ) : included ? (
+              <>
+                <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Exam Sitting</p>
+                <p className="mt-2 font-editorial text-4xl font-normal text-emerald-600 dark:text-emerald-400">
+                  Included
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Complimentary access granted on your account — no fee.</p>
+              </>
+            ) : (
+              <>
+                <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">One Exam Sitting</p>
+                <p className="mt-2 font-editorial text-5xl font-normal">{rupees(exam.price_paise)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Pass or retake — each sitting is an independent attempt.</p>
+              </>
+            )}
 
             <div className="mt-6 space-y-3">
               {!open && profile && !progress.complete ? (
@@ -222,7 +246,7 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
                 />
               )}
 
-              {!progress.complete && profile && !open ? null : included ? (
+              {!progress.complete && profile && !open ? null : included && !open ? (
                 <p className="text-center font-mono text-[11px] text-muted-foreground">
                   Complimentary access granted — no charge.
                 </p>

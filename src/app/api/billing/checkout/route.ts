@@ -31,8 +31,11 @@ export async function POST(request: NextRequest) {
   // attempt is created directly, with no purchase. Plans and top-ups are never
   // needed.
   if (parsed.data.kind === "exam") {
-    const { data: comp } = await admin.rpc("is_complimentary", { p_user: user.id });
-    if (comp === true) {
+    const [{ data: comp }, { data: profile }] = await Promise.all([
+      admin.rpc("is_complimentary", { p_user: user.id }),
+      admin.from("users").select("role").eq("id", user.id).maybeSingle(),
+    ]);
+    if (comp === true || profile?.role === "admin") {
       const free = await freeExamAttempt(admin, user.id, parsed.data.slug);
       return NextResponse.json(free.body, { status: free.status });
     }

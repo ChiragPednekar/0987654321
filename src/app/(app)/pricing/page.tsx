@@ -52,7 +52,7 @@ const FAQ: { q: string; a: string }[] = [
 export default async function PricingPage() {
   const profile = await getCurrentUser();
   const admin = createAdminClientOrNull();
-  const [access, mode, exams, attempts] = await Promise.all([
+  const [access, mode, exams, attempts, comp] = await Promise.all([
     profile && admin ? getAccess(admin, profile.id) : Promise.resolve(null as Access | null),
     profile && admin ? checkoutModeFor(admin, profile) : Promise.resolve(checkoutMode()),
     admin
@@ -61,7 +61,9 @@ export default async function PricingPage() {
     profile && admin
       ? admin.from("cert_attempts").select("id, exam_id, status, deadline_at").eq("user_id", profile.id).in("status", ["ready", "in_progress"])
       : Promise.resolve({ data: [] as { id: string; exam_id: string; status: string; deadline_at: string | null }[] }),
+    profile && admin ? admin.rpc("is_complimentary", { p_user: profile.id }) : Promise.resolve({ data: false }),
   ]);
+  const isComplimentary = Boolean(profile?.role === "admin" || comp?.data === true);
 
   const openAttempts = new Map(
     ((attempts?.data ?? []) as { id: string; exam_id: string; status: string }[]).map((a) => [a.exam_id, a]),
@@ -127,6 +129,7 @@ export default async function PricingPage() {
             <ul className="mt-4 divide-y divide-border border-y border-border">
               {(exams.data ?? []).map((exam) => {
                 const open = openAttempts.get(exam.id);
+                const hasAccess = Boolean(open) || isComplimentary;
                 return (
                   <li key={exam.slug} className="flex flex-wrap items-center justify-between gap-3 py-3">
                     <div>
@@ -138,7 +141,17 @@ export default async function PricingPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-editorial text-2xl">{rupees(exam.price_paise)}</span>
+                      {!hasAccess ? (
+                        <span className="font-editorial text-2xl">{rupees(exam.price_paise)}</span>
+                      ) : open ? (
+                        <span className="inline-flex items-center rounded border border-emerald-600/30 bg-emerald-500/10 px-2 py-0.5 font-mono text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                          {open.status === "ready" ? "Attempt ready" : "In progress"}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded border border-emerald-600/30 bg-emerald-500/10 px-2 py-0.5 font-mono text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                          Included
+                        </span>
+                      )}
                       {open ? (
                         <Button variant="ink" size="sm" asChild>
                           <Link href={`/certificates/attempt/${open.id}`}>
@@ -148,12 +161,12 @@ export default async function PricingPage() {
                       ) : (
                         <CheckoutButton
                           item={{ kind: "exam", slug: exam.slug }}
-                          mode={buyer.mode}
+                          mode={isComplimentary ? "demo" : buyer.mode}
                           signedIn={buyer.signedIn}
                           email={buyer.email}
                           name={buyer.name}
                           loginNext={`/certificates/${exam.slug}`}
-                          label="Take exam"
+                          label={isComplimentary ? "Start attempt — included" : "Take exam"}
                           variant="outline"
                           size="sm"
                         />

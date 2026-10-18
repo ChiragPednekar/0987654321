@@ -31,13 +31,15 @@ const STATE_LABEL: Record<string, string> = {
 export default async function CertificatesPage() {
   const profile = await getCurrentUser();
   const admin = createAdminClient();
-  const [{ data: exams }, { data: attempts }, mode] = await Promise.all([
+  const [{ data: exams }, { data: attempts }, mode, comp] = await Promise.all([
     admin.from("cert_exams").select("*").eq("is_published", true).order("title"),
     profile
       ? admin.from("cert_attempts").select("*").eq("user_id", profile.id).order("created_at", { ascending: false })
       : Promise.resolve({ data: [] as CertAttemptRow[] }),
     profile ? checkoutModeFor(admin, profile) : Promise.resolve(checkoutMode()),
+    profile ? admin.rpc("is_complimentary", { p_user: profile.id }) : Promise.resolve({ data: false }),
   ]);
+  const isComplimentary = Boolean(profile?.role === "admin" || comp.data === true);
   const examById = new Map(((exams ?? []) as CertExamRow[]).map((e) => [e.id, e]));
   const progressBySlug = new Map<string, CourseProgress>(
     profile
@@ -157,12 +159,30 @@ export default async function CertificatesPage() {
 
                 <div className="flex items-center gap-4 sm:flex-col sm:items-end">
                   <div className="text-right">
-                    <span className="font-editorial text-3xl">{rupees(exam.price_paise)}</span>
-                    <p className="text-[11px] text-muted-foreground">course free · pay per exam attempt</p>
+                    {!open && !isComplimentary ? (
+                      <>
+                        <span className="font-editorial text-3xl">{rupees(exam.price_paise)}</span>
+                        <p className="text-[11px] text-muted-foreground">course free · pay per exam attempt</p>
+                      </>
+                    ) : open ? (
+                      <>
+                        <span className="inline-flex items-center rounded border border-emerald-600/30 bg-emerald-500/10 px-2.5 py-1 font-mono text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                          {attemptState(open) === "ready" ? "Attempt ready" : "In progress"}
+                        </span>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Access active</p>
+                      </>
+                    ) : (
+                      <>
+                        <span className="inline-flex items-center rounded border border-emerald-600/30 bg-emerald-500/10 px-2.5 py-1 font-mono text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                          Included
+                        </span>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Complimentary access</p>
+                      </>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="ink" size="sm" asChild>
+                    <Button variant={open ? "outline" : "ink"} size="sm" asChild>
                       <Link href={`/certificates/${exam.slug}`}>
                         {!progress || progress.passed.length === 0
                           ? "Start course"
@@ -173,7 +193,7 @@ export default async function CertificatesPage() {
                     </Button>
 
                     {!open && (!profile || !progress?.complete) ? null : open ? (
-                      <Button variant="outline" size="sm" asChild>
+                      <Button variant="ink" size="sm" asChild>
                         <Link href={`/certificates/attempt/${open.id}`}>
                           {attemptState(open) === "ready" ? "Start exam" : "Resume exam"}
                         </Link>
@@ -181,12 +201,12 @@ export default async function CertificatesPage() {
                     ) : (
                       <CheckoutButton
                         item={{ kind: "exam", slug: exam.slug }}
-                        mode={mode}
+                        mode={isComplimentary ? "demo" : mode}
                         signedIn={Boolean(profile)}
                         email={profile?.email}
                         name={profile?.full_name}
                         loginNext={`/certificates/${exam.slug}`}
-                        label="Take exam"
+                        label={isComplimentary ? "Start attempt — included" : "Take exam"}
                         variant="outline"
                         size="sm"
                       />
