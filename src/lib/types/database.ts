@@ -510,7 +510,19 @@ export type GdScoreRow = {
 
 // ---- personal / HR interviews (20250101000041) ----------------------------
 
-export type PiKind = "hr_fit" | "resume_deep_dive" | "why_firm" | "stress";
+export type PiKind =
+  | "hr_fit"
+  | "resume_deep_dive"
+  | "why_firm"
+  | "stress"
+  | "behavioural"
+  | "career_goals"
+  | "academics"
+  | "current_affairs"
+  | "situational"
+  | "red_flags"
+  | "interests"
+  | "partner";
 
 export type PiProfileRow = {
   user_id: string;

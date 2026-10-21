@@ -54,4 +54,48 @@ export const PI_KINDS: {
     label: "Stress interview",
     description: "Interruptions, pushback, and being asked the same thing twice.",
   },
+  {
+    value: "behavioural",
+    label: "Behavioural (STAR)",
+    description: "Leadership, influence and ownership — one story, dug into until it holds or breaks.",
+  },
+  {
+    value: "career_goals",
+    label: "Career goals",
+    description: "Short and long term plans, why this role, and why now — tested for whether they hang together.",
+  },
+  {
+    value: "academics",
+    label: "Academics & domain",
+    description: "Your graduation subjects and specialisation, asked as a professor would.",
+  },
+  {
+    value: "current_affairs",
+    label: "Current affairs & opinion",
+    description: "Business and economic news, and an opinion you have to defend.",
+  },
+  {
+    value: "situational",
+    label: "Situational judgement",
+    description: "Workplace dilemmas: ethics, a difficult manager, two deadlines and one evening.",
+  },
+  {
+    value: "red_flags",
+    label: "Gaps & red flags",
+    description: "Low grades, a career gap, a short stint or a switch — explained without excuses.",
+  },
+  {
+    value: "interests",
+    label: "Hobbies & interests",
+    description: "Whatever is in your interests section, probed until it is clear whether it is real.",
+  },
+  {
+    value: "partner",
+    label: "Partner / final round",
+    description: "A senior interviewer, a broad conversation, curveballs and a judgement on maturity.",
+    needsFirm: true,
+  },
 ];
+
+/** Every round's value, for request validation. */
+export const PI_KIND_VALUES = PI_KINDS.map((k) => k.value) as [PiKind, ...PiKind[]];

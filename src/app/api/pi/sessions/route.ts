@@ -6,14 +6,14 @@ import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { chargeQuota, getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { callChat } from "@/lib/ai/chat";
 import { buildPiSystemPrompt } from "@/lib/ai/pi-interview";
-import { PI_MAX_QUESTIONS } from "@/lib/pi";
+import { PI_KIND_VALUES, PI_MAX_QUESTIONS } from "@/lib/pi";
 import { recordUsage } from "@/lib/usage";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  kind: z.enum(["hr_fit", "resume_deep_dive", "why_firm", "stress"]).default("hr_fit"),
+  kind: z.enum(PI_KIND_VALUES).default("hr_fit"),
   target_firm: z.string().trim().max(120).optional().nullable(),
 });
 
