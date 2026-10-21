@@ -6,6 +6,8 @@
  * before a candidate sits for the timed, proctored examination.
  */
 
+import { MORE_CERT_COURSES } from "./cert-courses-more";
+
 export interface CourseCaseRecommendation {
   slug: string;
   title: string;
@@ -926,7 +928,10 @@ export const CERT_COURSES: Record<string, CertCourse> = {
   },
 };
 
+/** Every course, including the second set (src/lib/cert-courses-more.ts). */
+const ALL_CERT_COURSES: Record<string, CertCourse> = { ...CERT_COURSES, ...MORE_CERT_COURSES };
+
 /** Get the course curriculum associated with an exam slug */
 export function getCertCourse(examSlug: string): CertCourse | null {
-  return CERT_COURSES[examSlug] ?? null;
+  return ALL_CERT_COURSES[examSlug] ?? null;
 }

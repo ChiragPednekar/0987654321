@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CERT_COURSES } from "@/lib/cert-courses";
+import { getCertCourse } from "@/lib/cert-courses";
 import { gradeCheck, MODULE_CHECKS, publicCheck } from "@/lib/cert-course-checks";
 
 /**
@@ -14,10 +14,32 @@ const EXAM_CASES: Record<string, string[]> = {
   "consulting-case-certificate": ["market-entry-10", "operations-capacity-3"],
   "finance-case-certificate": ["npv-irr-project-1", "dcf-valuation-1"],
   "product-marketing-certificate": ["prioritization-11", "product-launch-10"],
+  // 081
+  "operations-supply-chain-certificate": ["make-vs-buy-12", "dual-sourcing-13"],
+  "marketing-brand-certificate": ["channel-mix-12", "gtm-launch-12"],
+  "business-strategy-certificate": ["competitive-response-14", "portfolio-review-12"],
+  "mbb-case-interview-certificate": ["mbb-mckinsey-hard-3", "mbb-bcg-hard-3"],
 };
 
+const COURSES = Object.keys(EXAM_CASES).map((slug) => getCertCourse(slug)!);
+
 describe("prep course knowledge checks", () => {
-  const modules = Object.values(CERT_COURSES).flatMap((c) => c.modules);
+  const modules = COURSES.flatMap((c) => c.modules);
+
+  it("has a course for every exam, with four modules and unique module ids", () => {
+    for (const [slug, course] of Object.entries(EXAM_CASES).map(([s]) => [s, getCertCourse(s)] as const)) {
+      expect(course, slug).not.toBeNull();
+      expect(course!.modules, slug).toHaveLength(4);
+    }
+    expect(new Set(modules.map((m) => m.id)).size).toBe(modules.length);
+  });
+
+  it("has no check without a module, and unique question ids", () => {
+    const ids = new Set(modules.map((m) => m.id));
+    for (const key of Object.keys(MODULE_CHECKS)) expect(ids.has(key), key).toBe(true);
+    const qids = Object.values(MODULE_CHECKS).flat().map((q) => q.id);
+    expect(new Set(qids).size).toBe(qids.length);
+  });
 
   it("gives every module a four-question check", () => {
     for (const m of modules) {
@@ -63,7 +85,7 @@ describe("prep course knowledge checks", () => {
 
 describe("prep courses never hand out the exam", () => {
   it.each(Object.keys(EXAM_CASES))("the %s course does not recommend its exam's cases", (slug) => {
-    const recommended = CERT_COURSES[slug].modules.flatMap((m) => m.recommendedCases.map((c) => c.slug));
+    const recommended = getCertCourse(slug)!.modules.flatMap((m) => m.recommendedCases.map((c) => c.slug));
     for (const examCase of EXAM_CASES[slug]) expect(recommended).not.toContain(examCase);
   });
 });
