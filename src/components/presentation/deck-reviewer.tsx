@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { PLANS, rupees } from "@/lib/pricing";
 import { FileUp, Loader2, Presentation, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -218,7 +219,7 @@ export function DeckReviewer({
           </div>
           {!entitled && (
             <p className="text-xs text-muted-foreground">
-              Deck reviews need CaseCode Pro. <Link href="/upgrade" className="underline underline-offset-4 hover:text-foreground">Upgrade</Link> from ₹299 a month, or ask your placement cell
+              Deck reviews need CaseCode Pro. <Link href="/upgrade" className="underline underline-offset-4 hover:text-foreground">Upgrade</Link> from {rupees(PLANS.monthly.pricePaise)} a month, or ask your placement cell
               to add you to your college&apos;s licence.
             </p>
           )}

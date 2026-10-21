@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { PLANS, rupees } from "@/lib/pricing";
 import { Check, Copy, FileUp, Loader2, ScanText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -334,7 +335,7 @@ export function ResumeCritic({
           </div>
           {!entitled && (
             <p className="text-xs text-muted-foreground">
-              Critiques need CaseCode Pro. <Link href="/upgrade" className="underline underline-offset-4 hover:text-foreground">Upgrade</Link> from ₹299 a month, or ask your placement
+              Critiques need CaseCode Pro. <Link href="/upgrade" className="underline underline-offset-4 hover:text-foreground">Upgrade</Link> from {rupees(PLANS.monthly.pricePaise)} a month, or ask your placement
               cell to add you to your college&apos;s licence.
             </p>
           )}

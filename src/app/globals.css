@@ -291,11 +291,11 @@
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
   --font-display: var(--font-schibsted), var(--font-plex-sans), ui-sans-serif, sans-serif;
   --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
-  --font-editorial: var(--font-bodoni), var(--font-source-serif), ui-serif, Georgia, serif;
+  --font-editorial: var(--font-plex-serif), var(--font-source-serif), ui-serif, Georgia, serif;
 
   /* NB: `@theme inline` does not declare these as CSS variables — they exist
      only inside the font-* utilities. Plain CSS below must use the next/font
-     variables themselves (--font-plex-sans, --font-schibsted, --font-bodoni,
+     variables themselves (--font-plex-sans, --font-schibsted, --font-plex-serif,
      --font-source-serif, --font-plex-mono), which layout.tsx sets on <body>. */
 
   /* Plex is drawn with open spacing; the template habit of pulling every
@@ -467,12 +467,12 @@
 /* ------------------------------------------------------------ auth forms ---
    Sign-in, sign-up and password pages, scoped by .auth-form in the auth
    layout. Fields are a single underline rather than a box, labels are small
-   capitals, and titles are set in the Didone — the same quiet, editorial
+   capitals, and titles are set in the editorial serif — the same quiet
    register as the panel beside them. Unlayered on purpose, so it wins over
    the utility classes the shared Input and Label carry. */
 .auth-form h1 {
-  font-family: var(--font-bodoni), ui-serif, Georgia, serif;
-  font-weight: 400;
+  font-family: var(--font-plex-serif), ui-serif, Georgia, serif;
+  font-weight: 500;
   font-size: 2.9rem;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -504,4 +504,13 @@
 .auth-form input:not([type="checkbox"]):not([type="radio"])[aria-invalid="true"] {
   border-bottom-color: var(--danger);
   box-shadow: 0 1px 0 var(--danger);
+}
+
+/* --------------------------------------------------------- editorial weight ---
+   Headings in the editorial face were written as `font-normal` for Bodoni,
+   whose display cut was heavy enough at 400. IBM Plex Serif reads best at
+   500 at headline size, so the weight is set once here. Unlayered on purpose:
+   it wins over the `font-normal` utility on the 50-odd headings that carry it. */
+.font-editorial {
+  font-weight: 500;
 }

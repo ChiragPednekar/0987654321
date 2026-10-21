@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { PLANS, rupees } from "@/lib/pricing";
 import { useRouter } from "next/navigation";
 import { Check, ExternalLink, Loader2, Send, X } from "lucide-react";
 import { toast } from "sonner";
@@ -269,7 +270,7 @@ export function DailyQuiz({
             "One attempt. The answers, and the release each one came from, appear when you submit."
           ) : (
             <>
-              The daily quiz needs CaseCode Pro. <Link href="/upgrade" className="underline underline-offset-4 hover:text-foreground">Upgrade</Link> from ₹299 a month, or use your college&apos;s licence.
+              The daily quiz needs CaseCode Pro. <Link href="/upgrade" className="underline underline-offset-4 hover:text-foreground">Upgrade</Link> from {rupees(PLANS.monthly.pricePaise)} a month, or use your college&apos;s licence.
             </>
           )}
         </p>

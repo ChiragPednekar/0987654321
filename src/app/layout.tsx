@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bodoni_Moda, IBM_Plex_Mono, IBM_Plex_Sans, Schibsted_Grotesk, Source_Serif_4 } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Serif, Schibsted_Grotesk, Source_Serif_4 } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ProctorEndedHost } from "@/components/proctor/proctor-ended";
@@ -43,17 +43,18 @@ const display = Schibsted_Grotesk({
 
 /**
  * The editorial face: the landing hero, the sign-in panel, and page and
- * section titles on the dashboards. A Didone with an optical-size axis, so at
- * headline size it gets its display cut — fine hairlines, a confident italic.
- * Preloaded, because a dashboard title flashing from the fallback serif on
- * every visit would undo the point of it.
+ * section titles on the dashboards. IBM Plex Serif — a sober, corporate serif
+ * in the register of a consulting report, and the same family as the Plex
+ * Sans the interface is set in, so headings and text belong together. It
+ * replaced Bodoni Moda on 2026-10-21: the Didone read as a fashion magazine
+ * rather than professional. Preloaded, because a dashboard title flashing
+ * from the fallback serif on every visit would undo the point of it.
  */
-const editorial = Bodoni_Moda({
-  variable: "--font-bodoni",
+const editorial = IBM_Plex_Serif({
+  variable: "--font-plex-serif",
   subsets: ["latin"],
-  weight: "variable",
+  weight: ["400", "500", "600"],
   style: ["normal", "italic"],
-  axes: ["opsz"],
   display: "swap",
 });
 
