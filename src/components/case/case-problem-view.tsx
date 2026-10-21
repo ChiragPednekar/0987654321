@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useCaseProctor } from "@/components/case/case-proctor-shell";
 import type { Attachment, RubricCriteria } from "@/lib/types/database";
+import { orderedEntries } from "@/lib/supporting-data";
 
 interface CaseProblemViewProps {
   rubric: { criteria: RubricCriteria; max_score: number; pass_score: number } | null;
@@ -167,7 +168,7 @@ export function CaseProblemView({
 export function SupportingData({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="space-y-5">
-      {Object.entries(data).map(([key, value]) => {
+      {orderedEntries(data).map(([key, value]) => {
         const label = key.replace(/_/g, " ");
 
         if (Array.isArray(value) && typeof value[0] === "object" && value[0]) {

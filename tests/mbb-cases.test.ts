@@ -71,3 +71,16 @@ describe("MBB-style case set", () => {
     }
   });
 });
+
+describe("orderedEntries", () => {
+  it("puts numbered exhibits back in order after jsonb reorders them", async () => {
+    const { orderedEntries } = await import("@/lib/supporting-data");
+    const fromDb = { "Exhibit 1 — current economics": 1, "Exhibit 3 — customer segments": 3, "Exhibit 2 — demand sensitivity": 2 };
+    expect(orderedEntries(fromDb).map(([k]) => k[8])).toEqual(["1", "2", "3"]);
+  });
+
+  it("leaves other cases' keys alone", async () => {
+    const { orderedEntries } = await import("@/lib/supporting-data");
+    expect(orderedEntries({ revenue: 1, costs: 2 }).map(([k]) => k)).toEqual(["revenue", "costs"]);
+  });
+});
