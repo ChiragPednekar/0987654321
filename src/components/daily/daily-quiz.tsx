@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ExternalLink, Loader2, Send, X } from "lucide-react";
 import { toast } from "sonner";
@@ -264,9 +265,13 @@ export function DailyQuiz({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          {entitled
-            ? "One attempt. The answers, and the release each one came from, appear when you submit."
-            : "The daily quiz is available to licensed accounts. Ask your college to activate CaseCode."}
+          {entitled ? (
+            "One attempt. The answers, and the release each one came from, appear when you submit."
+          ) : (
+            <>
+              The daily quiz needs CaseCode Pro. <Link href="/upgrade" className="underline underline-offset-4 hover:text-foreground">Upgrade</Link> from ₹299 a month, or use your college&apos;s licence.
+            </>
+          )}
         </p>
         <Button onClick={submit} disabled={busy || !entitled || answered === 0}>
           {busy ? <Loader2 className="animate-spin" /> : <Send />}

@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Check, Copy, Loader2, ScanText, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Check, Copy, FileUp, Loader2, ScanText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -176,6 +177,40 @@ export function ResumeCritic({
   const [history, setHistory] = React.useState(initialHistory);
   const [shown, setShown] = React.useState<StoredCritique | null>(null);
   const [left, setLeft] = React.useState(gradingsLeft);
+  const [reading, setReading] = React.useState(false);
+  const fileInput = React.useRef<HTMLInputElement>(null);
+
+  /**
+   * Reads an uploaded résumé (PDF or Word) and fills the box with the bullets
+   * found in it. Nothing is critiqued or charged here — the student edits the
+   * list first, then presses Critique as before.
+   */
+  async function upload(file: File) {
+    if (text.trim() && !window.confirm("Replace the bullets in the box with the ones from this file?")) return;
+    setReading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const response = await fetch("/api/resume/extract", { method: "POST", body: form });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        toast.error(payload.error ?? "Could not read that file.");
+        return;
+      }
+      const found = payload.bullets as string[];
+      setText(found.map((b) => `• ${b}`).join("\n"));
+      toast.success(
+        found.length > RESUME_LIMITS.maxBullets
+          ? `Found ${found.length} bullets. Keep up to ${RESUME_LIMITS.maxBullets} to critique at once — delete the rest, or run them in batches.`
+          : `Found ${found.length} bullet${found.length === 1 ? "" : "s"}. Check them, then press Critique.`,
+      );
+    } catch {
+      toast.error("Network error — try again.");
+    } finally {
+      setReading(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
 
   const bullets = parseBullets(text);
   const tooMany = bullets.length > RESUME_LIMITS.maxBullets;
@@ -238,15 +273,44 @@ export function ResumeCritic({
               placeholder="e.g. Product manager at a consumer tech company (optional)"
             />
           </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">Bullets, one per line</span>
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label htmlFor="resume-bullets" className="text-sm font-medium">
+                Bullets, one per line
+              </label>
+              <input
+                ref={fileInput}
+                type="file"
+                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                className="sr-only"
+                aria-label="Upload your résumé"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void upload(file);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={reading}
+                onClick={() => fileInput.current?.click()}
+              >
+                {reading ? <Loader2 className="animate-spin" /> : <FileUp />}
+                {reading ? "Reading your résumé…" : "Upload résumé (PDF or Word)"}
+              </Button>
+            </div>
             <Textarea
+              id="resume-bullets"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder={"• Responsible for managing social media for the college fest\n• Worked on a pricing project for a D2C brand during my internship"}
               className="min-h-[200px] resize-y text-sm leading-relaxed"
             />
-          </label>
+            <p className="text-xs text-muted-foreground">
+              Upload your résumé to pull the bullets in, or paste them. The file is read and discarded — it is never stored.
+            </p>
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p
               className={cn(
@@ -270,8 +334,8 @@ export function ResumeCritic({
           </div>
           {!entitled && (
             <p className="text-xs text-muted-foreground">
-              Critiques are available to licensed accounts. Ask your college to activate
-              CaseCode, or sign in with your college email address.
+              Critiques need CaseCode Pro. <Link href="/upgrade" className="underline underline-offset-4 hover:text-foreground">Upgrade</Link> from ₹299 a month, or ask your placement
+              cell to add you to your college&apos;s licence.
             </p>
           )}
         </CardContent>
