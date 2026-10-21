@@ -201,7 +201,7 @@ export function ResumeCritic({
       setText(found.map((b) => `• ${b}`).join("\n"));
       toast.success(
         found.length > RESUME_LIMITS.maxBullets
-          ? `Found ${found.length} bullets. Keep up to ${RESUME_LIMITS.maxBullets} to critique at once — delete the rest, or run them in batches.`
+          ? `Found ${found.length} bullets. Keep up to ${RESUME_LIMITS.maxBullets} to critique at once.`
           : `Found ${found.length} bullet${found.length === 1 ? "" : "s"}. Check them, then press Critique.`,
       );
     } catch {

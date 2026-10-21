@@ -11,7 +11,13 @@ export { numbersIn };
  */
 
 export const RESUME_LIMITS = {
-  maxBullets: 12,
+  /**
+   * A whole résumé. Critiqued in parallel groups (src/lib/ai/resume-critique.ts),
+   * so 50 bullets take about as long as 12. Still one graded answer: a full
+   * 50-bullet critique costs roughly ₹2.6 at the 2027 model rates, which every
+   * plan absorbs even if all its graded answers were spent this way.
+   */
+  maxBullets: 50,
   maxBulletChars: 400,
   maxRoleChars: 120,
 } as const;

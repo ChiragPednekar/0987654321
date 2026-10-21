@@ -204,6 +204,10 @@ async function callAnthropic({
  * makes it the default recommendation for getting grading running at zero
  * cost. Structured output uses responseSchema.
  */
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function callGemini({
   system,
   user,
@@ -214,7 +218,8 @@ async function callGemini({
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
 
-  const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+  const primary = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+  const fallback = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash";
 
   // Gemini's responseSchema is an OpenAPI subset: it rejects
   // additionalProperties, so strip it from the shared builder's output.
@@ -223,42 +228,78 @@ async function callGemini({
     (key, value) => (key === "additionalProperties" ? undefined : value),
   );
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-goog-api-key": apiKey,
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [
+      {
+        role: "user",
+        parts: pdf
+          ? [{ inlineData: { mimeType: "application/pdf", data: pdf.base64 } }, { text: user }]
+          : [{ text: user }],
       },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [
-          {
-            role: "user",
-            parts: pdf
-              ? [{ inlineData: { mimeType: "application/pdf", data: pdf.base64 } }, { text: user }]
-              : [{ text: user }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          responseMimeType: "application/json",
-          responseSchema: schema,
-        },
-      }),
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      responseMimeType: "application/json",
+      responseSchema: schema,
     },
-  );
+  });
 
-  if (!response.ok) {
-    const detail = await response.text();
-    if (response.status === 429) {
-      throw new RateLimitError(
-        "The AI provider is rate limiting us.",
-        parseRetryAfter(detail),
-      );
+  /**
+   * Google answers 503 "model is currently experiencing high demand" in busy
+   * spells, and 429 when a quota is hit. Both pass on their own, and failing a
+   * student's graded answer on the first one is the wrong trade: so an
+   * overloaded model is retried twice with a short backoff, then the request
+   * moves to a second model that runs on separate capacity. Only when both
+   * are refusing is it reported — as "busy, try again", which is the truth,
+   * rather than a generic failure. A 4xx other than 429 is our request being
+   * wrong, and retrying it would not help.
+   */
+  const models = primary === fallback ? [primary] : [primary, fallback];
+  let response: Response | null = null;
+  let model = primary;
+  let retryAfter: number | null = null;
+  let lastDetail = "";
+
+  attempts: for (const candidate of models) {
+    model = candidate;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await sleep(attempt === 1 ? 1200 + Math.random() * 400 : 3000 + Math.random() * 800);
+      try {
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${candidate}:generateContent`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+            body,
+          },
+        );
+      } catch (error) {
+        // A dropped connection is treated like an overloaded model.
+        lastDetail = error instanceof Error ? error.message : String(error);
+        response = null;
+        continue;
+      }
+      if (response.ok) break attempts;
+
+      lastDetail = await response.text();
+      if (response.status === 429) {
+        // A quota is per model: the fallback may still have room.
+        retryAfter = parseRetryAfter(lastDetail);
+        continue attempts;
+      }
+      if (![500, 502, 503, 504].includes(response.status)) {
+        throw new Error(`Gemini API error ${response.status}: ${lastDetail}`);
+      }
     }
-    throw new Error(`Gemini API error ${response.status}: ${detail}`);
+  }
+
+  if (!response?.ok) {
+    console.error("[ai] Gemini unavailable on every model", models, lastDetail.slice(0, 1500));
+    // A short wait is worth telling the student. A long one is a daily quota
+    // (the free tier's resets once a day), and "wait about 70714 seconds" helps
+    // nobody — so past two minutes the student just hears "busy, try shortly".
+    throw new RateLimitError("The AI provider is busy right now.", retryAfter !== null && retryAfter <= 120 ? retryAfter : null);
   }
 
   const data = await response.json();

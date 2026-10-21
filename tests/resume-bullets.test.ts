@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MAX_EXTRACTED_BULLETS, pickBullets } from "@/lib/resume-bullets";
+
+vi.mock("server-only", () => ({}));
 
 /**
  * Real shapes of résumé text, taken from a sample CV read two ways: a PDF
@@ -38,6 +40,26 @@ describe("pickBullets", () => {
     ]);
   });
 
+  it("leaves out a skills section, even when it uses bullet markers", () => {
+    const text = [
+      "Skills",
+      "• Prompt Engineering",
+      "• Workflow Automation",
+      "• NLP Pipelines",
+      "Product Engineering •",
+      "Python, SQL, Tableau, Power BI, Excel",
+      "Prompt Engineering • Workflow Automation • GARCH Modeling",
+      "Experience",
+      "Analyst, Quantile Capital — Jan 2024 – Present",
+      "Built a GARCH volatility model for 40 equities that cut forecast error by 18%",
+      "Automated the weekly risk report in Python, saving the desk six hours a week",
+    ].join("\n");
+    expect(pickBullets(text)).toEqual([
+      "Built a GARCH volatility model for 40 equities that cut forecast error by 18%",
+      "Automated the weekly risk report in Python, saving the desk six hours a week",
+    ]);
+  });
+
   it("does not eat the number at the start of a bullet", () => {
     expect(pickBullets("• 40% growth in weekly active users over two quarters\n• Cut costs by 12 lakh in six months")[0]).toBe(
       "40% growth in weekly active users over two quarters",
@@ -52,5 +74,21 @@ describe("pickBullets", () => {
   it("caps what it hands back", () => {
     const many = Array.from({ length: 50 }, (_, i) => `• Delivered project number ${i + 1} on time and within budget`).join("\n");
     expect(pickBullets(many)).toHaveLength(MAX_EXTRACTED_BULLETS);
+  });
+});
+
+describe("combinedSummary", () => {
+  it("counts verdicts and the most common problems across every group", async () => {
+    const { combinedSummary } = await import("@/lib/ai/resume-critique");
+    const b = (verdict: "strong" | "needs_work" | "weak", issues: string[]) =>
+      ({ original: "x", verdict, issues, feedback: "", rewrite: "", invented_numbers: [] }) as never;
+    const summary = combinedSummary([
+      b("strong", []),
+      b("needs_work", ["no_number", "weak_verb"]),
+      b("needs_work", ["no_number"]),
+      b("weak", ["no_number", "vague"]),
+    ]);
+    expect(summary).toMatch(/^Of 4 bullets, 1 are strong, 2 need work and 1 are weak\./);
+    expect(summary).toMatch(/no measurable result \(3\)/);
   });
 });

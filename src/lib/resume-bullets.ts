@@ -8,11 +8,14 @@
  *     and break long bullets across lines, so "…recommending a 6%" and
  *     "price increase that was rolled out…" arrive as two lines.
  *
- * So: when the text has bullet markers, those lines are the bullets. When it
- * does not, a line counts as a bullet if it reads like one — a sentence of six
- * or more words that is not contact details and not a role/education line with
- * a date range. Either way, a line that starts in lower case continues the
- * bullet above it.
+ * And a skills section often uses the same markers ("• Prompt Engineering",
+ * or "Python • SQL • Tableau" on one line), so a marker alone proves nothing.
+ *
+ * So every line is judged on what it says: a bullet reads like an achievement
+ * — four or more words after a marker, six or more without one — and is not
+ * contact details, not a role/education line with a date range, and not a
+ * list of short skills. A line that starts in lower case continues the bullet
+ * above it, which rejoins what a PDF wrapped.
  *
  * The student sees every picked bullet in the box and edits before anything is
  * critiqued, so this aims to be useful, not perfect. Pure, so it is tested.
@@ -41,15 +44,25 @@ function endsSentence(line: string) {
   return /[.!?;:]$/.test(line);
 }
 
+/**
+ * A skills row rather than a sentence: several short items joined by commas,
+ * bullets or pipes ("Python, SQL, Tableau, Power BI"), or a dangling marker
+ * left by a PDF that wrapped such a row ("Product Engineering •").
+ */
+function isSkillsList(line: string) {
+  if (/[•●▪|·]\s*$/.test(line)) return true;
+  const parts = line.split(/\s*[,•●▪|·;]\s*/).filter(Boolean);
+  if (parts.length < 3) return false;
+  const avgWords = parts.reduce((s, p) => s + words(p), 0) / parts.length;
+  return avgWords <= 2.5;
+}
+
 export function pickBullets(text: string): string[] {
   const lines = text
     .replace(/\r/g, "")
     .split("\n")
     .map((l) => l.replace(/\t/g, " "))
     .filter((l) => l.trim().length > 0);
-
-  const marked = lines.filter((l) => MARKER.test(l) && clean(l.replace(MARKER, "")).length > 0);
-  const useMarkers = marked.length >= 2;
 
   const bullets: string[] = [];
   let open = false; // the last bullet may still continue on the next line
@@ -66,9 +79,8 @@ export function pickBullets(text: string): string[] {
       continue;
     }
 
-    const isBullet = useMarkers
-      ? hasMarker
-      : words(line) >= 6 && !CONTACT.test(line) && !DATE_RANGE.test(line);
+    const isBullet =
+      words(line) >= (hasMarker ? 4 : 6) && !CONTACT.test(line) && !DATE_RANGE.test(line) && !isSkillsList(line);
 
     if (isBullet) {
       bullets.push(line);

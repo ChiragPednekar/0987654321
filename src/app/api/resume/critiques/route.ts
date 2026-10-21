@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   }
   if (bullets.length > RESUME_LIMITS.maxBullets) {
     return NextResponse.json(
-      { error: `Up to ${RESUME_LIMITS.maxBullets} bullets at a time. Split the rest into a second critique.` },
+      { error: `Up to ${RESUME_LIMITS.maxBullets} bullets at a time.` },
       { status: 400 },
     );
   }

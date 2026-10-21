@@ -3,6 +3,7 @@ import { z } from "zod";
 import { callModel } from "./providers";
 import {
   NUMBER_PLACEHOLDER,
+  RESUME_ISSUE_LABEL,
   RESUME_ISSUES,
   RESUME_VERDICTS,
   stripInventedNumbers,
@@ -111,10 +112,12 @@ export interface CritiqueCall {
   cachedTokens: number;
 }
 
-export async function critiqueBullets(
-  bullets: string[],
-  targetRole: string | null,
-): Promise<CritiqueCall> {
+/** Bullets per model call: 50 bullets are two calls, run in parallel. Kept large because every call counts against the provider's per-minute request limit. */
+export const CRITIQUE_BATCH_SIZE = 25;
+
+type BulletResult = ResumeCritiqueResult["bullets"][number];
+
+async function critiqueBatch(bullets: string[], targetRole: string | null) {
   const numbered = bullets.map((b, i) => `${i + 1}. ${b}`).join("\n");
   const user = `<<<STUDENT_INPUT
 Target role: ${fence(targetRole?.trim() || "not given", "STUDENT_INPUT")}
@@ -123,22 +126,31 @@ Bullets:
 ${fence(numbered, "STUDENT_INPUT")}
 STUDENT_INPUT`;
 
-  const { raw, model, tokensUsed, inputTokens, outputTokens, cachedTokens } = await callModel({
+  const call = await callModel({
     system: SYSTEM + GRADER_GUARD,
     user,
     criteria: { placeholder: 1 },
     jsonSchema: JSON_SCHEMA as unknown as Record<string, unknown>,
   });
 
-  const parsed = SCHEMA.parse(JSON.parse(raw));
+  const parsed = SCHEMA.parse(JSON.parse(call.raw));
 
   // Matched back by index rather than trusted by position: a model that skips
-  // or reorders a bullet must not attach one bullet's rewrite to another.
+  // or reorders a bullet must not attach one bullet's rewrite to another. A
+  // bullet the model skipped is shown as not reviewed, rather than failing the
+  // whole critique — with 50 bullets one gap must not cost the other 49.
   const byIndex = new Map(parsed.bullets.map((b) => [b.index, b]));
-  const critiqued = bullets.map((original, i) => {
+  const critiqued: BulletResult[] = bullets.map((original, i) => {
     const entry = byIndex.get(i + 1);
     if (!entry) {
-      throw new Error(`Model returned no critique for bullet ${i + 1}`);
+      return {
+        original,
+        verdict: "needs_work",
+        issues: [],
+        feedback: "This bullet was not reviewed this time — critique it again on its own to include it.",
+        rewrite: "",
+        invented_numbers: [],
+      };
     }
     const { rewrite, invented } = stripInventedNumbers(original, entry.rewrite.trim());
     return {
@@ -152,15 +164,62 @@ STUDENT_INPUT`;
   });
 
   return {
+    summary: parsed.summary.trim(),
+    topFixes: parsed.top_fixes,
+    bullets: critiqued,
+    call,
+  };
+}
+
+/**
+ * The summary for a critique that ran in several groups: counted from the
+ * results rather than written by the model, because each group's model only
+ * saw its own bullets. Pure, so it is tested.
+ */
+export function combinedSummary(bullets: BulletResult[]): string {
+  const count = (v: string) => bullets.filter((b) => b.verdict === v).length;
+  const issues = new Map<string, number>();
+  for (const b of bullets) for (const issue of b.issues) issues.set(issue, (issues.get(issue) ?? 0) + 1);
+  const common = [...issues.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([issue, n]) => `${RESUME_ISSUE_LABEL[issue as keyof typeof RESUME_ISSUE_LABEL].toLowerCase()} (${n})`);
+  const head = `Of ${bullets.length} bullets, ${count("strong")} are strong, ${count("needs_work")} need work and ${count("weak")} are weak.`;
+  return common.length ? `${head} The most common problems: ${common.join(", ")}.` : head;
+}
+
+export async function critiqueBullets(
+  bullets: string[],
+  targetRole: string | null,
+): Promise<CritiqueCall> {
+  const groups: string[][] = [];
+  for (let i = 0; i < bullets.length; i += CRITIQUE_BATCH_SIZE) groups.push(bullets.slice(i, i + CRITIQUE_BATCH_SIZE));
+
+  const results = await Promise.all(groups.map((group) => critiqueBatch(group, targetRole)));
+  const critiqued = results.flatMap((r) => r.bullets);
+
+  // Fixes the groups agree on first, then the rest, without repeats.
+  const fixes: string[] = [];
+  for (let round = 0; fixes.length < 3 && round < 3; round++) {
+    for (const r of results) {
+      const fix = r.topFixes[round]?.trim();
+      if (fix && !fixes.includes(fix) && fixes.length < 3) fixes.push(fix);
+    }
+  }
+
+  const sum = (key: "tokensUsed" | "inputTokens" | "outputTokens" | "cachedTokens") =>
+    results.reduce((s, r) => s + (r.call[key] ?? 0), 0);
+
+  return {
     result: {
-      summary: parsed.summary.trim(),
-      top_fixes: parsed.top_fixes.slice(0, 3),
+      summary: results.length === 1 ? results[0].summary : combinedSummary(critiqued),
+      top_fixes: fixes,
       bullets: critiqued,
     },
-    model,
-    tokensUsed,
-    inputTokens,
-    outputTokens,
-    cachedTokens,
+    model: results[0].call.model,
+    tokensUsed: sum("tokensUsed"),
+    inputTokens: sum("inputTokens"),
+    outputTokens: sum("outputTokens"),
+    cachedTokens: sum("cachedTokens"),
   };
 }
