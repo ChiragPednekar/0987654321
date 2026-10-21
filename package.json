@@ -27,6 +27,7 @@
     "seed:companies": "tsx scripts/seed-companies.ts",
     "seed:models": "tsx scripts/seed-models.ts",
     "seed:sales": "tsx scripts/seed-sales.ts",
+    "seed:mbb": "tsx scripts/seed-mbb.ts",
     "test": "vitest run",
     "check:schema": "tsx scripts/check-schema-refs.ts",
     "test:watch": "vitest",
