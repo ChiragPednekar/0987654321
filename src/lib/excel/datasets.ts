@@ -108,8 +108,48 @@ export const STOCK_HIDDEN: Grid = [
   ["S-06", "Belts", 12, 20, 560, "MAA-0402-B"],
 ];
 
+// ---- Monthly P&L -------------------------------------------------------------
+// A financial year, April to March, in ₹ lakh. The hidden sheet keeps the months
+// in the same order — a P&L is read top to bottom, so a formula that relies on
+// April being the first row is a correct formula, not a lucky one. The numbers,
+// and so the answers, all differ.
+
+const PNL_HEADER = ["Month", "Revenue (₹ lakh)", "COGS (₹ lakh)", "Opex (₹ lakh)", "Marketing (₹ lakh)", "New customers"];
+
+export const PNL: Grid = [
+  PNL_HEADER,
+  ["Apr", 120, 70, 25, 8, 140],
+  ["May", 126, 73, 25, 9, 150],
+  ["Jun", 131, 75, 26, 12, 190],
+  ["Jul", 128, 74, 26, 10, 160],
+  ["Aug", 140, 80, 27, 11, 175],
+  ["Sep", 152, 86, 27, 14, 220],
+  ["Oct", 175, 97, 28, 18, 280],
+  ["Nov", 168, 94, 28, 15, 240],
+  ["Dec", 150, 85, 28, 10, 180],
+  ["Jan", 145, 83, 29, 9, 165],
+  ["Feb", 149, 85, 29, 10, 170],
+  ["Mar", 162, 92, 30, 12, 200],
+];
+
+export const PNL_HIDDEN: Grid = [
+  PNL_HEADER,
+  ["Apr", 98, 60, 22, 6, 110],
+  ["May", 104, 62, 22, 8, 125],
+  ["Jun", 101, 61, 23, 9, 120],
+  ["Jul", 112, 66, 23, 9, 135],
+  ["Aug", 118, 69, 24, 10, 150],
+  ["Sep", 125, 72, 24, 11, 160],
+  ["Oct", 160, 90, 25, 16, 260],
+  ["Nov", 171, 95, 25, 19, 300],
+  ["Dec", 140, 80, 26, 9, 170],
+  ["Jan", 133, 77, 26, 8, 150],
+  ["Feb", 128, 75, 26, 7, 140],
+  ["Mar", 146, 84, 27, 11, 185],
+];
+
 export interface ExcelDataset {
-  key: "sales" | "people" | "stock";
+  key: "sales" | "people" | "stock" | "pnl";
   label: string;
   grid: Grid;
   hidden: Grid;
@@ -119,4 +159,5 @@ export const EXCEL_DATASETS: readonly ExcelDataset[] = [
   { key: "sales", label: "Sales ledger — orders by region, rep and product", grid: SALES, hidden: SALES_HIDDEN },
   { key: "people", label: "People — employees, salary, rating and join year", grid: PEOPLE, hidden: PEOPLE_HIDDEN },
   { key: "stock", label: "Stock — items on hand, reorder levels and costs", grid: STOCK, hidden: STOCK_HIDDEN },
+  { key: "pnl", label: "Monthly P&L — revenue, costs, marketing and new customers, April to March", grid: PNL, hidden: PNL_HIDDEN },
 ];

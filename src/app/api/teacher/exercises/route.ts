@@ -36,7 +36,7 @@ const sqlSchema = z.object({
 const excelSchema = z.object({
   kind: z.literal("excel"),
   ...common,
-  dataset: z.enum(["sales", "people", "stock", "custom"]),
+  dataset: z.enum(["sales", "people", "stock", "pnl", "custom"]),
   /** Pasted from Excel or Sheets: tab- or comma-separated rows. */
   grid_text: z.string().max(40_000).optional().nullable(),
   hidden_grid_text: z.string().max(40_000).optional().nullable(),
