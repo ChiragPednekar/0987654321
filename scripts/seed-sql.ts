@@ -39,11 +39,14 @@ type Exercise = {
   solution_sql: string;
   order_matters: boolean;
   hint?: string;
-  /** A version that only works on the visible data — used to prove the hidden set discriminates. */
-  hardcoded: string;
+  /**
+   * A version that only works on the visible data — used to prove the hidden
+   * set discriminates. Left out, it is built from the visible answer itself.
+   */
+  hardcoded?: string;
 };
 
-const EXERCISES: Exercise[] = [
+export const EXERCISES: Exercise[] = [
   {
     slug: "sql-total-shipped-revenue",
     title: "Total revenue from shipped orders",
@@ -243,23 +246,193 @@ const EXERCISES: Exercise[] = [
     hint: "HAVING filters groups after aggregation. COUNT(DISTINCT ...) is the part that matters.",
     hardcoded:
       "select 'Aarav Menon' as name union all select 'Priya Raghavan' union all select 'Meera Iyer'",
+  },  {
+    slug: "sql-orders-by-status",
+    title: "Orders by status",
+    topic: "aggregation",
+    difficulty: "easy",
+    prompt: "For each order status, return the status and the number of orders with it.",
+    solution_sql: "select status, count(*) as n from orders group by status",
+    order_matters: false,
+    hint: "GROUP BY the status column and COUNT the rows in each group.",
+  },
+  {
+    slug: "sql-customers-joined-2024",
+    title: "Customers who joined in 2024",
+    topic: "dates",
+    difficulty: "easy",
+    prompt: "Return the name of every customer who joined during 2024.",
+    solution_sql: "select name from customers where joined_on >= '2024-01-01' and joined_on < '2025-01-01'",
+    order_matters: false,
+    hint: "Dates are stored as YYYY-MM-DD text, so a range comparison on the string works. So does substr(joined_on, 1, 4) = '2024'.",
+  },
+  {
+    slug: "sql-pending-value",
+    title: "Value stuck in pending orders",
+    topic: "aggregation",
+    difficulty: "easy",
+    prompt: "Return a single row with the total value (quantity x unit_price) of all pending orders.",
+    solution_sql: "select sum(o.quantity * p.unit_price) as pending_value from orders o join products p on p.id = o.product_id where o.status = 'pending'",
+    order_matters: false,
+    hint: "The same join as revenue, with a different status filter.",
+  },
+  {
+    slug: "sql-order-size-band",
+    title: "Banding orders by size",
+    topic: "case expressions",
+    difficulty: "medium",
+    prompt: "For every shipped order, return the order id and a band: 'large' if its value is 50,000 or more, 'medium' if it is 20,000 or more, otherwise 'small'.",
+    solution_sql: "select o.id, case when o.quantity * p.unit_price >= 50000 then 'large' when o.quantity * p.unit_price >= 20000 then 'medium' else 'small' end as band from orders o join products p on p.id = o.product_id where o.status = 'shipped'",
+    order_matters: false,
+    hint: "CASE WHEN ... THEN ... checks its conditions in order and stops at the first that is true, so put the largest threshold first.",
+  },
+  {
+    slug: "sql-shipped-vs-cancelled",
+    title: "Shipped and cancelled, side by side",
+    topic: "conditional aggregation",
+    difficulty: "medium",
+    prompt: "For every customer with at least one order, return their name, the number of their shipped orders and the number of their cancelled orders.",
+    solution_sql: "select c.name, sum(case when o.status = 'shipped' then 1 else 0 end) as shipped, sum(case when o.status = 'cancelled' then 1 else 0 end) as cancelled from customers c join orders o on o.customer_id = c.id group by c.id, c.name",
+    order_matters: false,
+    hint: "SUM(CASE WHEN condition THEN 1 ELSE 0 END) counts the rows that meet a condition within each group.",
+  },
+  {
+    slug: "sql-aov-by-segment",
+    title: "Average order value by segment",
+    topic: "joins",
+    difficulty: "medium",
+    prompt: "For each customer segment, return the segment and the average value of its shipped orders, rounded to the nearest rupee.",
+    solution_sql: "select c.segment, round(avg(o.quantity * p.unit_price)) as avg_value from orders o join customers c on c.id = o.customer_id join products p on p.id = o.product_id where o.status = 'shipped' group by c.segment",
+    order_matters: false,
+    hint: "Average the order values, not the customers' totals. ROUND with no second argument rounds to a whole number.",
+  },
+  {
+    slug: "sql-largest-order-per-customer",
+    title: "Each customer's biggest order",
+    topic: "aggregation",
+    difficulty: "medium",
+    prompt: "For every customer with a shipped order, return their name and the value of their single largest shipped order.",
+    solution_sql: "select c.name, max(o.quantity * p.unit_price) as largest from orders o join customers c on c.id = o.customer_id join products p on p.id = o.product_id where o.status = 'shipped' group by c.id, c.name",
+    order_matters: false,
+    hint: "MAX() of the order value, grouped per customer.",
+  },
+  {
+    slug: "sql-share-of-customers-buying",
+    title: "What share of customers have bought",
+    topic: "subqueries",
+    difficulty: "medium",
+    prompt: "Return a single row with the percentage of all customers who have at least one shipped order, rounded to one decimal place.",
+    solution_sql: "select round(100.0 * (select count(distinct customer_id) from orders where status = 'shipped') / (select count(*) from customers), 1) as pct",
+    order_matters: false,
+    hint: "Two counts: distinct customers with a shipped order, and all customers. Use 100.0 so the division is not integer division.",
+  },
+  {
+    slug: "sql-rank-customers",
+    title: "Ranking customers by revenue",
+    topic: "window functions",
+    difficulty: "hard",
+    prompt: "For every customer with shipped revenue, return their name, their total shipped revenue, and their rank (1 = highest). Customers with equal revenue share a rank, and the next rank is not skipped.",
+    solution_sql: "select c.name, sum(o.quantity * p.unit_price) as revenue, dense_rank() over (order by sum(o.quantity * p.unit_price) desc) as rnk from orders o join customers c on c.id = o.customer_id join products p on p.id = o.product_id where o.status = 'shipped' group by c.id, c.name",
+    order_matters: false,
+    hint: "DENSE_RANK() OVER (ORDER BY ...) gives ties the same rank without gaps. A window function can order by an aggregate.",
+  },
+  {
+    slug: "sql-running-total",
+    title: "Cumulative revenue by month",
+    topic: "window functions",
+    difficulty: "hard",
+    prompt: "Return each year-month (YYYY-MM) with shipped revenue, that month's revenue, and the cumulative revenue up to and including that month. Order by month, earliest first.",
+    solution_sql: "with m as (select substr(o.ordered_on, 1, 7) as month, sum(o.quantity * p.unit_price) as revenue from orders o join products p on p.id = o.product_id where o.status = 'shipped' group by month) select month, revenue, sum(revenue) over (order by month) as cumulative from m order by month",
+    order_matters: true,
+    hint: "Build monthly revenue first (a CTE helps), then SUM(revenue) OVER (ORDER BY month) gives the running total.",
+  },
+  {
+    slug: "sql-month-on-month",
+    title: "Month-on-month change",
+    topic: "window functions",
+    difficulty: "hard",
+    prompt: "For each year-month (YYYY-MM) with shipped revenue, return the month, its revenue, and the change from the previous month that had revenue. The first month's change is NULL. Order by month.",
+    solution_sql: "with m as (select substr(o.ordered_on, 1, 7) as month, sum(o.quantity * p.unit_price) as revenue from orders o join products p on p.id = o.product_id where o.status = 'shipped' group by month) select month, revenue, revenue - lag(revenue) over (order by month) as change from m order by month",
+    order_matters: true,
+    hint: "LAG(revenue) OVER (ORDER BY month) returns the previous row's revenue, and NULL for the first row.",
+  },
+  {
+    slug: "sql-top-product-per-category",
+    title: "Best-selling product in each category",
+    topic: "window functions",
+    difficulty: "hard",
+    prompt: "For each product category, return the category, the name of the product with the highest shipped revenue in it, and that revenue.",
+    solution_sql: "with r as (select p.category, p.name, sum(o.quantity * p.unit_price) as revenue, row_number() over (partition by p.category order by sum(o.quantity * p.unit_price) desc) as rn from orders o join products p on p.id = o.product_id where o.status = 'shipped' group by p.id, p.category, p.name) select category, name, revenue from r where rn = 1",
+    order_matters: false,
+    hint: "ROW_NUMBER() OVER (PARTITION BY category ORDER BY revenue DESC) numbers products within each category; keep number 1.",
+  },
+  {
+    slug: "sql-first-order-cohorts",
+    title: "Customers by month of first order",
+    topic: "ctes",
+    difficulty: "hard",
+    prompt: "Group customers by the year-month (YYYY-MM) of their first order of any status. Return each month and the number of customers whose first order fell in it.",
+    solution_sql: "with first as (select customer_id, min(ordered_on) as first_on from orders group by customer_id) select substr(first_on, 1, 7) as month, count(*) as customers from first group by month",
+    order_matters: false,
+    hint: "First find each customer's earliest order date with MIN in a CTE, then group those dates by month.",
+  },
+  {
+    slug: "sql-same-city-pairs",
+    title: "Customers in the same city",
+    topic: "self joins",
+    difficulty: "hard",
+    prompt: "Return every pair of customers who are based in the same city: the city and the two names. List each pair once.",
+    solution_sql: "select a.city, a.name as first_customer, b.name as second_customer from customers a join customers b on a.city = b.city and a.id < b.id",
+    order_matters: false,
+    hint: "Join the table to itself on city. a.id < b.id stops a customer pairing with themselves and stops each pair appearing twice.",
+  },
+  {
+    slug: "sql-days-to-first-order",
+    title: "Days from joining to first order",
+    topic: "dates",
+    difficulty: "hard",
+    prompt: "For every customer with at least one order of any status, return their name and the number of days between the date they joined and their first order.",
+    solution_sql: "select c.name, cast(julianday(min(o.ordered_on)) - julianday(c.joined_on) as integer) as days from customers c join orders o on o.customer_id = c.id group by c.id, c.name, c.joined_on",
+    order_matters: false,
+    hint: "JULIANDAY turns a date into a day number, so subtracting two gives the days between them. Take the MIN order date per customer.",
+  },
+  {
+    slug: "sql-above-segment-average",
+    title: "Customers above their segment's average",
+    topic: "ctes",
+    difficulty: "hard",
+    prompt: "Return the name, segment and total shipped revenue of every customer whose total shipped revenue is above the average total for customers with shipped revenue in the same segment.",
+    solution_sql: "with t as (select c.id, c.name, c.segment, sum(o.quantity * p.unit_price) as revenue from orders o join customers c on c.id = o.customer_id join products p on p.id = o.product_id where o.status = 'shipped' group by c.id, c.name, c.segment) select name, segment, revenue from t where revenue > (select avg(t2.revenue) from t t2 where t2.segment = t.segment)",
+    order_matters: false,
+    hint: "Compute each customer's total in a CTE, then compare it with a correlated subquery that averages the CTE within the same segment.",
   },
 ];
 
-async function main() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    console.error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.");
-    process.exit(1);
-  }
+/** A query that returns exactly these rows — the "memorised the answer" control. */
+export function literalQuery(result: { columns: string[]; rows: unknown[][] }): string {
+  const lit = (v: unknown) =>
+    v === null || v === undefined ? "null" : typeof v === "number" ? String(v) : `'${String(v).replace(/'/g, "''")}'`;
+  return result.rows
+    .map((row, i) =>
+      "select " + row.map((v, j) => (i === 0 ? `${lit(v)} as "${result.columns[j].replace(/"/g, "")}"` : lit(v))).join(", "),
+    )
+    .join(" union all ");
+}
 
+/**
+ * Runs every reference solution on both datasets and proves the hidden one
+ * discriminates. Returns the problems found; empty means safe to seed.
+ */
+export async function checkExercises(log: (line: string) => void = () => {}): Promise<string[]> {
   const problems: string[] = [];
+  const slugs = new Set<string>();
 
   for (const e of EXERCISES) {
+    if (slugs.has(e.slug)) problems.push(`${e.slug}: duplicate slug`);
+    slugs.add(e.slug);
+
     const onVisible = await runQuery(VISIBLE, e.solution_sql);
     const onHidden = await runQuery(HIDDEN, e.solution_sql);
-
     if (!onVisible.ok || !onVisible.result) {
       problems.push(`${e.slug}: solution fails on the visible data — ${onVisible.error}`);
       continue;
@@ -277,8 +450,9 @@ async function main() {
 
     // The discrimination check. A hardcoded answer must pass the visible data
     // and fail the hidden data, or the hidden variant is not doing its job.
-    const fakeVisible = await runQuery(VISIBLE, e.hardcoded);
-    const fakeHidden = await runQuery(HIDDEN, e.hardcoded);
+    const hardcoded = e.hardcoded ?? literalQuery(onVisible.result);
+    const fakeVisible = await runQuery(VISIBLE, hardcoded);
+    const fakeHidden = await runQuery(HIDDEN, hardcoded);
     if (!fakeVisible.ok || !fakeVisible.result || !fakeHidden.ok || !fakeHidden.result) {
       problems.push(`${e.slug}: the hardcoded control query does not run`);
       continue;
@@ -299,15 +473,32 @@ async function main() {
         `${e.slug}: a hardcoded answer passes the HIDDEN data too — the variant does not discriminate`,
       );
     }
-    console.log(
+    if (e.hardcoded === undefined && !fakePassesVisible) {
+      problems.push(`${e.slug}: the generated control does not reproduce the visible answer`);
+    }
+    log(
       `  ${e.slug.padEnd(32)} visible ${onVisible.result.rows.length} rows, hidden ${onHidden.result.rows.length} rows` +
         `  (hardcoded passes visible: ${fakePassesVisible}, hidden: ${fakePassesHidden})`,
     );
   }
 
+  return problems;
+}
+
+async function main() {
+  const problems = await checkExercises(console.log);
   if (problems.length > 0) {
     console.error(`\n${problems.length} problem(s):`);
     for (const p of problems) console.error(`  - ${p}`);
+    process.exit(1);
+  }
+  console.log(`\nValidated ${EXERCISES.length} SQL exercises.`);
+  if (process.argv.includes("--dry-run")) return;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    console.error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.");
     process.exit(1);
   }
 
@@ -343,7 +534,9 @@ async function main() {
   console.log(`\nSeeded ${EXERCISES.length} SQL exercises.`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (process.argv[1]?.endsWith("seed-sql.ts")) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}
