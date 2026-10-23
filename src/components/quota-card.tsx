@@ -3,7 +3,7 @@ import { Section } from "@/components/section";
 import { Progress } from "@/components/ui/progress";
 import { cn, formatDay, formatNumber } from "@/lib/utils";
 import { QUOTA } from "@/lib/constants";
-import { PLANS } from "@/lib/pricing";
+import { USAGE_WINDOW, PLANS } from "@/lib/pricing";
 import type { QuotaStatus } from "@/lib/quota";
 
 /**
@@ -26,7 +26,7 @@ export function QuotaCard({ quota, title = "Your allowance" }: { quota: QuotaSta
 
   const anyLow = rows.some((r) => r.limit > 0 && (r.limit - r.used) / r.limit < 0.15);
   const periodNote = quota.plan
-    ? `${PLANS[quota.plan].name} · renews ${quota.periodEndsAt ? formatDay(quota.periodEndsAt) : ""}`
+    ? `this week · ${PLANS[quota.plan].name} until ${quota.periodEndsAt ? formatDay(quota.periodEndsAt) : ""}`
     : `rolling ${QUOTA.windowDays} days`;
 
   const windowRows = [
@@ -101,8 +101,9 @@ export function QuotaCard({ quota, title = "Your allowance" }: { quota: QuotaSta
 
         {!quota.isPro ? (
           <p className="text-xs text-muted-foreground">
-            CaseCode Pro starts at {formatNumber(PLANS.monthly.gradings)} graded answers and{" "}
-            {PLANS.monthly.interviews} interviews a month.{" "}
+            CaseCode Pro gives you {formatNumber(USAGE_WINDOW.gradings)} graded answers and{" "}
+            {USAGE_WINDOW.interviews} interviews every {USAGE_WINDOW.hours} hours, up to{" "}
+            {PLANS.monthly.weeklyGradings} answers and {PLANS.monthly.weeklyInterviews} interviews a week.{" "}
             <Link href="/upgrade" className="underline underline-offset-4 hover:text-foreground">
               Upgrade
             </Link>

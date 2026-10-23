@@ -32,8 +32,8 @@ const FAQ: { q: string; a: string }[] = [
     a: "No. Sign up with any email address and pick a plan. If your college has a campus licence, your placement cell can add you to it instead.",
   },
   {
-    q: "What is the 5-hour limit?",
-    a: `Like Claude's usage limit: within any 5-hour window you can have up to ${USAGE_WINDOW.gradings} answers graded and take ${USAGE_WINDOW.interviews} mock interviews. The window opens with your first one and resets five hours later. It stops one sitting from using up a month's allowance — and top-up credits keep working past it.`,
+    q: "How do the limits work?",
+    a: `Like Claude's usage limits. Within any 5-hour window you can have up to ${USAGE_WINDOW.gradings} answers graded and take ${USAGE_WINDOW.interviews} mock interviews; the window opens with your first one and resets five hours later. Across any 7 days you can have up to ${PLANS.monthly.weeklyGradings} answers graded and take ${PLANS.monthly.weeklyInterviews} interviews — each one frees up a week after you used it. Top-up packs keep working past both limits.`,
   },
   {
     q: "Does a plan renew automatically?",

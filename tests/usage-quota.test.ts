@@ -67,7 +67,9 @@ describe("quota denial messages", () => {
     viaInstitution: false,
     plan: null,
     periodEndsAt: null,
-    window: { hours: 5, gradingLimit: 8, interviewLimit: 3, gradingsUsed: 0, interviewsUsed: 0, resetsAt: null },
+    weekly: false,
+    allowanceFreesAt: { gradings: null, interviews: null },
+    window: { hours: 5, gradingLimit: 10, interviewLimit: 2, gradingsUsed: 0, interviewsUsed: 0, resetsAt: null },
     topups: { gradings: 0, interviews: 0 },
     planLeft: { gradings: 0, interviews: QUOTA.pro.interviews },
     exempt: false,
@@ -213,13 +215,12 @@ describe("quota status", () => {
     expect(status.gradingsLeft).toBe(Math.min(QUOTA.free.gradings, USAGE_WINDOW.gradings));
   });
 
-  it("uses the plan's allowance from the period start for a subscriber", () => {
+  it("counts a subscriber's use over a rolling week", () => {
     const status = buildQuotaStatus(
       facts({
-        subscription: { planCode: "monthly", startsAt: hoursAgo(24 * 10), endsAt: hoursAgo(-24 * 20) },
-        // One use before the period began does not count against it.
+        subscription: { planCode: "monthly", startsAt: hoursAgo(24 * 20), endsAt: hoursAgo(-24 * 10) },
         uses: [
-          { kind: "gradings", at: hoursAgo(24 * 11) },
+          { kind: "gradings", at: hoursAgo(24 * 8) }, // more than a week ago: free again
           { kind: "gradings", at: hoursAgo(24 * 5) },
           { kind: "interviews", at: hoursAgo(24 * 4) },
         ],
@@ -227,10 +228,38 @@ describe("quota status", () => {
       NOW,
     );
     expect(status.plan).toBe("monthly");
-    expect(status.gradingLimit).toBe(PLANS.monthly.gradings);
+    expect(status.weekly).toBe(true);
+    expect(status.gradingLimit).toBe(PLANS.monthly.weeklyGradings);
+    expect(status.interviewLimit).toBe(PLANS.monthly.weeklyInterviews);
     expect(status.gradingsUsed).toBe(1);
     expect(status.interviewsUsed).toBe(1);
-    expect(status.periodEndsAt).toBe(hoursAgo(-24 * 20));
+    expect(status.periodEndsAt).toBe(hoursAgo(-24 * 10));
+  });
+
+  it("never charges this plan's week for use before the plan began", () => {
+    const status = buildQuotaStatus(
+      facts({
+        subscription: { planCode: "monthly", startsAt: hoursAgo(24 * 2), endsAt: hoursAgo(-24 * 28) },
+        uses: [{ kind: "gradings", at: hoursAgo(24 * 3) }],
+      }),
+      NOW,
+    );
+    expect(status.gradingsUsed).toBe(0);
+  });
+
+  it("stops at the weekly limit and says when the next one frees up", () => {
+    const limit = PLANS.monthly.weeklyInterviews;
+    // Spread over the week so the 5-hour window is not what stops it.
+    const uses = Array.from({ length: limit }, (_, i) => ({ kind: "interviews" as const, at: hoursAgo(24 * (6 - i)) }));
+    const status = buildQuotaStatus(
+      facts({ subscription: { planCode: "monthly", startsAt: hoursAgo(24 * 10), endsAt: hoursAgo(-24 * 20) }, uses }),
+      NOW,
+    );
+    expect(status.interviewsLeft).toBe(0);
+    expect(status.allowanceFreesAt.interviews).toBe(new Date(new Date(hoursAgo(24 * 6)).getTime() + 7 * 86_400_000).toISOString());
+    const denial = quotaDenial("interviews", status);
+    expect(denial.error).toMatch(/for this week/);
+    expect(denial.error).toMatch(/frees up/);
   });
 
   it("stops at the 5-hour limit even with allowance left, and says when it resets", () => {

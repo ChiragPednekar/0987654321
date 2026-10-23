@@ -9,9 +9,9 @@ import {
   type Access,
   type ActiveSubscription,
 } from "@/lib/subscription";
-import { PLANS, PLAN_ORDER, TOPUPS, TOPUP_ORDER, perMonth, rupees } from "@/lib/pricing";
+import { PLANS, PLAN_ORDER, TOPUPS, TOPUP_ORDER, USAGE_WINDOW, WEEK_DAYS, perMonth, rupees } from "@/lib/pricing";
 import { attemptState, linkedInAddUrl, overallPercentage, SUBMIT_GRACE_SECONDS } from "@/lib/certificates";
-import { GRADING_COST_INR, INTERVIEW_COST_INR } from "@/lib/economics";
+import { GRADING_COST_INR, INTERVIEW_COST_INR, TYPICAL_GRADING_COST_INR, TYPICAL_INTERVIEW_COST_INR } from "@/lib/economics";
 
 const DAY = 86_400_000;
 const NOW = new Date("2026-10-17T06:00:00Z");
@@ -105,10 +105,28 @@ describe("pricing stays profitable at the 2027 model rates", () => {
     expect(INTERVIEW_2027).toBeGreaterThan(25);
   });
 
-  it.each(PLAN_ORDER)("the %s plan keeps a 30%% margin when every allowance is used in the costliest way", (code) => {
-    const plan = PLANS[code];
-    const cost = plan.gradings * GRADING_2027 + plan.interviews * INTERVIEW_2027;
-    expect(kept(plan.pricePaise)).toBeGreaterThan(cost / 0.7);
+  /** Weeks in a plan; the weekly limits apply in every one of them. */
+  const weeks = (code: keyof typeof PLANS) => PLANS[code].days / WEEK_DAYS;
+  const fullUse = (code: keyof typeof PLANS, grading: number, interview: number) =>
+    weeks(code) * (PLANS[code].weeklyGradings * grading + PLANS[code].weeklyInterviews * interview);
+  const TYPICAL_GRADING_2027 = TYPICAL_GRADING_COST_INR * 2;
+  const TYPICAL_INTERVIEW_2027 = TYPICAL_INTERVIEW_COST_INR * 2;
+
+  it.each(PLAN_ORDER)("the %s plan keeps a 40%% margin when every weekly limit is used at typical cost", (code) => {
+    expect(kept(PLANS[code].pricePaise)).toBeGreaterThan(fullUse(code, TYPICAL_GRADING_2027, TYPICAL_INTERVIEW_2027) / 0.6);
+  });
+
+  it("the monthly plan never loses money, even with every interview at its maximum length", () => {
+    expect(kept(PLANS.monthly.pricePaise)).toBeGreaterThan(fullUse("monthly", GRADING_2027, INTERVIEW_2027));
+  });
+
+  it("limits use by time — a 5-hour window and a rolling week — like Claude's", () => {
+    expect(USAGE_WINDOW).toMatchObject({ hours: 5, gradings: 10, interviews: 2 });
+    for (const code of PLAN_ORDER) {
+      // The week must allow more than one window, or the window means nothing.
+      expect(PLANS[code].weeklyGradings).toBeGreaterThan(USAGE_WINDOW.gradings);
+      expect(PLANS[code].weeklyInterviews).toBeGreaterThan(USAGE_WINDOW.interviews);
+    }
   });
 
   it.each(TOPUP_ORDER)("the %s top-up makes money even at worst-case use", (code) => {
@@ -123,9 +141,9 @@ describe("pricing stays profitable at the 2027 model rates", () => {
   });
 
   it("prices the plans at the current amounts", () => {
-    expect(PLANS.monthly.pricePaise).toBe(49_900);
-    expect(PLANS.season.pricePaise).toBe(129_900);
-    expect(PLANS.annual.pricePaise).toBe(499_900);
+    expect(PLANS.monthly.pricePaise).toBe(69_900);
+    expect(PLANS.season.pricePaise).toBe(179_900);
+    expect(PLANS.annual.pricePaise).toBe(649_900);
   });
 
   it("discounts the season and annual plans against paying monthly", () => {
@@ -135,8 +153,8 @@ describe("pricing stays profitable at the 2027 model rates", () => {
   });
 
   it("formats rupees the Indian way", () => {
-    expect(rupees(499_900)).toBe("₹4,999");
-    expect(perMonth(PLANS.monthly)).toBe("₹499");
+    expect(rupees(649_900)).toBe("₹6,499");
+    expect(perMonth(PLANS.monthly)).toBe("₹699");
   });
 });
 

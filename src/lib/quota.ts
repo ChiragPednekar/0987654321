@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { QUOTA } from "@/lib/constants";
-import { isPlanCode, PLANS, USAGE_WINDOW, type PlanCode } from "@/lib/pricing";
+import { isPlanCode, PLANS, USAGE_WINDOW, WEEK_DAYS, type PlanCode } from "@/lib/pricing";
 import type { Database } from "@/lib/types/database";
 
 /**
@@ -10,10 +10,10 @@ import type { Database } from "@/lib/types/database";
  *
  * Three limits, checked together:
  *
- *   1. The ALLOWANCE. For an individual subscriber, the plan's allowance for
- *      the current period (src/lib/pricing.ts). For a campus licence or a
+ *   1. The ALLOWANCE. For an individual subscriber, the plan's WEEKLY limit
+ *      over a rolling 7 days (src/lib/pricing.ts). For a campus licence or a
  *      hand-granted Pro, the annual fair-use quota (QUOTA, with any per-licence
- *      override) over a rolling 365 days, as before.
+ *      override) over a rolling 365 days — set per college.
  *   2. The 5-HOUR WINDOW, like Claude's: a window opens with the first use and
  *      resets five hours later. It stops one sitting from spending a month's
  *      allowance in an afternoon.
@@ -52,8 +52,12 @@ export interface QuotaStatus {
   viaInstitution: boolean;
   /** The individual plan this allowance belongs to, if any. */
   plan: PlanCode | null;
-  /** When the period's allowance renews (the plan's end); null for a rolling year. */
+  /** When the plan ends; null for a rolling year. */
   periodEndsAt: string | null;
+  /** True when the allowance is a plan's rolling weekly limit. */
+  weekly: boolean;
+  /** For a weekly limit: when the oldest use in the week drops out, freeing one up. */
+  allowanceFreesAt: { gradings: string | null; interviews: string | null };
   window: UsageWindow;
   topups: { gradings: number; interviews: number };
   /** What the plan alone would still allow now, before top-ups. */
@@ -84,7 +88,7 @@ export interface QuotaFacts {
   viaInstitution: boolean;
   /** The live, started individual period. */
   subscription: { planCode: PlanCode; startsAt: string; endsAt: string } | null;
-  /** AI uses since at least the period start (subscriber) or the last 24 hours. */
+  /** AI uses over at least the last 7 days (subscriber) or the last 24 hours. */
   uses: UsageMoment[];
   /** Top-up credits spent, over at least the same range and the rolling year. */
   debits: UsageMoment[];
@@ -112,6 +116,15 @@ function countSince(moments: UsageMoment[], kind: QuotaKind, since: Date | null)
   return moments.filter((m) => m.kind === kind && (since === null || new Date(m.at) >= since)).length;
 }
 
+/** When the oldest use of `kind` since `since` leaves a rolling window of `days`. */
+function oldestLeaves(moments: UsageMoment[], kind: QuotaKind, since: Date, days: number): string | null {
+  const times = moments
+    .filter((m) => m.kind === kind && new Date(m.at) >= since)
+    .map((m) => new Date(m.at).getTime());
+  if (times.length === 0) return null;
+  return new Date(Math.min(...times) + days * DAY_MS).toISOString();
+}
+
 export function buildQuotaStatus(facts: QuotaFacts, now = new Date()): QuotaStatus {
   const { row, subscription } = facts;
   const isPro = Boolean(row?.is_pro);
@@ -133,16 +146,25 @@ export function buildQuotaStatus(facts: QuotaFacts, now = new Date()): QuotaStat
   let gradingsUsed: number;
   let interviewsUsed: number;
   let periodEndsAt: string | null = null;
+  let allowanceFreesAt: QuotaStatus["allowanceFreesAt"] = { gradings: null, interviews: null };
 
   if (subscription) {
     const plan = PLANS[subscription.planCode];
-    const since = new Date(subscription.startsAt);
-    gradingLimit = plan.gradings;
-    interviewLimit = plan.interviews;
+    // A rolling week — but never reaching back before this plan began, so
+    // use on a previous plan is not charged to this one.
+    const weekAgo = new Date(now.getTime() - WEEK_DAYS * DAY_MS);
+    const started = new Date(subscription.startsAt);
+    const since = started > weekAgo ? started : weekAgo;
+    gradingLimit = plan.weeklyGradings;
+    interviewLimit = plan.weeklyInterviews;
     // A use a top-up paid for is not the plan's.
     gradingsUsed = Math.max(0, countSince(facts.uses, "gradings", since) - countSince(facts.debits, "gradings", since));
     interviewsUsed = Math.max(0, countSince(facts.uses, "interviews", since) - countSince(facts.debits, "interviews", since));
     periodEndsAt = subscription.endsAt;
+    allowanceFreesAt = {
+      gradings: oldestLeaves(facts.uses, "gradings", since, WEEK_DAYS),
+      interviews: oldestLeaves(facts.uses, "interviews", since, WEEK_DAYS),
+    };
   } else {
     const yearAgo = new Date(now.getTime() - QUOTA.windowDays * DAY_MS);
     gradingLimit = isPro ? (row?.grading_limit ?? QUOTA.pro.gradings) : QUOTA.free.gradings;
@@ -202,6 +224,8 @@ export function buildQuotaStatus(facts: QuotaFacts, now = new Date()): QuotaStat
     viaInstitution: facts.viaInstitution,
     plan: subscription?.planCode ?? null,
     periodEndsAt,
+    weekly: Boolean(subscription),
+    allowanceFreesAt,
     window,
     topups,
     planLeft,
@@ -259,9 +283,9 @@ export async function getQuotaStatus(admin: Admin, userId: string): Promise<Quot
       }
     : null;
 
-  const since = new Date(
-    Math.min(now.getTime() - DAY_MS, subscription ? new Date(subscription.startsAt).getTime() : Infinity),
-  ).toISOString();
+  // A subscriber's weekly limit needs the last 7 days; otherwise the 5-hour
+  // window needs only the last day.
+  const since = new Date(now.getTime() - (subscription ? WEEK_DAYS : 1) * DAY_MS).toISOString();
   const debitSince = new Date(Math.min(new Date(since).getTime(), now.getTime() - QUOTA.windowDays * DAY_MS)).toISOString();
 
   const [uses, debits] = await Promise.all([
@@ -326,6 +350,17 @@ export interface QuotaDenial {
   };
 }
 
+function dayAndTime(iso: string) {
+  return new Date(iso).toLocaleString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata",
+  });
+}
+
 function timeOfDay(iso: string) {
   return new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
 }
@@ -367,9 +402,10 @@ export function quotaDenial(kind: QuotaKind, status: QuotaStatus): QuotaDenial {
       `It resets at ${timeOfDay(status.window.resetsAt as string)}.` +
       topupHint;
   } else if (status.plan) {
+    const frees = kind === "gradings" ? status.allowanceFreesAt.gradings : status.allowanceFreesAt.interviews;
     message =
-      `You have used all ${limit} ${noun} in your ${PLANS[status.plan].name} plan (${used} of ${limit}). ` +
-      `It renews with your next period.` +
+      `You have used all ${limit} ${noun} for this week on your ${PLANS[status.plan].name} plan (${used} of ${limit}). ` +
+      (frees ? `The next one frees up ${dayAndTime(frees)}.` : "It frees up as the week rolls on.") +
       topupHint;
   } else {
     message =

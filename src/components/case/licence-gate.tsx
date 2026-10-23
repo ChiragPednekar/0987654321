@@ -36,7 +36,7 @@ export function LicenceGate({ signedIn = false }: { signedIn?: boolean; userEmai
               <p className="text-muted-foreground">{plan.name}</p>
               <p className="font-editorial text-2xl">{rupees(plan.pricePaise)}</p>
               <p className="text-xs text-muted-foreground">
-                {plan.gradings} answers · {plan.interviews} interviews
+                {plan.weeklyGradings} answers · {plan.weeklyInterviews} interviews a week
               </p>
             </li>
           );

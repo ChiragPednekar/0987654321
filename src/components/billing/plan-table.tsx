@@ -61,13 +61,14 @@ export function PlanTable({ buyer, loginNext = "/upgrade" }: { buyer: Buyer; log
                 {code === "monthly" ? "billed each month you choose to renew" : `works out to ${perMonth(plan)} a month`}
               </p>
               <ul className="mt-5 divide-y divide-border border-y border-border text-sm">
-                <li className="py-2.5">{plan.gradings} graded answers</li>
-                <li className="py-2.5">{plan.interviews} AI mock interviews</li>
-                <li className="py-2.5">SQL, Excel, aptitude, drills, CV and deck reviews</li>
-                <li className="py-2.5 text-muted-foreground">
-                  Up to {USAGE_WINDOW.gradings} answers and {USAGE_WINDOW.interviews} interviews every{" "}
+                <li className="py-2.5">
+                  {USAGE_WINDOW.gradings} graded answers and {USAGE_WINDOW.interviews} AI mock interviews every{" "}
                   {USAGE_WINDOW.hours} hours
                 </li>
+                <li className="py-2.5">
+                  Up to {plan.weeklyGradings} answers and {plan.weeklyInterviews} interviews a week
+                </li>
+                <li className="py-2.5">SQL, Excel, aptitude, drills, CV and deck reviews</li>
               </ul>
               <div className="mt-5">
                 {buyer.blocked && buyer.signedIn ? null : (

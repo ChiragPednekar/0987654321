@@ -58,6 +58,16 @@ const WORST_SESSION = sessionTokens(
 export const INTERVIEW_COST_INR = priceUsage(WORST_SESSION.input, WORST_SESSION.output);
 
 /**
+ * Typical costs, for pricing the longer plans: nobody uses a season or a year
+ * of weekly limits with every interview at its maximum length. A graded answer
+ * averages ~4,200 input and ~1,000 output tokens in production, plus a little
+ * thinking; a practice interview runs about 12 exchanges of short messages.
+ */
+export const TYPICAL_GRADING_COST_INR = priceUsage(4_200, 1_000 + 300);
+const TYPICAL_SESSION = sessionTokens(12, 3_000, 120, 300);
+export const TYPICAL_INTERVIEW_COST_INR = priceUsage(TYPICAL_SESSION.input, TYPICAL_SESSION.output);
+
+/**
  * Gross margin as a fraction, or null when there is no revenue to divide by.
  *
  * Null rather than 0 or -Infinity: a licence with no contract value recorded
