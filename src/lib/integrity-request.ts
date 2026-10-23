@@ -45,6 +45,7 @@ export const signalsSchema = z
     phoneEvents: z.number().int().min(0).max(10_000).default(0),
     bookEvents: z.number().int().min(0).max(10_000).default(0),
     coveredMs: z.number().int().min(0).max(86_400_000).default(0),
+    darkMs: z.number().int().min(0).max(86_400_000).default(0),
     lookingAwayEvents: z.number().int().min(0).max(10_000).default(0),
     lookingAwayMs: z.number().int().min(0).max(86_400_000).default(0),
     voiceEvents: z.number().int().min(0).max(10_000).default(0),

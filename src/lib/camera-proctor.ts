@@ -81,6 +81,17 @@ export const MAX_LOOKING_AWAY_STRIKES = 5;
 /** Voice: the test is suspended on the 3rd strike — the counter reads 3/3. */
 export const MAX_VOICE_STRIKES = 3;
 
+/**
+ * Too dark to see the student. A frame whose average brightness (0–255) is
+ * below DARK_MEAN is too dark to watch whatever is in it; below DIM_MEAN it
+ * counts as too dark only when the face detector also cannot find anyone —
+ * a dim room is fine if the student can still be seen.
+ */
+export const DARK_MEAN = 40;
+export const DIM_MEAN = 70;
+/** Continuous time too dark to see that ends the attempt. The student is warned from the first moment. */
+export const TOO_DARK_END_MS = 15_000;
+
 /** Normalized landmark keypoint from face detector. */
 export interface FaceKeypoint {
   x: number;
@@ -323,6 +334,11 @@ export interface CameraSample {
    * lens. Measured from pixel brightness, not from a model.
    */
   covered: boolean;
+  /**
+   * The room is too dark to see the student (see isTooDark). Different from
+   * `covered`: the lens is open, there is just not enough light.
+   */
+  dark?: boolean;
   /** Whether the face in view is looking away / not facing the screen. */
   lookingAway?: boolean;
   /** Whether speaking / talking / voice was heard during this sample interval. */
@@ -330,7 +346,7 @@ export interface CameraSample {
 }
 
 /** The kinds of moment worth one evidence photo. */
-export type SnapshotKind = "phone" | "multiple_faces" | "no_face" | "book" | "looking_away" | "voice_detected";
+export type SnapshotKind = "phone" | "multiple_faces" | "no_face" | "book" | "looking_away" | "voice_detected" | "too_dark";
 
 /** Counters reported with the attempt. Mirrors the camera fields on ProctorSignals. */
 export interface CameraCounters {
@@ -341,6 +357,8 @@ export interface CameraCounters {
   phoneEvents: number;
   bookEvents: number;
   coveredMs: number;
+  /** Time the room was too dark to see the student. */
+  darkMs: number;
   lookingAwayEvents: number;
   lookingAwayMs: number;
   voiceEvents: number;
@@ -355,6 +373,7 @@ export const EMPTY_CAMERA_COUNTERS: CameraCounters = {
   phoneEvents: 0,
   bookEvents: 0,
   coveredMs: 0,
+  darkMs: 0,
   lookingAwayEvents: 0,
   lookingAwayMs: 0,
   voiceEvents: 0,
@@ -373,6 +392,7 @@ export interface TrackerState {
   phone: Condition;
   book: Condition;
   covered: Condition;
+  dark: Condition;
   lookingAway: Condition;
   voice: Condition;
   /**
@@ -386,6 +406,8 @@ export interface TrackerState {
   lookingAwayRunMs: number;
   /** Continuous time talking / voice detected. */
   voiceRunMs: number;
+  /** Continuous time too dark to see the student. What TOO_DARK_END_MS is measured against. */
+  darkRunMs: number;
 }
 
 const fresh = (): Condition => ({ hits: [], active: false });
@@ -398,11 +420,13 @@ export function createTracker(): TrackerState {
     phone: fresh(),
     book: fresh(),
     covered: fresh(),
+    dark: fresh(),
     lookingAway: fresh(),
     voice: fresh(),
     noFaceRunMs: 0,
     lookingAwayRunMs: 0,
     voiceRunMs: 0,
+    darkRunMs: 0,
   };
 }
 
@@ -454,7 +478,14 @@ export function observe(
    * as well would report one act twice under two names.
    */
   const covered = step(state.covered, sample.covered, COVERED_ACTIVATE_AT);
-  const seeing = !sample.covered;
+  /**
+   * Darkness, like a covered lens, suppresses what depends on seeing: in a
+   * dark room nobody can be found, and that is one finding, not "nobody at
+   * the desk" as well. A covered lens is the more specific of the two.
+   */
+  const darkNow = !sample.covered && Boolean(sample.dark);
+  const dark = step(state.dark, darkNow, COVERED_ACTIVATE_AT);
+  const seeing = !sample.covered && !darkNow;
 
   const noFace = step(state.noFace, seeing && sample.faces === 0);
   const multiFace = step(state.multiFace, seeing && sample.faces >= 2);
@@ -487,6 +518,7 @@ export function observe(
     phoneEvents: c.phoneEvents + (phone.rose ? 1 : 0),
     bookEvents: c.bookEvents + (book.rose ? 1 : 0),
     coveredMs: c.coveredMs + (covered.next.active ? credit : 0),
+    darkMs: c.darkMs + (dark.next.active ? credit : 0),
     lookingAwayMs: c.lookingAwayMs + (lookingAway.next.active ? credit : 0),
     lookingAwayEvents: c.lookingAwayEvents + (lookingAway.rose ? 1 : 0) + extraLookingAwayEvents,
     voiceMs: c.voiceMs + (voice.next.active ? credit : 0),
@@ -500,6 +532,7 @@ export function observe(
   if (book.rose) started.push("book");
   if (lookingAway.rose) started.push("looking_away");
   if (voice.rose) started.push("voice_detected");
+  if (dark.rose) started.push("too_dark");
 
   return {
     state: {
@@ -509,11 +542,15 @@ export function observe(
       phone: phone.next,
       book: book.next,
       covered: covered.next,
+      dark: dark.next,
       lookingAway: lookingAway.next,
       voice: voice.next,
       noFaceRunMs: noFace.next.active ? state.noFaceRunMs + credit : 0,
       lookingAwayRunMs: newLookingAwayRunMs,
       voiceRunMs: newVoiceRunMs,
+      // Measured from the first dark sample, not from when the condition
+      // switched on, so the countdown the student sees is the real one.
+      darkRunMs: darkNow ? state.darkRunMs + credit : 0,
     },
     started,
   };
@@ -535,7 +572,8 @@ export type EndReason =
   | "camera_off"
   | "tab_switch"
   | "looking_away"
-  | "voice_detected";
+  | "voice_detected"
+  | "too_dark";
 
 export const END_REASONS: readonly EndReason[] = [
   "phone",
@@ -546,6 +584,7 @@ export const END_REASONS: readonly EndReason[] = [
   "tab_switch",
   "looking_away",
   "voice_detected",
+  "too_dark",
 ];
 
 /** Said to the student on the ended screen, and to whoever reviews it. */
@@ -558,6 +597,7 @@ export const END_REASON_LABEL: Record<EndReason, string> = {
   tab_switch: "You left the test window",
   looking_away: "You looked away from the screen too many times",
   voice_detected: "Speaking or voice was detected during the test",
+  too_dark: "The room was too dark to see you",
 };
 
 /** Continuous time out of frame that ends an attempt. */
@@ -580,11 +620,34 @@ export function endReason(state: TrackerState): EndReason | null {
   if (state.phone.active) return "phone";
   if (state.multiFace.active) return "multiple_faces";
   if (state.covered.active) return "camera_covered";
+  if (state.darkRunMs >= TOO_DARK_END_MS) return "too_dark";
   if (state.noFaceRunMs >= NO_FACE_END_MS) return "no_face";
   // `>=`: the student is shown "5/5" and "3/3", and that is when it ends.
   if (state.counters.lookingAwayEvents >= MAX_LOOKING_AWAY_STRIKES) return "looking_away";
   if (state.counters.voiceEvents >= MAX_VOICE_STRIKES) return "voice_detected";
   return null;
+}
+
+/** Average brightness (Rec. 601 luma, 0–255) of an RGBA frame. */
+export function frameBrightness(rgba: ArrayLike<number>): number {
+  const pixels = Math.floor(rgba.length / 4);
+  if (pixels === 0) return 0;
+  let sum = 0;
+  for (let i = 0; i < pixels; i++) {
+    const o = i * 4;
+    sum += 0.299 * rgba[o] + 0.587 * rgba[o + 1] + 0.114 * rgba[o + 2];
+  }
+  return sum / pixels;
+}
+
+/**
+ * Whether the room is too dark to see the student: very dark outright, or
+ * dim with nobody the face detector can find. A dim room where the face is
+ * still found is not too dark — the student can be seen, which is the point.
+ */
+export function isTooDark(brightness: number, faces: number): boolean {
+  if (brightness < DARK_MEAN) return true;
+  return faces === 0 && brightness < DIM_MEAN;
 }
 
 /**

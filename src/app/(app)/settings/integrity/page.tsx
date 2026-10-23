@@ -26,6 +26,7 @@ const FLAG_LABEL: Record<string, string> = {
   multiple_faces: "Another person appeared on camera",
   no_face: "You were away from the camera for a while",
   camera_covered: "The camera view was blocked",
+  too_dark: "The room was too dark to see you",
   camera_refused: "Camera access was refused",
   camera_unavailable: "No camera was available",
   camera_lost: "The camera stopped during the attempt",

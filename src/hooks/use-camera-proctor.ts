@@ -7,7 +7,10 @@ import {
   createTracker,
   endReason,
   isBlockedWithoutFace,
+  frameBrightness,
   isCovered,
+  isTooDark,
+  TOO_DARK_END_MS,
   observe,
   SAMPLE_INTERVAL_MS,
   type CameraCounters,
@@ -72,6 +75,10 @@ export interface LiveView {
   /** The model's best phone score this sample, 0 when none — for ?camera-debug. */
   phoneScore: number;
   covered: boolean;
+  /** The room is too dark to see the student. */
+  dark: boolean;
+  /** While dark: time left before the attempt ends, for the warning's countdown. */
+  darkRemainingMs: number | null;
   /** True when the student is not facing the screen (turned head, looking down, etc.). */
   lookingAway: boolean;
   lookingAwayCount: number;
@@ -500,6 +507,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     ctx.drawImage(video, 0, 0, 32, 24);
     const imageData = ctx.getImageData(0, 0, 32, 24).data;
     let covered = isCovered(imageData);
+    const brightness = frameBrightness(imageData);
 
     // Voice: whatever the audio loop CONFIRMED since the last camera sample
     // (sustained speech, not a click or a cough), or what the browser's own
@@ -614,6 +622,9 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       }
     }
 
+    // Decided after the face check: a dim room is fine while the face is found.
+    const dark = !covered && isTooDark(brightness, faces);
+
     if (lookingAwayLive && !lookingAwayTip) {
       if (faces === 0) {
         lookingAwayTip = "Face not visible — stay in camera view";
@@ -632,7 +643,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
 
     const { state, started } = observe(
       trackerRef.current,
-      { faces, phone, book, covered, lookingAway: lookingAwayConfirmed, voiceDetected },
+      { faces, phone, book, covered, dark, lookingAway: lookingAwayConfirmed, voiceDetected },
       elapsed,
     );
     trackerRef.current = state;
@@ -641,6 +652,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       phone,
       phoneScore,
       covered,
+      dark,
+      darkRemainingMs: dark ? Math.max(0, TOO_DARK_END_MS - state.darkRunMs) : null,
       lookingAway: lookingAwayLive,
       lookingAwayCount: state.counters.lookingAwayEvents,
       lookingAwayReason,
@@ -661,14 +674,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     // The photo or audio is captured first, from this same moment: it is the evidence for
     // the ending, and the devices are switched off as soon as the ending lands.
     for (const kind of started) {
-      if (kind === "voice_detected") {
-        captureAudioSnippet();
-        captureSnapshot("multiple_faces");
-      } else if (kind === "looking_away") {
-        captureSnapshot("no_face");
-      } else {
-        captureSnapshot(kind);
-      }
+      if (kind === "voice_detected") captureAudioSnippet();
+      captureSnapshot(kind);
     }
     const reason = endReason(state);
     if (reason) setViolation((v) => v ?? reason);

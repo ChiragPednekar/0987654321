@@ -33,6 +33,7 @@ const FLAG_LABEL: Record<string, string> = {
   multiple_faces: "Another person on camera",
   no_face: "Away from camera",
   camera_covered: "Camera blocked",
+  too_dark: "Too dark to see",
   camera_refused: "Camera refused",
   camera_unavailable: "No camera",
   camera_lost: "Camera stopped",

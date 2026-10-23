@@ -14,6 +14,11 @@ import {
   MAX_VOICE_STRIKES,
   type CameraSample,
   type TrackerState,
+  DARK_MEAN,
+  DIM_MEAN,
+  frameBrightness,
+  isTooDark,
+  TOO_DARK_END_MS,
 } from "@/lib/camera-proctor";
 import { signalsSchema } from "@/lib/integrity-request";
 import { EMPTY_SIGNALS } from "@/lib/integrity";
@@ -362,3 +367,68 @@ describe("checkPoseAndGaze", () => {
   });
 });
 
+
+describe("too dark to see the student", () => {
+  const dark = { dark: true, faces: 0 };
+
+  it("ends the attempt after TOO_DARK_END_MS of darkness", () => {
+    const { state, started } = run(hold(TOO_DARK_END_MS + SAMPLE_INTERVAL_MS, dark));
+    expect(endReason(state)).toBe("too_dark");
+    expect(started).toContain("too_dark");
+    expect(state.counters.darkMs).toBeGreaterThan(0);
+  });
+
+  it("does not end it a moment early — the student has the whole countdown to turn on a light", () => {
+    const { state } = run(hold(TOO_DARK_END_MS - 2 * SAMPLE_INTERVAL_MS, dark));
+    expect(endReason(state)).toBeNull();
+  });
+
+  it("starts the countdown again once the light comes back", () => {
+    const { state } = run([...hold(10_000, dark), ...hold(1_500), ...hold(10_000, dark)]);
+    expect(endReason(state)).toBeNull();
+  });
+
+  it("is one finding, not also an empty desk, a phone or a second person", () => {
+    const { state } = run(hold(TOO_DARK_END_MS - 2 * SAMPLE_INTERVAL_MS, { ...dark, phone: true }));
+    expect(state.counters.noFaceEvents).toBe(0);
+    expect(state.counters.noFaceMs).toBe(0);
+    expect(state.counters.phoneEvents).toBe(0);
+  });
+
+  it("calls a covered lens covered, not dark", () => {
+    const { state } = run(hold(TOO_DARK_END_MS + 2_000, { covered: true, dark: true, faces: 0 }));
+    expect(endReason(state)).toBe("camera_covered");
+    expect(state.counters.darkMs).toBe(0);
+  });
+
+  it("has a label for the student and a place in the reasons list", () => {
+    expect(END_REASONS).toContain("too_dark");
+    expect(END_REASON_LABEL.too_dark).toMatch(/too dark/i);
+  });
+});
+
+describe("isTooDark", () => {
+  it("is too dark below DARK_MEAN, whatever the face detector says", () => {
+    expect(isTooDark(DARK_MEAN - 1, 1)).toBe(true);
+    expect(isTooDark(5, 0)).toBe(true);
+  });
+
+  it("allows a dim room while the student can still be seen", () => {
+    expect(isTooDark(DIM_MEAN - 10, 1)).toBe(false);
+  });
+
+  it("is too dark when dim AND nobody can be found", () => {
+    expect(isTooDark(DIM_MEAN - 10, 0)).toBe(true);
+  });
+
+  it("leaves an ordinary lit room alone even with nobody in frame — that is 'no face', not darkness", () => {
+    expect(isTooDark(120, 0)).toBe(false);
+  });
+
+  it("measures brightness as the eye reads it", () => {
+    const px = new Uint8ClampedArray(32 * 24 * 4);
+    for (let i = 0; i < 32 * 24; i++) px.set([100, 100, 100, 255], i * 4);
+    expect(frameBrightness(px)).toBeCloseTo(100, 5);
+    expect(frameBrightness(new Uint8ClampedArray(0))).toBe(0);
+  });
+});

@@ -403,6 +403,7 @@ describe("camera findings", () => {
         multiFaceEvents: 1,
         noFaceMs: 60_000,
         coveredMs: 30_000,
+        darkMs: 30_000,
       }),
     );
     const emitted = new Set(everything.flags.map((f) => f.code));

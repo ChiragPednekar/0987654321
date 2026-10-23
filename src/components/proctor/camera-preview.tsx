@@ -247,6 +247,16 @@ function describe(camera: CameraApi): { ok: boolean; text: string } {
   const live = camera.live;
   if (!live) return { ok: true, text: "Camera on" };
   if (live.covered) return { ok: false, text: "Camera view is blocked" };
+  if (live.dark) {
+    const seconds = live.darkRemainingMs === null ? null : Math.ceil(live.darkRemainingMs / 1000);
+    return {
+      ok: false,
+      text:
+        seconds === null
+          ? "Too dark to see you — turn on a light"
+          : `Too dark to see you — turn on a light (test ends in ${seconds}s)`,
+    };
+  }
   if (live.phone) return { ok: false, text: "Phone in view — put it away" };
   if (live.faces > 1) return { ok: false, text: "More than one person in view" };
 

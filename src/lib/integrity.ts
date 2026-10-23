@@ -87,6 +87,8 @@ export interface ProctorSignals {
   bookEvents: number;
   /** Time the lens was dark or blocked. */
   coveredMs: number;
+  /** Time the room was too dark to see the student (the lens was open). */
+  darkMs: number;
   lookingAwayEvents: number;
   lookingAwayMs: number;
   voiceEvents: number;
@@ -117,6 +119,7 @@ export const EMPTY_SIGNALS: ProctorSignals = {
   phoneEvents: 0,
   bookEvents: 0,
   coveredMs: 0,
+  darkMs: 0,
   lookingAwayEvents: 0,
   lookingAwayMs: 0,
   voiceEvents: 0,
@@ -143,6 +146,7 @@ export const CAMERA_REVIEW_FLAGS = [
   "multiple_faces",
   "no_face",
   "camera_covered",
+  "too_dark",
   "camera_refused",
   "camera_lost",
   "mic_refused",
@@ -383,6 +387,14 @@ export function assessIntegrity({
         false,
       );
     }
+    if (signals.darkMs >= 30_000) {
+      add(
+        "too_dark",
+        `The room was too dark to see the student for about ${minutes(signals.darkMs)} min.`,
+        0,
+        false,
+      );
+    }
     if (signals.bookEvents > 0) {
       add(
         "book_seen",
@@ -478,6 +490,7 @@ export const INTEGRITY_FLAG_LABELS: Record<string, string> = {
   multiple_faces: "Another person on camera",
   no_face: "Away from camera",
   camera_covered: "Camera blocked",
+  too_dark: "Too dark to see",
   camera_refused: "Camera refused",
   camera_unavailable: "No camera",
   camera_lost: "Camera stopped",

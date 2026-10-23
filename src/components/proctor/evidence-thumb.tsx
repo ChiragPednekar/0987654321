@@ -9,6 +9,7 @@ export const EVIDENCE_LABEL: Record<string, string> = {
   looking_away: "looking away",
   voice_detected: "voice heard",
   voice_audio: "voice recording",
+  too_dark: "too dark to see",
 };
 
 /**
