@@ -14,6 +14,7 @@ import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/lib/types/database";
 import type { BuyRule, SalesNeed, SalesObjection } from "../src/lib/sales/engine";
+import { CONVERSATION_LIMITS } from "../src/lib/conversation-limits";
 
 config({ path: ".env.local" });
 config({ path: ".env" });
@@ -283,6 +284,8 @@ export function validate(s: ScenarioSeed): string[] {
   for (const key of s.buy_rule.objectionsRequired) {
     if (!objectionKeys.has(key)) say(`required objection "${key}" is not defined`);
   }
+  // Each turn resends the whole meeting to the model; the plan prices assume this ceiling.
+  if (s.max_turns > CONVERSATION_LIMITS.sales.maxTurns) say(`allows ${s.max_turns} turns; the limit is ${CONVERSATION_LIMITS.sales.maxTurns}`);
   // A buyer the student cannot possibly satisfy in the turns available.
   const minimumTurns = s.buy_rule.needsRequired + s.buy_rule.objectionsRequired.length;
   if (minimumTurns > s.max_turns) say(`needs at least ${minimumTurns} turns but allows ${s.max_turns}`);

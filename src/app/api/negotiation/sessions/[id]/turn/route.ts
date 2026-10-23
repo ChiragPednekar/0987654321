@@ -13,12 +13,13 @@ import {
 } from "@/lib/negotiation/engine";
 import type { NegotiationCaseRow } from "@/lib/types/database";
 import { lockoutResponse } from "@/lib/exam-lockouts";
+import { CONVERSATION_LIMITS } from "@/lib/conversation-limits";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  message: z.string().trim().min(1).max(3_000),
+  message: z.string().trim().min(1).max(CONVERSATION_LIMITS.negotiation.maxMessageChars),
   /** Complete terms when the student is making an offer; omitted when talking. */
   offer: z.record(z.string(), z.string()).nullable().optional(),
 });
@@ -94,7 +95,7 @@ export async function POST(
     .eq("session_id", id)
     .order("created_at", { ascending: true });
 
-  const MAX_NEGOTIATION_TURNS = 30;
+  const MAX_NEGOTIATION_TURNS = CONVERSATION_LIMITS.negotiation.maxTurns;
   if ((history?.length ?? 0) >= MAX_NEGOTIATION_TURNS * 2) {
     return NextResponse.json(
       {

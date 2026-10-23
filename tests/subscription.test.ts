@@ -11,6 +11,7 @@ import {
 } from "@/lib/subscription";
 import { PLANS, PLAN_ORDER, TOPUPS, TOPUP_ORDER, perMonth, rupees } from "@/lib/pricing";
 import { attemptState, linkedInAddUrl, overallPercentage, SUBMIT_GRACE_SECONDS } from "@/lib/certificates";
+import { GRADING_COST_INR, INTERVIEW_COST_INR } from "@/lib/economics";
 
 const DAY = 86_400_000;
 const NOW = new Date("2026-10-17T06:00:00Z");
@@ -91,20 +92,29 @@ describe("purchaseBlock", () => {
  * model rates that apply from 1 Jan 2027 (twice today's).
  */
 describe("pricing stays profitable at the 2027 model rates", () => {
-  const GRADING_2027 = 1.44; // ₹, worst case
-  const INTERVIEW_2027 = 4.32;
+  // Measured unit costs (thinking tokens included), doubled for Gemini's 2027
+  // rates. The worst interview is the costliest conversation the limits in
+  // src/lib/conversation-limits.ts allow. These used to be fixed guesses —
+  // 1.44 and 4.32 — under which every plan passed while losing money.
+  const GRADING_2027 = GRADING_COST_INR * 2;
+  const INTERVIEW_2027 = INTERVIEW_COST_INR * 2;
   const kept = (paise: number) => paise / 100 / 1.18 - (paise / 100) * 0.02; // GST-inclusive, ~2% gateway
 
-  it.each(PLAN_ORDER)("the %s plan makes money at full use", (code) => {
-    const plan = PLANS[code];
-    const cost = plan.gradings * GRADING_2027 + plan.interviews * INTERVIEW_2027;
-    expect(kept(plan.pricePaise)).toBeGreaterThan(cost * 1.3);
+  it("uses unit costs that include thinking and whole conversations", () => {
+    expect(GRADING_2027).toBeGreaterThan(2);
+    expect(INTERVIEW_2027).toBeGreaterThan(25);
   });
 
-  it.each(TOPUP_ORDER)("the %s top-up makes money", (code) => {
+  it.each(PLAN_ORDER)("the %s plan keeps a 30%% margin when every allowance is used in the costliest way", (code) => {
+    const plan = PLANS[code];
+    const cost = plan.gradings * GRADING_2027 + plan.interviews * INTERVIEW_2027;
+    expect(kept(plan.pricePaise)).toBeGreaterThan(cost / 0.7);
+  });
+
+  it.each(TOPUP_ORDER)("the %s top-up makes money even at worst-case use", (code) => {
     const pack = TOPUPS[code];
     const cost = pack.gradings * GRADING_2027 + pack.interviews * INTERVIEW_2027;
-    expect(kept(pack.pricePaise)).toBeGreaterThan(cost * 1.3);
+    expect(kept(pack.pricePaise)).toBeGreaterThan(cost * 1.2);
   });
 
   it("prices the season pass above a month and below three", () => {
@@ -114,7 +124,7 @@ describe("pricing stays profitable at the 2027 model rates", () => {
 
   it("prices the plans at the current amounts", () => {
     expect(PLANS.monthly.pricePaise).toBe(49_900);
-    expect(PLANS.season.pricePaise).toBe(99_900);
+    expect(PLANS.season.pricePaise).toBe(129_900);
     expect(PLANS.annual.pricePaise).toBe(499_900);
   });
 

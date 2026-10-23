@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { PLANS, rupees } from "@/lib/pricing";
 import type { ChatResponse } from "@/app/api/chat/route";
 import { useCaseProctor } from "./case-proctor-shell";
+import { CONVERSATION_LIMITS } from "@/lib/conversation-limits";
+import { CharCount } from "@/components/char-count";
 
 interface Turn {
   role: "interviewer" | "candidate";
@@ -204,6 +206,7 @@ export function CaseChat({
       ) : (
         <form onSubmit={submit} className="flex items-end gap-2">
           <Textarea
+            maxLength={CONVERSATION_LIMITS.caseChat.maxMessageChars}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onPaste={sharedProctor?.proctor.handlers.onPaste}
@@ -229,6 +232,7 @@ export function CaseChat({
           </Button>
         </form>
       )}
+      {!closed && <CharCount value={draft} max={CONVERSATION_LIMITS.caseChat.maxMessageChars} />}
     </div>
   );
 }

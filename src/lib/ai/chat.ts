@@ -164,6 +164,10 @@ async function chatGemini(
         generationConfig: {
           temperature: TEMPERATURE,
           maxOutputTokens: maxTokens,
+          // No thinking for a conversational turn: it is billed as output,
+          // and it counts against maxOutputTokens, so a model that thought
+          // for 700 tokens could cut its own reply short.
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
     },
@@ -189,7 +193,7 @@ async function chatGemini(
     model,
     tokensUsed: data.usageMetadata?.totalTokenCount ?? 0,
     inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
-    outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
+    outputTokens: (data.usageMetadata?.candidatesTokenCount ?? 0) + (data.usageMetadata?.thoughtsTokenCount ?? 0),
     cachedTokens: data.usageMetadata?.cachedContentTokenCount ?? 0,
   };
 }

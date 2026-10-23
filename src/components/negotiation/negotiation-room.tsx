@@ -22,6 +22,8 @@ import {
   type Terms,
 } from "@/lib/negotiation/engine";
 import { cn } from "@/lib/utils";
+import { CONVERSATION_LIMITS } from "@/lib/conversation-limits";
+import { CharCount } from "@/components/char-count";
 
 export interface NegotiationTurn {
   role: "student" | "counterparty";
@@ -208,6 +210,7 @@ export function NegotiationRoom({
 
         <div className="space-y-2">
           <Textarea
+            maxLength={CONVERSATION_LIMITS.negotiation.maxMessageChars}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onPaste={proctor.handlers.onPaste}
@@ -222,6 +225,7 @@ export function NegotiationRoom({
             className="min-h-[90px] resize-y text-[13px]"
             disabled={busy}
           />
+          <CharCount value={draft} max={CONVERSATION_LIMITS.negotiation.maxMessageChars} />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input

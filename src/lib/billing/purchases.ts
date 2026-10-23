@@ -11,6 +11,7 @@ import {
   rupees,
   type PlanCode,
   type TopupCode,
+  TOPUP_ORDER,
 } from "@/lib/pricing";
 import { activatePlanPeriod, getAccess, purchaseBlock } from "@/lib/subscription";
 import { getCourseProgress } from "@/lib/course-progress";
@@ -33,7 +34,7 @@ type Admin = SupabaseClient<Database>;
 
 export const itemSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("plan"), code: z.enum(["monthly", "season", "annual"]) }),
-  z.object({ kind: z.literal("topup"), code: z.enum(["answers_25", "interviews_10", "combo"]) }),
+  z.object({ kind: z.literal("topup"), code: z.enum(TOPUP_ORDER as [TopupCode, ...TopupCode[]]) }),
   z.object({ kind: z.literal("exam"), slug: z.string().min(1).max(120) }),
 ]);
 

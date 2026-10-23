@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { CheckoutMode } from "@/lib/billing/checkout-mode";
+import type { TopupCode } from "@/lib/pricing";
 
 /**
  * The pay button for anything CaseCode sells: a plan, a top-up pack, a
@@ -28,7 +29,7 @@ declare global {
 
 export type CheckoutItem =
   | { kind: "plan"; code: "monthly" | "season" | "annual" }
-  | { kind: "topup"; code: "answers_25" | "interviews_10" | "combo" }
+  | { kind: "topup"; code: TopupCode }
   | { kind: "exam"; slug: string };
 
 export interface CheckoutButtonProps {

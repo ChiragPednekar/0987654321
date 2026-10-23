@@ -204,6 +204,31 @@ async function callAnthropic({
  * makes it the default recommendation for getting grading running at zero
  * cost. Structured output uses responseSchema.
  */
+/**
+ * How many tokens Gemini may spend "thinking" before it grades.
+ *
+ * Gemini's Flash models think by default, and thinking is billed at the output
+ * rate. Measured in production it was 450–3,600 tokens a call — more than the
+ * answer itself, and on a three-sentence question 975 tokens of thought for 84
+ * of reply. Left unset it roughly doubled the cost of every graded answer, and
+ * none of it was counted.
+ *
+ * Measured on the calibration set (npm run compare:providers, 2026-10-23):
+ * thinking off, a 512-token budget and Gemini's default all ranked strong >
+ * medium > weak correctly; the default cost 3.9x as much (Rs 0.91 against
+ * Rs 0.24 a grade) and took 3x as long. 512 costs the same as off on a normal
+ * answer while leaving room to check arithmetic on a long one.
+ * GEMINI_THINKING_BUDGET overrides it; 0 turns thinking off, -1 is Gemini's default.
+ */
+export function gradingThinkingBudget(): number {
+  const raw = process.env.GEMINI_THINKING_BUDGET;
+  const parsed = raw === undefined || raw === "" ? NaN : Number(raw);
+  // -1 is Gemini's own "dynamic" budget — the unrestricted default, kept
+  // reachable so the comparison script can measure what it costs.
+  return Number.isFinite(parsed) && parsed >= -1 ? Math.floor(parsed) : DEFAULT_THINKING_BUDGET;
+}
+const DEFAULT_THINKING_BUDGET = 512;
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -242,6 +267,7 @@ async function callGemini({
       temperature: 0.2,
       responseMimeType: "application/json",
       responseSchema: schema,
+      thinkingConfig: { thinkingBudget: gradingThinkingBudget() },
     },
   });
 
@@ -315,7 +341,9 @@ async function callGemini({
     // portion is priced separately below, so it is reported rather than
     // subtracted here.
     inputTokens: usage.promptTokenCount ?? 0,
-    outputTokens: usage.candidatesTokenCount ?? 0,
+    // Thinking is billed as output, so it is counted as output: leaving it
+    // out made the logged cost of a call about a third of the real one.
+    outputTokens: (usage.candidatesTokenCount ?? 0) + (usage.thoughtsTokenCount ?? 0),
     cachedTokens: usage.cachedContentTokenCount ?? 0,
   };
 }

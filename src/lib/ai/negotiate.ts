@@ -111,7 +111,9 @@ Return JSON: message (what you say), offer (an object of issue key to option key
   // 1,400 rather than the conversational default: this reply carries a
   // complete counter-offer as JSON alongside the prose, and a truncated object
   // cannot be parsed at all.
-  const reply = await callChat(system + ROLEPLAY_GUARD, turns, 1_400);
+  // 700 tokens is about 500 words — far more than a counterparty told to be
+  // brief uses, and the ceiling the plan prices assume for a reply.
+  const reply = await callChat(system + ROLEPLAY_GUARD, turns, 700);
 
   const parsed = parseCounterpartyReply(reply.content, setup.issues);
 

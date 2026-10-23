@@ -68,10 +68,24 @@ interface Contender {
 const USD_INR = 88;
 
 const CONTENDERS: Contender[] = [
+  // Thinking is billed as output, so each budget is a separate contender: the
+  // question is whether grading gets worse without it, and what it costs.
   {
-    label: "Gemini 3.6 Flash",
+    label: "Gemini 3.6 Flash · thinking off",
     requires: "GEMINI_API_KEY",
-    env: { AI_PROVIDER: "gemini", OPENAI_BASE_URL: undefined },
+    env: { AI_PROVIDER: "gemini", OPENAI_BASE_URL: undefined, GEMINI_THINKING_BUDGET: "0" },
+    rates: { input: 0.75, output: 3.75, cached: 0.1875 },
+  },
+  {
+    label: "Gemini 3.6 Flash · thinking 512",
+    requires: "GEMINI_API_KEY",
+    env: { AI_PROVIDER: "gemini", OPENAI_BASE_URL: undefined, GEMINI_THINKING_BUDGET: "512" },
+    rates: { input: 0.75, output: 3.75, cached: 0.1875 },
+  },
+  {
+    label: "Gemini 3.6 Flash · thinking default",
+    requires: "GEMINI_API_KEY",
+    env: { AI_PROVIDER: "gemini", OPENAI_BASE_URL: undefined, GEMINI_THINKING_BUDGET: "-1" },
     rates: { input: 0.75, output: 3.75, cached: 0.1875 },
   },
   {

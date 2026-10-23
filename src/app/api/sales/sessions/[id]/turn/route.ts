@@ -7,11 +7,12 @@ import { RateLimitError } from "@/lib/ai/errors";
 import { recordUsage } from "@/lib/usage";
 import type { SalesScenarioRow } from "@/lib/types/database";
 import { lockoutResponse } from "@/lib/exam-lockouts";
+import { CONVERSATION_LIMITS } from "@/lib/conversation-limits";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-const bodySchema = z.object({ message: z.string().trim().min(1).max(2_000) });
+const bodySchema = z.object({ message: z.string().trim().min(1).max(CONVERSATION_LIMITS.sales.maxMessageChars) });
 
 /**
  * One exchange: the seller speaks, the buyer answers.

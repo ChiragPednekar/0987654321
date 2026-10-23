@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { CONVERSATION_LIMITS } from "@/lib/conversation-limits";
+import { CharCount } from "@/components/char-count";
 
 export interface SalesTurn {
   role: "student" | "buyer";
@@ -200,6 +202,7 @@ export function SalesRoom({
 
       <div className="space-y-2">
         <Textarea
+          maxLength={CONVERSATION_LIMITS.sales.maxMessageChars}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onPaste={proctor.handlers.onPaste}
@@ -214,6 +217,7 @@ export function SalesRoom({
           className="min-h-[90px] resize-y text-[13px]"
           disabled={busy}
         />
+        <CharCount value={draft} max={CONVERSATION_LIMITS.sales.maxMessageChars} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground tabular">
             Turn {used} of {maxTurns}

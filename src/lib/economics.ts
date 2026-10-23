@@ -1,4 +1,5 @@
 import { MODEL_RATES, PLATFORM_INFRA_INR_PER_YEAR, QUOTA } from "@/lib/constants";
+import { CONVERSATION_LIMITS } from "@/lib/conversation-limits";
 
 /**
  * The arithmetic behind every commercial number in the admin area.
@@ -21,12 +22,40 @@ export function priceUsage(inputTokens: number, outputTokens: number): number {
 }
 
 /**
- * Measured unit costs, from the worst-case call in constants.ts: a full
- * 20,000-character answer at 5,271 input + 1,126 output tokens.
+ * Worst-case graded answer: a full 20,000-character answer is about 6,500
+ * input tokens; the grade about 1,500 output, plus up to ~512 of thinking
+ * (gradingThinkingBudget in src/lib/ai/providers.ts), which is billed as
+ * output. The earlier figure (5,271 + 1,126) left thinking out, and measured
+ * production calls carried 450–3,600 thinking tokens each.
  */
-export const GRADING_COST_INR = priceUsage(5_271, 1_126);
-/** An interview runs about nine turns. */
-export const INTERVIEW_COST_INR = GRADING_COST_INR * 3;
+export const GRADING_COST_INR = priceUsage(6_500, 1_500 + 512);
+
+/**
+ * Tokens for a whole conversation. Each turn resends everything so far, so
+ * input grows with the square of the length:
+ *   turn t sends  system + (t − 1) × (message + reply) + message.
+ */
+export function sessionTokens(turns: number, systemTokens: number, messageTokens: number, replyTokens: number) {
+  let input = 0;
+  for (let t = 1; t <= turns; t++) input += systemTokens + (t - 1) * (messageTokens + replyTokens) + messageTokens;
+  return { input, output: turns * replyTokens };
+}
+
+/**
+ * Worst-case "interview": the costliest conversation the limits allow — the
+ * case interviewer at its turn limit, every message at the character limit
+ * (about 4 characters a token), every reply at its 700-token cap, over a
+ * ~3,000-token case brief. Replies are not allowed to think. A negotiation or
+ * sales meeting at its limits costs a little less. The earlier figure — three
+ * graded answers — underestimated this tenfold.
+ */
+const WORST_SESSION = sessionTokens(
+  CONVERSATION_LIMITS.caseChat.maxTurns,
+  3_000,
+  CONVERSATION_LIMITS.caseChat.maxMessageChars / 4,
+  700,
+);
+export const INTERVIEW_COST_INR = priceUsage(WORST_SESSION.input, WORST_SESSION.output);
 
 /**
  * Gross margin as a fraction, or null when there is no revenue to divide by.

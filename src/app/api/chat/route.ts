@@ -9,6 +9,7 @@ import { recordUsage } from "@/lib/usage";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { ROLEPLAY_GUARD } from "@/lib/ai/untrusted";
 import { lockoutResponse } from "@/lib/exam-lockouts";
+import { CONVERSATION_LIMITS } from "@/lib/conversation-limits";
 
 // A model turn takes several seconds; the default function timeout is tight.
 export const maxDuration = 60;
@@ -18,11 +19,11 @@ const bodySchema = z.object({
   case_id: z.string().uuid(),
   // Omitted on the opening turn, when the interviewer speaks first.
   session_id: z.string().uuid().optional(),
-  message: z.string().trim().min(1).max(4_000).optional(),
+  message: z.string().trim().min(1).max(CONVERSATION_LIMITS.caseChat.maxMessageChars).optional(),
 });
 
 /** Beyond this the transcript is long enough that the interview should close. */
-const MAX_TURNS = 30;
+const MAX_TURNS = CONVERSATION_LIMITS.caseChat.maxTurns;
 
 export interface ChatResponse {
   session_id: string;

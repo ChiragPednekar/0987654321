@@ -8,12 +8,13 @@ import { recordUsage } from "@/lib/usage";
 import { RateLimitError } from "@/lib/ai/errors";
 import { PI_MAX_QUESTIONS } from "@/lib/pi";
 import { lockoutResponse } from "@/lib/exam-lockouts";
+import { CONVERSATION_LIMITS } from "@/lib/conversation-limits";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  message: z.string().trim().min(1).max(4_000),
+  message: z.string().trim().min(1).max(CONVERSATION_LIMITS.interview.maxMessageChars),
 });
 
 /** One candidate turn, and the interviewer's next question. */

@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { CONVERSATION_LIMITS } from "@/lib/conversation-limits";
+import { CharCount } from "@/components/char-count";
 
 export interface PiTurn {
   role: "interviewer" | "candidate";
@@ -188,6 +190,7 @@ export function PiChat({
 
       <div className="space-y-2">
         <Textarea
+          maxLength={CONVERSATION_LIMITS.interview.maxMessageChars}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onPaste={proctor.handlers.onPaste}
@@ -204,6 +207,7 @@ export function PiChat({
           className="min-h-[110px] resize-y text-[13px] leading-relaxed"
           disabled={busy || finishing}
         />
+        <CharCount value={draft} max={CONVERSATION_LIMITS.interview.maxMessageChars} />
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             Enter to send. Answer in full sentences, the way you would speak.

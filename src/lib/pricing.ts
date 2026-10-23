@@ -5,17 +5,23 @@
  * allowances) and the pages (which show them), so a price can never be shown
  * as one number and charged as another.
  *
- * WORST-CASE UNIT COSTS, from 1 Jan 2027 when Gemini's rates double:
- *   graded answer ₹1.44, mock interview ₹4.32 (src/lib/economics.ts).
- * What we keep from a price: it is GST-inclusive (÷1.18), less ~2% gateway fee.
+ * WORST-CASE UNIT COSTS, from 1 Jan 2027 when Gemini's rates double
+ * (src/lib/economics.ts — measured, thinking tokens included):
+ *   graded answer ₹2.19, interview ₹28.51 — the costliest session there is,
+ *   a 15-turn case interview at the message limit (src/lib/conversation-limits.ts).
+ * A typical interview is nearer ₹11. What we keep from a price: it is
+ * GST-inclusive (÷1.18), less ~2% gateway fee.
  *
- *   plan      price    allowance          full-use cost   kept    margin
- *   monthly   ₹499     50 + 10 interviews   ₹115           ₹413    ₹298
- *   season    ₹999     160 + 35             ₹382           ₹827    ₹445
- *   annual    ₹4,999   500 + 100            ₹1,152         ₹4,136  ₹2,984
+ *   plan      price    allowance          worst full use   kept     margin
+ *   monthly   ₹499     50 + 6 interviews    ₹281            ₹414     32%
+ *   season    ₹1,299   120 + 16             ₹719            ₹1,079   33%
+ *   annual    ₹4,999   400 + 60             ₹2,587          ₹4,152   38%
  *
- * So every plan is profitable even for a student who uses every last answer,
- * unlike the previous low-price, high-allowance plan.
+ * Every plan stays profitable for a student who uses every answer and every
+ * interview in the most expensive way possible. The earlier allowances (up to
+ * 160 + 35 for ₹999) were priced on an interview costing three graded answers;
+ * measured, a conversation costs ten to fifteen. One edge remains: a résumé
+ * critique of 50 bullets is two model calls (₹5.41 worst) but one answer.
  */
 
 export type PlanCode = "monthly" | "season" | "annual";
@@ -41,17 +47,17 @@ export const PLANS: Record<PlanCode, Plan> = {
     pricePaise: 49_900,
     days: 30,
     gradings: 50,
-    interviews: 10,
+    interviews: 6,
     renewalWindowDays: 5,
   },
   season: {
     code: "season",
     name: "Placement Season Pass",
     tagline: "Three months, timed for placement season.",
-    pricePaise: 99_900,
+    pricePaise: 129_900,
     days: 90,
-    gradings: 160,
-    interviews: 35,
+    gradings: 120,
+    interviews: 16,
     renewalWindowDays: 14,
   },
   annual: {
@@ -60,8 +66,8 @@ export const PLANS: Record<PlanCode, Plan> = {
     tagline: "One purchase for year-round practice.",
     pricePaise: 499_900,
     days: 365,
-    gradings: 500,
-    interviews: 100,
+    gradings: 400,
+    interviews: 60,
     renewalWindowDays: 30,
   },
 };
@@ -84,7 +90,7 @@ export const USAGE_WINDOW = {
   interviews: 3,
 } as const;
 
-export type TopupCode = "answers_25" | "interviews_10" | "combo";
+export type TopupCode = "answers_25" | "interviews_5" | "combo";
 
 export interface Topup {
   code: TopupCode;
@@ -95,18 +101,18 @@ export interface Topup {
 }
 
 /**
- * Top-up packs. Each is profitable at the 2027 rates:
- *   answers_25    ₹99   cost ₹36   kept ₹82
- *   interviews_10 ₹149  cost ₹43   kept ₹123
- *   combo         ₹299  cost ₹137  kept ₹247
+ * Top-up packs. Each is profitable at the 2027 rates, at worst-case use:
+ *   answers_25    ₹99   worst ₹55   kept ₹82    33%
+ *   interviews_5  ₹249  worst ₹143  kept ₹207   31%
+ *   combo         ₹399  worst ₹259  kept ₹331   22%
  */
 export const TOPUPS: Record<TopupCode, Topup> = {
   answers_25: { code: "answers_25", name: "25 graded answers", pricePaise: 9_900, gradings: 25, interviews: 0 },
-  interviews_10: { code: "interviews_10", name: "10 mock interviews", pricePaise: 14_900, gradings: 0, interviews: 10 },
-  combo: { code: "combo", name: "Practice pack: 50 answers + 15 interviews", pricePaise: 29_900, gradings: 50, interviews: 15 },
+  interviews_5: { code: "interviews_5", name: "5 mock interviews", pricePaise: 24_900, gradings: 0, interviews: 5 },
+  combo: { code: "combo", name: "Practice pack: 40 answers + 6 interviews", pricePaise: 39_900, gradings: 40, interviews: 6 },
 };
 
-export const TOPUP_ORDER: TopupCode[] = ["answers_25", "interviews_10", "combo"];
+export const TOPUP_ORDER: TopupCode[] = ["answers_25", "interviews_5", "combo"];
 
 /** Top-up credits last a year from purchase. */
 export const TOPUP_VALID_DAYS = 365;
