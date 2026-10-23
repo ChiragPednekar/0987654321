@@ -109,20 +109,10 @@ export async function recordLockout(
   const expiresAt =
     strike >= MAX_STRIKES ? null : new Date(Date.now() + COOLDOWN_HOURS * 3_600_000).toISOString();
 
-  // Safe mapping for DB constraint compatibility while keeping exact reason in signals
-  const rawReason = input.reason;
-  let dbReason: ExamLockoutRow["reason"];
-  if (rawReason === "looking_away") {
-    dbReason = "no_face";
-  } else if (rawReason === "voice_detected") {
-    dbReason = "multiple_faces";
-  } else {
-    dbReason = rawReason as ExamLockoutRow["reason"];
-  }
-
+  // Stored as itself since 082; also kept in signals, where older rows have it.
   const payloadSignals = {
     ...((typeof input.signals === "object" && input.signals !== null ? input.signals : {}) as Record<string, unknown>),
-    violation: rawReason,
+    violation: input.reason,
   };
 
   const { data, error: insertError } = await admin
@@ -130,7 +120,7 @@ export async function recordLockout(
     .insert({
       user_id: input.userId,
       path: input.path,
-      reason: dbReason,
+      reason: input.reason,
       signals: payloadSignals as ExamLockoutRow["signals"],
       strike,
       expires_at: expiresAt,

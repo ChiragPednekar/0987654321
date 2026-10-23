@@ -21,7 +21,7 @@ const MAX_BASE64 = Math.ceil(MAX_BYTES / 3) * 4;
 const MAX_PER_HOUR = 30;
 
 const bodySchema = z.object({
-  kind: z.enum(["phone", "multiple_faces", "no_face", "book"]),
+  kind: z.enum(["phone", "multiple_faces", "no_face", "book", "looking_away", "voice_detected"]),
   image: z.string().min(100).max(MAX_BASE64),
 });
 

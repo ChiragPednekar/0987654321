@@ -5,13 +5,8 @@ import { END_REASON_LABEL } from "@/lib/camera-proctor";
 import type { LockoutView } from "@/lib/exam-lockouts";
 import { MAX_STRIKES } from "@/lib/exam-lockouts";
 import { timeAgo } from "@/lib/utils";
+import { EvidenceThumb } from "@/components/proctor/evidence-thumb";
 
-const PHOTO_LABEL: Record<string, string> = {
-  phone: "phone",
-  multiple_faces: "another person",
-  no_face: "nobody in frame",
-  book: "book",
-};
 
 /**
  * Tests that were ended — by the camera or by leaving the window — for
@@ -55,25 +50,7 @@ export function LockoutList({ rows, failed }: { rows: LockoutView[]; failed: boo
             {row.photos.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {row.photos.map((photo) => (
-                  <a
-                    key={photo.url}
-                    href={photo.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group block w-28 overflow-hidden rounded-md border"
-                  >
-                    {/* Signed URL to a private bucket — see the integrity page for why not next/image. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={photo.url}
-                      alt={`Camera photo: ${PHOTO_LABEL[photo.kind] ?? photo.kind}`}
-                      className="aspect-[4/3] w-full bg-muted object-cover"
-                      loading="lazy"
-                    />
-                    <span className="block px-1.5 py-1 text-[10px] text-muted-foreground group-hover:text-foreground">
-                      {PHOTO_LABEL[photo.kind] ?? photo.kind} · {timeAgo(photo.takenAt)}
-                    </span>
-                  </a>
+                  <EvidenceThumb key={photo.url} photo={photo} />
                 ))}
               </div>
             )}

@@ -68,10 +68,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Could not store audio" }, { status: 500 });
   }
 
-  // Record evidence in proctor_snapshots under "multiple_faces" (talking / voice collaboration)
   const { error: rowError } = await admin
     .from("proctor_snapshots")
-    .insert({ user_id: user.id, kind: "multiple_faces", storage_path: path });
+    .insert({ user_id: user.id, kind: "voice_audio", storage_path: path });
 
   if (rowError) {
     await admin.storage.from(SNAPSHOT_BUCKET).remove([path]);

@@ -41,28 +41,38 @@ export interface GazeTrackingConfig {
 }
 
 export interface AudioVadConfig {
-  /** FFT size for Web Audio AnalyserNode (frequency bins = fftSize / 2). */
+  /** FFT size for the spectrum analyser (frequency bins = fftSize / 2). */
   fftSize: number;
-  /** Minimum speech probability score [0.0, 1.0] to flag active speech. */
+  /**
+   * FFT size for the second analyser whose waveform is used to find a voice
+   * pitch. It must hold two periods of an 80 Hz voice: 2048 samples is 43 ms
+   * at 48 kHz.
+   */
+  pitchFftSize: number;
+  /** Time spent learning the room's level before anything can count as speech. */
+  calibrationMs: number;
+  /** Minimum graded speech score [0.0, 1.0]; the hard gates below must also all hold. */
   minSpeechProbability: number;
-  /** Minimum speech utterance duration in ms to filter isolated clicks, coughs, or thuds. */
+  /** Speech must be continuous this long to count — a word or a cough is not someone talking. */
   minSpeechDurationMs: number;
   /** Maximum pause duration in ms within continuous speech that gets merged into one utterance. */
   speechGapMergeMs: number;
   /** Cooldown in ms after an utterance ends before a new event can be raised. */
   eventCooldownMs: number;
-  /** Initial ambient noise floor estimate. */
+  /** Speech-band floor reported before the first frame arrives. */
   noiseFloorInitial: number;
-  /** Fast tracking downward rate for ambient noise floor during quiet periods. */
+  /** Per-frame rate at which the speech-band floor falls to a quieter room. */
   noiseFloorTrackDownRate: number;
-  /** Slow tracking upward rate to prevent speech from dragging the noise floor up. */
+  /** Per-frame rate at which it rises to steadier, louder noise (slow, so a voice cannot drag it up). */
   noiseFloorTrackUpRate: number;
-  /** Minimum SNR in dB above noise floor to consider speech candidates. */
+  /** dB the speech band must rise above its own floor. */
   minSnrDb: number;
-  /** Minimum speech formant energy (300Hz-2800Hz) ratio relative to high-frequency clatter (4000-8000Hz). */
+  /** dB the speech band must sit above the keyboard-clatter band (4–8 kHz). */
   formantMinRatio: number;
-  /** Maximum Spectral Flatness Measure (SFM) for voiced speech (noise/fans have high SFM > 0.5). */
+  /** Maximum Spectral Flatness Measure for voiced speech (telemetry). */
   maxSpectralFlatness: number;
+  /** Minimum autocorrelation peak at a voice pitch (80–400 Hz) for a frame to count as voiced. */
+  minPeriodicity: number;
   /** Benefit of doubt warnings for speech before test suspension. */
   maxVoiceStrikes: number;
 }
@@ -101,16 +111,19 @@ export const DEFAULT_PROCTOR_CONFIG: ProctorEngineConfig = {
   },
   audio: {
     fftSize: 512,
+    pitchFftSize: 2048,
+    calibrationMs: 1500,
     minSpeechProbability: 0.55,
-    minSpeechDurationMs: 350,
+    minSpeechDurationMs: 800,
     speechGapMergeMs: 450,
     eventCooldownMs: 2000,
     noiseFloorInitial: 14,
     noiseFloorTrackDownRate: 0.15,
     noiseFloorTrackUpRate: 0.02,
-    minSnrDb: 6.0,
-    formantMinRatio: 1.2,
+    minSnrDb: 10,
+    formantMinRatio: 6,
     maxSpectralFlatness: 0.52,
+    minPeriodicity: 0.45,
     maxVoiceStrikes: 3,
   },
   objects: {

@@ -2616,7 +2616,7 @@ export type AccessAllowlistRow = {
 export type ProctorSnapshotRow = {
   id: string;
   user_id: string;
-  kind: "phone" | "multiple_faces" | "no_face" | "book";
+  kind: "phone" | "multiple_faces" | "no_face" | "book" | "looking_away" | "voice_detected" | "voice_audio";
   storage_path: string;
   created_at: string;
 };
@@ -2629,7 +2629,7 @@ export type ExamLockoutRow = {
   id: string;
   user_id: string;
   path: string;
-  reason: "phone" | "multiple_faces" | "camera_covered" | "no_face" | "camera_off" | "tab_switch";
+  reason: "phone" | "multiple_faces" | "camera_covered" | "no_face" | "camera_off" | "tab_switch" | "looking_away" | "voice_detected";
   signals: Record<string, unknown>;
   created_at: string;
   reopened_at: string | null;

@@ -15,14 +15,8 @@ import { CAMERA_REVIEW_FLAGS, INTEGRITY_FLAG_LABELS } from "@/lib/integrity";
 
 const CAMERA_REVIEW = new Set<string>(CAMERA_REVIEW_FLAGS);
 
-/** Said plainly — the reader is deciding something about a student. */
-const PHOTO_LABEL: Record<string, string> = {
-  phone: "phone",
-  multiple_faces: "another person",
-  no_face: "nobody in frame",
-  book: "book",
-};
 import type { AssignmentReviewRow } from "@/lib/types/database";
+import { EvidenceThumb } from "@/components/proctor/evidence-thumb";
 
 /**
  * The marking queue.
@@ -461,30 +455,7 @@ export function ReviewQueue({
                             </p>
                             <div className="mt-1.5 flex flex-wrap gap-2">
                               {row.integrity.photos.map((photo) => (
-                                <a
-                                  key={photo.url}
-                                  href={photo.url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="group block w-28 overflow-hidden rounded-md border"
-                                >
-                                  {/*
-                                    A plain img, not next/image: these are
-                                    short-lived signed URLs to a private bucket,
-                                    and the image optimiser would cache a
-                                    private photo under a public URL.
-                                  */}
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img
-                                    src={photo.url}
-                                    alt={`Camera photo: ${PHOTO_LABEL[photo.kind] ?? photo.kind}`}
-                                    className="aspect-[4/3] w-full bg-muted object-cover"
-                                    loading="lazy"
-                                  />
-                                  <span className="block px-1.5 py-1 text-[10px] text-muted-foreground group-hover:text-foreground">
-                                    {PHOTO_LABEL[photo.kind] ?? photo.kind} · {timeAgo(photo.takenAt)}
-                                  </span>
-                                </a>
+                                <EvidenceThumb key={photo.url} photo={photo} />
                               ))}
                             </div>
                           </div>

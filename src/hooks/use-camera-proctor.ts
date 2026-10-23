@@ -22,11 +22,13 @@ import {
   type HeadPoseEuler,
   OffScreenDwell,
 } from "@/lib/gaze-tracker";
-import { AudioVadEngine } from "@/lib/audio-vad";
+import { AudioVadEngine, recognisedWords } from "@/lib/audio-vad";
 import { DEFAULT_PROCTOR_CONFIG } from "@/lib/proctor-config";
 
 /** How often the voice detector reads the microphone. The frame length it was designed for. */
 const AUDIO_FRAME_MS = 100;
+/** How recently the detector must have heard a voice for a transcript to count. */
+const VOICE_CORROBORATION_MS = 2_000;
 /** First delay before restarting the browser's speech recogniser after it ends. */
 const SPEECH_RESTART_MS = 250;
 /** Longest back-off between restarts after repeated network errors. */
@@ -331,6 +333,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
   const audioTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const lastAudioAtRef = React.useRef<number | null>(null);
   const voiceLatchRef = React.useRef(false);
+  /** When the detector last heard a voiced, above-room frame (performance.now()). */
+  const lastVoicedAtRef = React.useRef(Number.NEGATIVE_INFINITY);
   const audioPeakRef = React.useRef(0);
   const audioMetricsRef = React.useRef<{ speechProbability: number; snrDb: number; spectralFlatness: number } | null>(null);
   const audioResumeCleanupRef = React.useRef<(() => void) | null>(null);
@@ -356,6 +360,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     audioTimerRef.current = null;
     lastAudioAtRef.current = null;
     voiceLatchRef.current = false;
+    lastVoicedAtRef.current = Number.NEGATIVE_INFINITY;
     audioPeakRef.current = 0;
     audioMetricsRef.current = null;
     audioResumeCleanupRef.current?.();
@@ -415,10 +420,6 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     canvas.height = Math.round((video.videoHeight / video.videoWidth) * SNAPSHOT_WIDTH);
     canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Map to DB allowed kinds for proctor_snapshots table
-    const dbKind =
-      kind === "looking_away" ? "no_face" : kind === "voice_detected" ? "multiple_faces" : kind;
-
     canvas.toBlob(
       (blob) => {
         if (!blob) return;
@@ -428,7 +429,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
           void fetch("/api/proctor/snapshot", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ kind: dbKind, image }),
+            body: JSON.stringify({ kind, image }),
           }).catch(() => {});
         };
         reader.readAsDataURL(blob);
@@ -756,6 +757,12 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
             // smearing a cough into a sentence.
             analyser.smoothingTimeConstant = 0.5;
             source.connect(analyser);
+            // A second, longer window for the waveform: finding a voice's
+            // pitch needs two periods of an 80 Hz voice, which a 512-sample
+            // read (11 ms) cannot hold.
+            const pitchAnalyser = audioCtx.createAnalyser();
+            pitchAnalyser.fftSize = DEFAULT_PROCTOR_CONFIG.audio.pitchFftSize;
+            source.connect(pitchAnalyser);
             audioContextRef.current = audioCtx;
             analyserRef.current = analyser;
             // Frequency bands follow the real sample rate (48 kHz on most
@@ -797,7 +804,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
             } catch {}
 
             const freqData = new Uint8Array(analyser.frequencyBinCount);
-            const timeData = new Uint8Array(analyser.fftSize);
+            const timeData = new Uint8Array(pitchAnalyser.fftSize);
             audioTimerRef.current = setInterval(() => {
               if (stopped.current || analyserRef.current !== analyser) return;
               const now = performance.now();
@@ -806,8 +813,9 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
               const dt = Math.min(500, lastAudioAtRef.current === null ? AUDIO_FRAME_MS : now - lastAudioAtRef.current);
               lastAudioAtRef.current = now;
               analyser.getByteFrequencyData(freqData);
-              analyser.getByteTimeDomainData(timeData);
+              pitchAnalyser.getByteTimeDomainData(timeData);
               const r = vadRef.current.processFrame(freqData, timeData, now, dt);
+              if (r.metrics.isSpeechInstantaneous) lastVoicedAtRef.current = now;
               audioPeakRef.current = Math.max(
                 audioPeakRef.current,
                 Math.min(100, Math.round((r.metrics.rmsEnergy / 128) * 100)),
@@ -828,12 +836,15 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       } catch {}
 
       try {
+        type SpeechRecResultEvent = {
+          resultIndex: number;
+          results: ArrayLike<ArrayLike<{ transcript: string }>>;
+        };
         type SpeechRecInstance = {
           continuous: boolean;
           interimResults: boolean;
           lang: string;
-          onresult: (() => void) | null;
-          onspeechstart: (() => void) | null;
+          onresult: ((event: SpeechRecResultEvent) => void) | null;
           onerror: ((event: { error?: string }) => void) | null;
           onend: (() => void) | null;
           start: () => void;
@@ -852,12 +863,25 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
           rec.lang = "en-US";
           let restartDelay = SPEECH_RESTART_MS;
           let fatal = false;
-          const heard = () => {
-            if (countingRef.current) voiceActivityRef.current = true;
+          /**
+           * Counts only when the recogniser produced real words AND the
+           * detector heard a voice above the room in the last moment. Chrome's
+           * own "speech start" fires on fans, typing and breathing before it
+           * has recognised anything, and alone it once ended the test of a
+           * student sitting silent in an empty room — so it is not used, and
+           * a transcript on its own (a television next door) is not enough.
+           */
+          rec.onresult = (event) => {
             restartDelay = SPEECH_RESTART_MS;
+            let text = "";
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              text += ` ${event.results[i]?.[0]?.transcript ?? ""}`;
+            }
+            if (!countingRef.current || !recognisedWords(text)) return;
+            if (performance.now() - lastVoicedAtRef.current <= VOICE_CORROBORATION_MS) {
+              voiceActivityRef.current = true;
+            }
           };
-          rec.onresult = heard;
-          rec.onspeechstart = heard;
           rec.onerror = (event) => {
             const error = event?.error;
             // Permission or hardware: restarting cannot help, and would spin.

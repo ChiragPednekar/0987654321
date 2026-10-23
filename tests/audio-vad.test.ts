@@ -49,11 +49,11 @@ describe("AudioVadEngine", () => {
     it(`hears a higher voice as speech at ${rate / 1000} kHz, not as keyboard clatter`, () => {
       const vad = new AudioVadEngine();
       vad.configureSpectrum(rate, FFT);
-      feed(vad, spectrum(rate, []), 10); // settle the noise floor on a quiet room
-      const r = feed(vad, higherVoice(rate), 5, 1_000);
+      feed(vad, spectrum(rate, []), 20); // learn a quiet room (calibration is 1.5 s)
+      const r = feed(vad, higherVoice(rate), 9, 2_000);
       expect(r.metrics.isSpeechInstantaneous).toBe(true);
-      // With the old fixed bins this voice scored 0.60 against a 0.55 bar —
-      // its upper formants were counted as keyboard clatter. Keep a margin.
+      // With the old fixed bins this voice's upper formants were counted as
+      // keyboard clatter. Keep a margin.
       expect(r.metrics.speechProbability).toBeGreaterThan(0.8);
       expect(r.sustainedSpeech).toBe(true);
     });
@@ -62,18 +62,20 @@ describe("AudioVadEngine", () => {
   it("does not call keyboard clatter speech", () => {
     const vad = new AudioVadEngine();
     vad.configureSpectrum(48_000, FFT);
-    feed(vad, spectrum(48_000, []), 10);
+    feed(vad, spectrum(48_000, []), 20);
     const typing = spectrum(48_000, [{ fromHz: 4_000, toHz: 8_000, value: 160 }], 20);
-    expect(feed(vad, typing, 5, 1_000).sustainedSpeech).toBe(false);
+    expect(feed(vad, typing, 20, 2_000).sustainedSpeech).toBe(false);
   });
 
   it("needs sustained speech — one loud frame (a cough, a thud) is not someone talking", () => {
     const vad = new AudioVadEngine();
     vad.configureSpectrum(48_000, FFT);
-    feed(vad, spectrum(48_000, []), 10);
-    const single = vad.processFrame(higherVoice(48_000), null, 1_000, 100);
+    feed(vad, spectrum(48_000, []), 20);
+    const single = vad.processFrame(higherVoice(48_000), null, 2_000, 100);
     expect(single.sustainedSpeech).toBe(false);
-    // 400 ms of it is past the 350 ms minimum utterance.
-    expect(feed(vad, higherVoice(48_000), 4, 1_100).sustainedSpeech).toBe(true);
+    // Half a second is a word, not a conversation.
+    expect(feed(vad, higherVoice(48_000), 4, 2_100).sustainedSpeech).toBe(false);
+    // 900 ms in all is past the 800 ms minimum.
+    expect(feed(vad, higherVoice(48_000), 4, 2_500).sustainedSpeech).toBe(true);
   });
 });
