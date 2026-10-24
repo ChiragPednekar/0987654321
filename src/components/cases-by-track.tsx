@@ -38,7 +38,7 @@ export function CasesByTrack({
 }) {
   if (tracks.length === 0) {
     return (
-      <p className="mt-8 border-t border-foreground pt-4 text-sm text-muted-foreground">
+      <p className="mt-8 border-t border-border pt-4 text-sm text-muted-foreground">
         No tracks have cases assigned yet.
       </p>
     );
@@ -54,7 +54,7 @@ export function CasesByTrack({
 
         return (
           <section key={track.id} className="mt-10">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-foreground pb-2">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border pb-2">
               <Link
                 href={`/paths/${track.slug}`}
                 className="font-editorial text-[1.6rem] leading-tight hover:italic"

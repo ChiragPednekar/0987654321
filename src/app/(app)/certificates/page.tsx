@@ -79,28 +79,28 @@ export default async function CertificatesPage() {
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">How the Certification Works</p>
         <div className="mt-4 grid gap-4 sm:grid-cols-4">
           <div className="rounded border border-border/80 bg-background p-4">
-            <span className="font-mono text-[10px] uppercase text-muted-foreground">Step 1</span>
+            <span className="font-mono text-[11px] uppercase text-muted-foreground">Step 1</span>
             <p className="mt-1 text-sm font-semibold">1. Study Curriculum</p>
             <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
               4 modules with framework guides, formula sheets, and common pitfalls.
             </p>
           </div>
           <div className="rounded border border-border/80 bg-background p-4">
-            <span className="font-mono text-[10px] uppercase text-muted-foreground">Step 2</span>
+            <span className="font-mono text-[11px] uppercase text-muted-foreground">Step 2</span>
             <p className="mt-1 text-sm font-semibold">2. Solve Practice Cases</p>
             <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
               Apply frameworks to real library cases with immediate AI rubric grading.
             </p>
           </div>
           <div className="rounded border border-border/80 bg-background p-4">
-            <span className="font-mono text-[10px] uppercase text-muted-foreground">Step 3</span>
+            <span className="font-mono text-[11px] uppercase text-muted-foreground">Step 3</span>
             <p className="mt-1 text-sm font-semibold">3. Proctored Exam</p>
             <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
               Two timed cases in 90 minutes under camera and window-lock proctoring.
             </p>
           </div>
           <div className="rounded border border-border/80 bg-background p-4">
-            <span className="font-mono text-[10px] uppercase text-muted-foreground">Step 4</span>
+            <span className="font-mono text-[11px] uppercase text-muted-foreground">Step 4</span>
             <p className="mt-1 text-sm font-semibold">4. Verified Credential</p>
             <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
               Score 60%+ to earn a public certificate page and LinkedIn credential.

@@ -29,7 +29,7 @@ export default async function SignupPage() {
 
       <p className="text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/login" className="text-foreground underline underline-offset-4">
+        <Link href="/login" className="font-medium text-brand hover:underline">
           Log in
         </Link>
       </p>

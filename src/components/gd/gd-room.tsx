@@ -570,11 +570,11 @@ export function GdRoom({
             {participantIds.size} present
           </span>
           {joinPolicy === "open" ? (
-            <span className="rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
+            <span className="rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
               Open link
             </span>
           ) : (
-            <span className="rounded bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] text-amber-600 dark:text-amber-400">
+            <span className="rounded bg-amber-500/10 px-2 py-0.5 font-mono text-[11px] text-amber-600 dark:text-amber-400">
               Approval required
             </span>
           )}
@@ -673,7 +673,7 @@ export function GdRoom({
                       </span>
                     )}
                     {person.id === hostId && (
-                      <span className="rounded bg-white/20 px-1 py-0.2 text-[10px] text-zinc-200 font-mono">
+                      <span className="rounded bg-white/20 px-1 py-0.2 text-[11px] text-zinc-200 font-mono">
                         Host
                       </span>
                     )}
@@ -777,7 +777,7 @@ export function GdRoom({
             >
               <MessageSquare className="size-5" />
               {!chatOpen && unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white shadow">
+                <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white shadow">
                   {unreadCount}
                 </span>
               )}
@@ -849,7 +849,7 @@ export function GdRoom({
                             className={cn(
                               "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed",
                               isMyMessage
-                                ? "bg-foreground text-background"
+                                ? "bg-action text-action-foreground"
                                 : "bg-muted text-foreground border border-border/60"
                             )}
                           >

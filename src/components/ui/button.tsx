@@ -4,43 +4,41 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150 disabled:pointer-events-none disabled:border-border-subtle disabled:bg-muted disabled:text-muted-foreground/60 disabled:shadow-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:bg-muted disabled:text-muted-foreground/70 disabled:shadow-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       /**
-       * Five tiers that are told apart by weight, not only by hue: a filled
-       * brand primary, a tinted-neutral secondary that carries a hairline, a
-       * bordered tertiary on card, a borderless ghost, and a filled danger.
-       * Every one has its own hover AND active state, so a press is visible
-       * on a trackpad where hover never lands.
+       * Apple's button hierarchy (buttons.md › Style): one filled, prominent
+       * action per view; a tinted grey for the rest; plain text for the
+       * least. Capsules, as on iOS 26 and apple.com. Style, not size, says
+       * which choice is preferred.
        */
       variant: {
         default:
-          "bg-action text-action-foreground shadow-xs hover:bg-action-hover active:bg-[color-mix(in_oklch,var(--action-hover)_88%,black)]",
+          "bg-action text-action-foreground hover:bg-action-hover",
         destructive:
-          "bg-danger text-danger-foreground shadow-xs hover:bg-[color-mix(in_oklch,var(--danger)_90%,black)] active:bg-[color-mix(in_oklch,var(--danger)_80%,black)]",
+          "bg-danger text-danger-foreground hover:bg-[color-mix(in_srgb,var(--danger)_88%,black)]",
         outline:
-          "border border-input bg-card text-foreground hover:border-brand-border hover:bg-brand-surface hover:text-brand active:bg-[color-mix(in_oklch,var(--brand-surface)_88%,var(--brand))]",
+          "border border-input bg-card text-foreground hover:bg-accent",
         secondary:
-          // Hairline drawn as an inset shadow, not a border: a real border
-          // would add 2px to the button's width and move everything beside it.
-          "bg-secondary text-secondary-foreground shadow-[inset_0_0_0_1px_var(--border-subtle)] hover:bg-accent hover:shadow-[inset_0_0_0_1px_var(--border)] active:bg-[color-mix(in_oklch,var(--accent)_90%,var(--foreground))]",
+          "bg-secondary text-secondary-foreground hover:bg-accent",
+        // Monochrome: ghost buttons mostly live in bars, and Apple keeps bar
+        // controls untinted (toolbars.md). Tinted text is `link`.
         ghost:
-          "text-muted-foreground hover:bg-brand-surface hover:text-brand active:bg-[color-mix(in_oklch,var(--brand-surface)_88%,var(--brand))]",
-        link: "text-brand underline decoration-brand/30 underline-offset-4 hover:decoration-brand",
+          "text-foreground/80 hover:bg-accent hover:text-foreground",
+        link: "text-brand underline-offset-4 hover:underline",
         /**
-         * Ink: square, black on paper (paper on ink in dark mode). The primary
-         * action on the editorial pages — landing, dashboards — where the only
-         * colour is the type.
+         * Formerly the square black button of the editorial pages. Kept as a
+         * name so call sites need not change; it is the prominent action.
          */
         ink:
-          "rounded-none bg-foreground text-background hover:bg-foreground/85 active:bg-foreground/75",
+          "bg-action text-action-foreground hover:bg-action-hover",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-11 rounded-md px-6",
-        icon: "size-9",
+        default: "h-10 px-5",
+        sm: "h-8 px-3.5 text-[13px]",
+        lg: "h-11 px-6 text-base",
+        icon: "size-10",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

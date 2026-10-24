@@ -247,7 +247,7 @@ export default async function CasesPage({
               className={cn(
                 "-mb-px border-b pb-2.5 transition-colors",
                 active
-                  ? "border-foreground text-foreground"
+                  ? "border-brand font-semibold text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
@@ -273,7 +273,7 @@ export default async function CasesPage({
       ) : (
       <div className="mt-8">
         {/* Column headers — hidden on mobile, where each row stacks. */}
-        <div className="hidden items-center gap-4 border-b border-foreground pb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground sm:flex">
+        <div className="hidden items-center gap-4 border-b border-border pb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground sm:flex">
           <span className={cn("w-5", canAssign && "ml-9")} />
           <span className="flex-1">Case</span>
           <span className="w-36">Domain</span>

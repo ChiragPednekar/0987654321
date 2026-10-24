@@ -70,7 +70,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ co
           <Logo />
         </Link>
 
-        <article className="mt-10 border-y-2 border-foreground px-2 py-12 text-center sm:px-10">
+        <article className="mt-10 border-y border-border px-2 py-12 text-center sm:px-10">
           <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
             Certificate of achievement
           </p>
@@ -104,7 +104,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ co
             href={linkedInAddUrl({ title: cert.exam.title, issuedAt: issued, url, code })}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-10 items-center bg-foreground px-5 font-medium text-background hover:opacity-85"
+            className="inline-flex h-10 items-center rounded-full bg-action px-5 font-medium text-action-foreground hover:bg-action-hover"
           >
             Add to LinkedIn
           </a>

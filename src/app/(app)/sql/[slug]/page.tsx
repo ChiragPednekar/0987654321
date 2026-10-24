@@ -69,7 +69,7 @@ export default async function SqlExercisePage({
             alreadySolved={Boolean(last?.correct)}
           />
         ) : (
-          <div className="border-l-2 border-foreground/40 bg-card/60 px-4 py-3 text-sm">
+          <div className="rounded-xl bg-card shadow-xs dark:shadow-none px-4 py-3 text-sm">
             <p className="font-medium">This question needs CaseCode access</p>
             <p className="mt-1 text-muted-foreground">{SOLVE_DENIAL.error}</p>
           </div>

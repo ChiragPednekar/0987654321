@@ -169,7 +169,7 @@ export function CommandPalette({ role }: { role?: UserRole | null }) {
             placeholder="Search cases, tracks and pages…"
             className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
-          <kbd className="hidden shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground sm:block">
+          <kbd className="hidden shrink-0 rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground sm:block">
             esc
           </kbd>
         </div>
@@ -273,7 +273,7 @@ function Item({
 
 function DomainBadge({ domain }: { domain: string }) {
   return (
-    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
       {DOMAIN_LABEL[domain as Domain] ?? domain}
     </span>
   );

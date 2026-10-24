@@ -62,7 +62,7 @@ export function SignupForm() {
 
   if (pendingEmail) {
     return (
-      <div className="space-y-4 border-l-2 border-foreground/40 bg-card/60 px-5 py-4">
+      <div className="space-y-4 rounded-xl bg-muted px-5 py-4">
         <div className="space-y-1.5">
           <p className="font-medium">Confirm your email</p>
           <p className="text-sm text-muted-foreground">
@@ -78,7 +78,7 @@ export function SignupForm() {
         <Button
           type="button"
           variant="outline"
-          className="h-11 w-full rounded-none border-foreground/30 bg-transparent"
+          className="h-11 w-full"
           onClick={() => setPendingEmail(null)}
         >
           Use a different email

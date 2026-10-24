@@ -234,7 +234,7 @@ export function TeacherGdDialog({
                     onClick={() => setTopicMode("preset")}
                     className={`rounded px-2 py-0.5 ${
                       topicMode === "preset"
-                        ? "bg-foreground text-background font-medium"
+                        ? "bg-action text-action-foreground font-medium"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -245,7 +245,7 @@ export function TeacherGdDialog({
                     onClick={() => setTopicMode("custom")}
                     className={`rounded px-2 py-0.5 ${
                       topicMode === "custom"
-                        ? "bg-foreground text-background font-medium"
+                        ? "bg-action text-action-foreground font-medium"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >

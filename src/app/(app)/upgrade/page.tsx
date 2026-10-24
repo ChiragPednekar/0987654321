@@ -61,7 +61,7 @@ export default async function UpgradePage() {
       </header>
 
       {access?.pro && !access.subscription ? (
-        <p className="mt-10 max-w-xl border-l-2 border-foreground/40 pl-4 text-sm text-muted-foreground">
+        <p className="mt-10 max-w-xl rounded-xl bg-card px-4 py-3 shadow-xs dark:shadow-none text-sm text-muted-foreground">
           Your account already has Pro through your college or the CaseCode team — there is no plan to buy. You can
           still top up below if you run low.
         </p>
@@ -73,7 +73,7 @@ export default async function UpgradePage() {
 
       <div className="mt-16 grid gap-x-14 gap-y-12 lg:grid-cols-2">
         <section id="topups">
-          <div className="border-b border-foreground pb-2">
+          <div className="border-b border-border pb-2">
             <h2 className="font-editorial text-[1.6rem] font-normal leading-tight">Top-up packs</h2>
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
@@ -88,7 +88,7 @@ export default async function UpgradePage() {
         {quota && (access?.canSolve || access?.pro) ? <QuotaCard quota={quota} title="Where you stand" /> : null}
       </div>
 
-      <section className="mt-16 border-t-2 border-foreground pt-5">
+      <section className="mt-16 border-t border-border pt-5">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
           Pay as you go · no plan needed
         </p>

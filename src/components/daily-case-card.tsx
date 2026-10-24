@@ -42,7 +42,7 @@ export function DailyCaseCard({
   // An editorial band rather than a card: the case title in the serif,
   // the facts in small mono, and one ink action.
   return (
-    <section className="border-y border-foreground py-7">
+    <section className="border-y border-border py-7">
       <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
         <div className="min-w-0 flex-1">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">

@@ -645,7 +645,7 @@ export default async function CaseDetailPage({
                         <CardHeader className="flex-row items-center justify-between">
                           <div className="flex items-center gap-2.5">
                             <Avatar className="size-7">
-                              <AvatarFallback className="text-[10px]">
+                              <AvatarFallback className="text-[11px]">
                                 {initials(author?.full_name)}
                               </AvatarFallback>
                             </Avatar>

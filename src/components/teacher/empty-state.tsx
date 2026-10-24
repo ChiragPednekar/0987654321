@@ -22,7 +22,7 @@ export function EmptyState({
   action?: { href: string; label: string };
 }) {
   return (
-    <div className="max-w-lg border-t-2 border-foreground pt-5 pb-10">
+    <div className="max-w-lg border-t border-border pt-5 pb-10">
       <h2 className="text-xl font-semibold">{title}</h2>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
       {action ? (

@@ -226,7 +226,7 @@ export default async function PublicProfilePage({
                       <div className="min-w-0">
                         <p className="text-sm font-medium">
                           {badge.name}
-                          <Badge variant="secondary" className="ml-2 text-[10px]">
+                          <Badge variant="secondary" className="ml-2 text-[11px]">
                             {badge.tier}
                           </Badge>
                         </p>

@@ -234,7 +234,7 @@ export default async function SettingsPage() {
               )}
               {access?.subscription ? (
                 canRenew(access.subscription) && !access.queued ? (
-                  <div className="space-y-2 border-l-2 border-foreground/40 pl-4">
+                  <div className="space-y-2 rounded-xl bg-card px-4 py-3 shadow-xs dark:shadow-none">
                     <p className="text-xs text-muted-foreground">Your plan is nearly up — the next period starts the day this one ends.</p>
                     <Button variant="ink" size="sm" asChild>
                       <Link href="/upgrade">Renew</Link>
@@ -251,7 +251,7 @@ export default async function SettingsPage() {
                   Pro comes with your account through your college or the CaseCode team — nothing to pay.
                 </p>
               ) : (
-                <div className="space-y-3 border-l-2 border-foreground/40 pl-4">
+                <div className="space-y-3 rounded-xl bg-card px-4 py-3 shadow-xs dark:shadow-none">
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     {access?.canSolve
                       ? "You can practise through your college. Pro adds the AI interviewer and a larger allowance."

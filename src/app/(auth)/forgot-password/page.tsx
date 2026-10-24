@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
           If that address has an account, we&apos;ve sent a reset link. It expires
           in one hour.
         </p>
-        <Button variant="outline" className="h-11 w-full rounded-none border-foreground/30 bg-transparent" asChild>
+        <Button variant="outline" className="h-11 w-full" asChild>
           <Link href="/login">Back to log in</Link>
         </Button>
       </div>
@@ -72,7 +72,7 @@ export default function ForgotPasswordPage() {
       </form>
 
       <p className="text-sm text-muted-foreground">
-        <Link href="/login" className="text-foreground underline underline-offset-4">
+        <Link href="/login" className="font-medium text-brand hover:underline">
           Back to log in
         </Link>
       </p>

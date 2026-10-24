@@ -83,7 +83,7 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
           {((answers ?? []) as CertAnswerRow[]).map((a, i) => {
             const fb = (a.feedback ?? {}) as { verdict?: string; strengths?: string[]; improvements?: string[] };
             return (
-              <section key={a.case_id} className="border-t-2 border-foreground pt-4">
+              <section key={a.case_id} className="border-t border-border pt-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-3">
                   <h2 className="font-editorial text-2xl font-normal">
                     Case {i + 1}: {titleOf.get(a.case_id)}

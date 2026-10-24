@@ -50,7 +50,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
         {paid ? <>Payment <em className="italic">received</em>.</> : "Payment pending."}
       </h1>
 
-      <dl className="mt-8 divide-y divide-border border-y-2 border-foreground text-sm">
+      <dl className="mt-8 divide-y divide-border border-y border-border text-sm">
         <div className="flex justify-between gap-4 py-3">
           <dt className="text-muted-foreground">Item</dt>
           <dd className="text-right">{purchase.description}</dd>

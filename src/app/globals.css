@@ -4,217 +4,229 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------- tokens ---
-   PAPER, INK AND THE EXAMINER'S PEN (2026-10).
+   APPLE'S SYSTEM, CASECODE'S PEN (2026-10-24).
 
-   CaseCode is where an answer gets marked, so the palette is the desk it is
-   marked on: a cool, faintly green sheet of paper, blue-black ink for
-   everything the student reads and presses, and one vermilion pen (--mark)
-   that is used ONLY where marking happens — a circled score, a tick, a note
-   in the margin. Nothing else is vermilion, so the eye learns that colour
-   means "the examiner said this".
+   The interface follows Apple's Human Interface Guidelines: the grouped
+   system background with white inset cards on it, SF Pro set in Apple's text
+   styles, one tint (system blue) for everything you can press or have
+   selected, and Liquid Glass only on the layer that floats above the content
+   — the top bar, the sidebar and menus. Content never sits on glass.
 
-   The dark theme is the same desk at night: ink-slate rather than neutral
-   charcoal, the ink lightened to read on it, the pen kept.
+   One thing is CaseCode's own: the examiner's vermilion pen (--mark), used
+   ONLY where marking happens — a circled score, a tick, a note in the margin.
+   Apple keeps brand colour for primary actions and status; marking is the
+   status this product exists to give, so that is where the brand lives.
 
-   What follows is the earlier note on the status hues, which still holds.
+   Values are Apple's system colours where those pass WCAG at body size, and
+   Apple's increased-contrast variants where the default does not (system
+   blue, green, orange and red are all below 4.5:1 as text on white). Every
+   text colour below is at least 4.5:1 on both the page and a card:
 
-   A working tool that is allowed to have a palette.
+     light                         page #F2F2F7   card #FFFFFF
+       --foreground  #1D1D1F         15.1          16.8
+       --muted-fg    #636366          5.6           6.2
+       --subtle-fg   #6E6E73          4.5           5.1
+       --brand       #0066CC          5.0           5.6
+       white on --action #0071E3     4.7
+     dark                          page #000000   card #1C1C1E   popover #2C2C2E
+       --foreground  #F5F5F7         19.3          15.6          12.8
+       --muted-fg    #98989D          7.3           5.9           4.9
+       --brand       #2997FF          7.0           5.6           4.6
 
-   The previous pass pulled every stray hue onto one desaturated scale, which
-   fixed the template look and overshot: with a single petrol accent and
-   near-zero chroma everywhere else, the interface had no way to say "this is
-   good", "this needs attention" and "this is just information" except with
-   words. This restores a real palette without restoring the noise.
+   SIX HUES, EACH WITH A JOB, FOUR ROLES EACH (--x, --x-foreground,
+   --x-surface, --x-border). Surfaces and borders are mixed from the hue and
+   the card, so they stay in step with it in both appearances.
 
-   SIX HUES, EACH WITH A JOB. Nothing is coloured for decoration:
+     brand      system blue    primary actions, links, focus, selection
+     info       cyan           informational, neutral status
+     success    green          passed, solved, correct, positive deltas
+     highlight  yellow         small emphasis
+     warning    orange         attention, flagged, approaching a limit
+     danger     red            errors, destructive actions, suspensions
 
-     brand      petrol blue  primary actions, links, focus, selected state
-     info       teal         informational, secondary accents, neutral status
-     success    green        passed, solved, correct, positive deltas
-     highlight  yellow       small emphasis, notices worth noticing
-     warning    amber        attention, flagged, approaching a limit
-     danger     red          errors, destructive actions, suspensions
-
-   FOUR ROLES PER HUE, so a component never hand-mixes a tint again:
-
-     --x            the solid colour. Readable as text on --background.
-     --x-foreground text placed ON the solid colour.
-     --x-surface    a very low-chroma wash for backgrounds.
-     --x-border     between the two, for hairlines around a surface.
-
-   Neutrals still dominate and still carry the page: warm paper and graphite,
-   now with a little more separation between page, sunken section, card and
-   popover so hierarchy comes from surface as well as from type.
-
-   Radius scale unchanged: 4px inside controls, 6px buttons and inputs, 8px
-   cards. Nothing is a pill unless it is a status dot or an avatar.
+   Radius follows Apple's concentric shapes: 6px inside controls, 10px fields
+   and menus' rows, 12px cards, 16–20px sheets. Buttons are capsules.
    -------------------------------------------------------------------------- */
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 
-  /* ---- neutral surfaces, page -> elevated: sheet paper ---- */
-  --background: oklch(0.958 0.007 125);
-  --surface-sunken: oklch(0.932 0.009 125);
-  --card: oklch(0.987 0.004 120);
-  --card-foreground: oklch(0.215 0.01 155);
-  --popover: oklch(0.994 0.002 120);
-  --popover-foreground: oklch(0.215 0.01 155);
+  /* Font stacks as real custom properties, so plain CSS below can use them.
+     SF Pro / New York / SF Mono / SF Rounded on Apple devices; Inter and
+     Source Serif (loaded by layout.tsx on <html>) everywhere else. */
+  --font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    var(--font-inter), "Helvetica Neue", system-ui, sans-serif;
+  --font-serif-doc: "New York", ui-serif, var(--font-source-serif), Georgia, serif;
+  --font-code: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --font-round: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont,
+    var(--font-inter), system-ui, sans-serif;
 
-  /* ---- neutral text, strongest -> quietest: green-black ink ---- */
-  --foreground: oklch(0.215 0.01 155);
-  --muted-foreground: oklch(0.48 0.013 150);
-  --subtle-foreground: oklch(0.59 0.012 145);
+  /* ---- grouped backgrounds, page -> elevated ---- */
+  --background: #f2f2f7;
+  --surface-sunken: #e9e9ee;
+  --card: #ffffff;
+  --card-foreground: #1d1d1f;
+  --popover: #ffffff;
+  --popover-foreground: #1d1d1f;
 
-  /* ---- neutral fills and lines ---- */
-  --secondary: oklch(0.925 0.009 125);
-  --secondary-foreground: oklch(0.25 0.01 155);
-  --muted: oklch(0.937 0.008 125);
-  --accent: oklch(0.912 0.011 125);
-  --accent-foreground: oklch(0.215 0.01 155);
-  --border: oklch(0.86 0.013 125);
-  --border-subtle: oklch(0.905 0.01 125);
-  --input: oklch(0.82 0.015 125);
+  /* ---- labels, primary -> tertiary ---- */
+  --foreground: #1d1d1f;
+  --muted-foreground: #636366;
+  --subtle-foreground: #6e6e73;
 
-  /* ---- brand: blue-black ink ---- */
-  --brand: oklch(0.385 0.115 266);
-  --brand-foreground: oklch(0.985 0.004 266);
-  --brand-surface: oklch(0.938 0.022 266);
-  --brand-border: oklch(0.83 0.055 266);
-  --brand-hover: oklch(0.32 0.105 266);
+  /* ---- fills and separators ---- */
+  --secondary: #e9e9ee;
+  --secondary-foreground: #1d1d1f;
+  --muted: #efeff4;
+  --accent: #e5e5ea;
+  --accent-foreground: #1d1d1f;
+  --border: #d8d8dc;
+  --border-subtle: #e5e5ea;
+  --input: #d1d1d6;
+
+  /* ---- brand: system blue (accessible) ---- */
+  --brand: #0066cc;
+  --brand-foreground: #ffffff;
+  --brand-hover: #0058b0;
 
   /* ---- mark: the examiner's vermilion pen. Marking only. ---- */
-  --mark: oklch(0.6 0.19 36);
-  --mark-surface: oklch(0.95 0.03 40);
+  --mark: #c4400c;
 
-  /* ---- info: teal ---- */
-  --info: oklch(0.5 0.085 197);
-  --info-foreground: oklch(0.99 0.004 85);
-  --info-surface: oklch(0.965 0.024 197);
-  --info-border: oklch(0.883 0.045 197);
+  --info: #00668f;
+  --info-foreground: #ffffff;
+  --success: #1d7a36;
+  --success-foreground: #ffffff;
+  --highlight: #806200;
+  --highlight-foreground: #ffffff;
+  --warning: #a84b00;
+  --warning-foreground: #ffffff;
+  --danger: #d70015;
+  --danger-foreground: #ffffff;
 
-  /* ---- success: green ---- */
-  --success: oklch(0.505 0.105 152);
-  --success-foreground: oklch(0.99 0.004 85);
-  --success-surface: oklch(0.963 0.03 152);
-  --success-border: oklch(0.873 0.055 152);
+  /* Filled actions: Apple's button blue, slightly brighter than link blue. */
+  --action: #0071e3;
+  --action-foreground: #ffffff;
+  --action-hover: #0077ed;
 
-  /* ---- highlight: yellow. Dark text on the fill; yellow cannot carry white. ---- */
-  --highlight: oklch(0.6 0.115 95);
-  --highlight-foreground: oklch(0.2 0.025 95);
-  --highlight-surface: oklch(0.968 0.035 95);
-  --highlight-border: oklch(0.878 0.07 95);
+  --chart-1: #0071e3;
+  --chart-2: #28a745;
+  --chart-3: #ff9500;
+  --chart-4: #32ade6;
+  --chart-5: #ff3b30;
 
-  /* ---- warning: amber ---- */
-  --warning: oklch(0.555 0.115 62);
-  --warning-foreground: oklch(0.99 0.004 85);
-  --warning-surface: oklch(0.963 0.033 62);
-  --warning-border: oklch(0.876 0.06 62);
+  /* Liquid Glass approximation for the functional layer. */
+  --glass: rgb(250 250 252 / 0.72);
+  --glass-border: rgb(0 0 0 / 0.08);
 
-  /* ---- danger: red ---- */
-  --danger: oklch(0.525 0.165 27);
-  --danger-foreground: oklch(0.99 0.004 85);
-  --danger-surface: oklch(0.962 0.033 27);
-  --danger-border: oklch(0.876 0.06 27);
-
-  /* ---- aliases kept so every existing className keeps working ---- */
-  --primary: var(--brand);
-  --primary-foreground: var(--brand-foreground);
-  --destructive: var(--danger);
-  --destructive-foreground: var(--danger-foreground);
-  --ring: var(--brand);
-
-  /* Filled actions. In light mode this is simply the brand. */
-  --action: var(--brand);
-  --action-foreground: var(--brand-foreground);
-  --action-hover: var(--brand-hover);
-
-  /* Five genuinely distinct hues, so a five-series chart is readable without
-     a legend lookup on every mark. The old scale had two greys in it. */
-  --chart-1: oklch(0.45 0.12 266);
-  --chart-2: oklch(0.56 0.105 152);
-  --chart-3: oklch(0.66 0.12 65);
-  --chart-4: oklch(0.6 0.085 197);
-  --chart-5: oklch(0.56 0.155 27);
-
-  --shadow-color: oklch(0.22 0.015 155 / 0.08);
+  --shadow-color: rgb(0 0 0 / 0.06);
 }
 
 .dark {
-  --background: oklch(0.168 0.009 165);
-  --surface-sunken: oklch(0.145 0.008 165);
-  --card: oklch(0.198 0.01 165);
-  --card-foreground: oklch(0.93 0.008 125);
-  --popover: oklch(0.222 0.011 165);
-  --popover-foreground: oklch(0.93 0.008 125);
+  --background: #000000;
+  --surface-sunken: #0c0c0d;
+  --card: #1c1c1e;
+  --card-foreground: #f5f5f7;
+  --popover: #2c2c2e;
+  --popover-foreground: #f5f5f7;
 
-  --foreground: oklch(0.93 0.008 125);
-  --muted-foreground: oklch(0.72 0.012 135);
-  --subtle-foreground: oklch(0.615 0.012 140);
+  --foreground: #f5f5f7;
+  --muted-foreground: #98989d;
+  --subtle-foreground: #8e8e93;
 
-  --secondary: oklch(0.245 0.01 165);
-  --secondary-foreground: oklch(0.93 0.008 125);
-  --muted: oklch(0.235 0.01 165);
-  --accent: oklch(0.262 0.011 165);
-  --accent-foreground: oklch(0.93 0.008 125);
-  --border: oklch(0.295 0.012 165);
-  --border-subtle: oklch(0.25 0.01 165);
-  --input: oklch(0.345 0.013 165);
+  --secondary: #2c2c2e;
+  --secondary-foreground: #f5f5f7;
+  --muted: #242426;
+  --accent: #3a3a3c;
+  --accent-foreground: #f5f5f7;
+  --border: #38383a;
+  --border-subtle: #2c2c2e;
+  --input: #48484a;
 
-  --brand: oklch(0.79 0.08 266);
-  --brand-foreground: oklch(0.18 0.03 266);
-  --brand-surface: oklch(0.265 0.04 266);
-  --brand-border: oklch(0.38 0.065 266);
-  --brand-hover: oklch(0.7 0.095 266);
+  --brand: #2997ff;
+  --brand-foreground: #ffffff;
+  --brand-hover: #4aa8ff;
 
-  --mark: oklch(0.72 0.16 38);
-  --mark-surface: oklch(0.26 0.05 38);
+  --mark: #ff7a45;
 
-  --info: oklch(0.76 0.08 197);
-  --info-foreground: oklch(0.16 0.02 200);
-  --info-surface: oklch(0.26 0.035 197);
-  --info-border: oklch(0.35 0.05 197);
+  /* Bright fills in the dark take dark text: white on them is under 4.5:1. */
+  --info: #64d2ff;
+  --info-foreground: #1d1d1f;
+  --success: #30d158;
+  --success-foreground: #1d1d1f;
+  --highlight: #ffd60a;
+  --highlight-foreground: #1d1d1f;
+  --warning: #ffb340;
+  --warning-foreground: #1d1d1f;
+  --danger: #ff6961;
+  --danger-foreground: #1d1d1f;
 
-  --success: oklch(0.76 0.11 152);
-  --success-foreground: oklch(0.16 0.02 155);
-  --success-surface: oklch(0.255 0.04 152);
-  --success-border: oklch(0.35 0.055 152);
+  --action: #0071e3;
+  --action-foreground: #ffffff;
+  --action-hover: #0a84ff;
 
-  --highlight: oklch(0.83 0.12 95);
-  --highlight-foreground: oklch(0.19 0.03 95);
-  --highlight-surface: oklch(0.27 0.045 95);
-  --highlight-border: oklch(0.37 0.06 95);
+  --chart-1: #0a84ff;
+  --chart-2: #30d158;
+  --chart-3: #ff9f0a;
+  --chart-4: #64d2ff;
+  --chart-5: #ff453a;
 
-  --warning: oklch(0.8 0.115 65);
-  --warning-foreground: oklch(0.17 0.025 65);
-  --warning-surface: oklch(0.265 0.045 65);
-  --warning-border: oklch(0.36 0.06 65);
+  --glass: rgb(30 30 32 / 0.7);
+  --glass-border: rgb(255 255 255 / 0.1);
 
-  --danger: oklch(0.705 0.145 27);
-  --danger-foreground: oklch(0.17 0.02 27);
-  --danger-surface: oklch(0.27 0.05 27);
-  --danger-border: oklch(0.37 0.07 27);
+  --shadow-color: rgb(0 0 0 / 0.5);
+}
 
+/* Derived roles: a wash and a hairline for each hue, mixed against the card. */
+:root,
+.dark {
+  --brand-surface: color-mix(in srgb, var(--brand) 10%, var(--card));
+  --brand-border: color-mix(in srgb, var(--brand) 32%, var(--card));
+  --mark-surface: color-mix(in srgb, var(--mark) 10%, var(--card));
+  --info-surface: color-mix(in srgb, var(--info) 10%, var(--card));
+  --info-border: color-mix(in srgb, var(--info) 30%, var(--card));
+  --success-surface: color-mix(in srgb, var(--success) 10%, var(--card));
+  --success-border: color-mix(in srgb, var(--success) 30%, var(--card));
+  --highlight-surface: color-mix(in srgb, var(--highlight) 12%, var(--card));
+  --highlight-border: color-mix(in srgb, var(--highlight) 32%, var(--card));
+  --warning-surface: color-mix(in srgb, var(--warning) 10%, var(--card));
+  --warning-border: color-mix(in srgb, var(--warning) 30%, var(--card));
+  --danger-surface: color-mix(in srgb, var(--danger) 10%, var(--card));
+  --danger-border: color-mix(in srgb, var(--danger) 30%, var(--card));
+
+  /* Aliases kept so every existing className keeps working. */
   --primary: var(--brand);
   --primary-foreground: var(--brand-foreground);
   --destructive: var(--danger);
   --destructive-foreground: var(--danger-foreground);
   --ring: var(--brand);
+}
 
-  /* On charcoal the brand has to be light to read as text, which makes a
-     button filled with it look pastel. Filled actions keep a deeper petrol
-     with light text on it. */
-  --action: oklch(0.47 0.12 266);
-  --action-foreground: oklch(0.985 0.004 266);
-  --action-hover: oklch(0.53 0.125 266);
+/* Increase Contrast: stronger separators and secondary labels. */
+@media (prefers-contrast: more) {
+  :root {
+    --muted-foreground: #48484a;
+    --subtle-foreground: #545458;
+    --border: #aeaeb2;
+    --input: #8e8e93;
+    --glass: #fafafc;
+  }
+  .dark {
+    --muted-foreground: #c7c7cc;
+    --subtle-foreground: #aeaeb2;
+    --border: #636366;
+    --input: #8e8e93;
+    --glass: #1e1e20;
+  }
+}
 
-  --chart-1: oklch(0.79 0.08 266);
-  --chart-2: oklch(0.76 0.105 152);
-  --chart-3: oklch(0.81 0.11 68);
-  --chart-4: oklch(0.76 0.075 197);
-  --chart-5: oklch(0.72 0.13 27);
-
-  --shadow-color: oklch(0 0 0 / 0.35);
+/* Reduce Transparency: the glass becomes opaque. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass: #fafafc;
+  }
+  .dark {
+    --glass: #1e1e20;
+  }
 }
 
 @theme inline {
@@ -241,6 +253,8 @@
   --color-action: var(--action);
   --color-action-foreground: var(--action-foreground);
   --color-action-hover: var(--action-hover);
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
 
   /* The six hues, each with its four roles. */
   --color-brand: var(--brand);
@@ -278,58 +292,50 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
-  /* 4 / 6 / 8 / 10. `rounded-xl` and above collapse onto the card radius so a
-     stray utility cannot reintroduce the soft, pillowy look. */
-  --radius-sm: calc(var(--radius) - 4px);
+  /* 6 / 10 / 12 / 16 / 20 / 24 — concentric with the 12px card. */
+  --radius-sm: calc(var(--radius) - 6px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 2px);
-  --radius-2xl: calc(var(--radius) + 2px);
-  --radius-3xl: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
 
-  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
-  --font-display: var(--font-schibsted), var(--font-plex-sans), ui-sans-serif, sans-serif;
-  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
-  --font-editorial: var(--font-plex-serif), var(--font-source-serif), ui-serif, Georgia, serif;
+  --font-sans: var(--font-text);
+  --font-mono: var(--font-code);
+  --font-display: var(--font-text);
+  --font-serif: var(--font-serif-doc);
+  --font-editorial: var(--font-text);
+  --font-rounded: var(--font-round);
 
-  /* NB: `@theme inline` does not declare these as CSS variables — they exist
-     only inside the font-* utilities. Plain CSS below must use the next/font
-     variables themselves (--font-plex-sans, --font-schibsted, --font-plex-serif,
-     --font-source-serif, --font-plex-mono), which layout.tsx sets on <body>. */
-
-  /* Plex is drawn with open spacing; the template habit of pulling every
-     heading tight makes it look cramped. Tighten only slightly. */
-  --tracking-tight: -0.011em;
-  --tracking-tighter: -0.02em;
+  /* SF tracks tighter as it gets larger. */
+  --tracking-tight: -0.015em;
+  --tracking-tighter: -0.025em;
   --tracking-wide: 0.01em;
-  --tracking-wider: 0.02em;
+  --tracking-wider: 0.03em;
 
-  /* Neutral, low elevation. Nothing glows, nothing is tinted. */
-  --shadow-xs: 0 1px 0 0 var(--shadow-color);
-  --shadow-sm: 0 1px 2px 0 var(--shadow-color);
-  --shadow-md: 0 2px 6px -1px var(--shadow-color), 0 1px 2px 0 var(--shadow-color);
-  --shadow-lg: 0 8px 20px -6px var(--shadow-color), 0 2px 4px 0 var(--shadow-color);
-  --shadow-xl: 0 12px 28px -8px var(--shadow-color), 0 2px 6px 0 var(--shadow-color);
-  --shadow-2xl: 0 16px 36px -10px var(--shadow-color), 0 2px 6px 0 var(--shadow-color);
+  /* Soft, neutral elevation for things that float: menus, sheets, popovers. */
+  --shadow-xs: 0 1px 1px 0 var(--shadow-color);
+  --shadow-sm: 0 1px 3px 0 var(--shadow-color), 0 1px 2px -1px var(--shadow-color);
+  --shadow-md: 0 4px 12px -2px var(--shadow-color), 0 2px 4px -2px var(--shadow-color);
+  --shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 0.16), 0 2px 6px 0 var(--shadow-color);
+  --shadow-xl: 0 20px 48px -12px rgb(0 0 0 / 0.22), 0 4px 10px 0 var(--shadow-color);
+  --shadow-2xl: 0 28px 64px -16px rgb(0 0 0 / 0.28), 0 4px 12px 0 var(--shadow-color);
 
-  /* Raw Tailwind hues that crept into components, mapped onto the semantic
-     scale above so they inherit the system instead of fighting it. Only the
-     three that are actually used are kept; orange, sky and violet had no
-     call sites left. */
-  --color-emerald-300: oklch(0.82 0.09 152);
-  --color-emerald-400: oklch(0.76 0.11 152);
-  --color-emerald-500: oklch(0.63 0.105 152);
-  --color-emerald-600: oklch(0.505 0.105 152);
-  --color-emerald-700: oklch(0.44 0.095 152);
-  --color-amber-300: oklch(0.86 0.095 80);
-  --color-amber-400: oklch(0.8 0.115 65);
-  --color-amber-500: oklch(0.68 0.12 64);
-  --color-amber-600: oklch(0.555 0.115 62);
-  --color-amber-700: oklch(0.48 0.105 62);
-  --color-rose-400: oklch(0.705 0.145 27);
-  --color-rose-500: oklch(0.6 0.155 27);
-  --color-rose-600: oklch(0.525 0.165 27);
+  /* Raw Tailwind hues that crept into components, mapped onto the system
+     hues above so they inherit it instead of fighting it. */
+  --color-emerald-300: #7ee2a0;
+  --color-emerald-400: #30d158;
+  --color-emerald-500: #28a745;
+  --color-emerald-600: #1d7a36;
+  --color-emerald-700: #17652c;
+  --color-amber-300: #ffd27a;
+  --color-amber-400: #ffb340;
+  --color-amber-500: #ff9500;
+  --color-amber-600: #a84b00;
+  --color-amber-700: #8a3e00;
+  --color-rose-400: #ff6961;
+  --color-rose-500: #ff3b30;
+  --color-rose-600: #d70015;
 }
 
 @layer base {
@@ -337,16 +343,26 @@
     border-color: var(--border);
   }
 
+  /* 17px is Apple's body size. Setting it on the root scales every rem — the
+     web's nearest thing to Dynamic Type, and it still follows the browser's
+     own text-size setting because it is a percentage. */
+  html {
+    font-size: 106.25%;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-feature-settings: "kern", "liga";
-    line-height: 1.5;
+    font-family: var(--font-text);
+    font-feature-settings: "kern", "liga", "calt";
+    line-height: 1.47;
+    letter-spacing: -0.006em;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
 
-  /* Headings carry weight through size and contrast, not boldness. */
   h1,
   h2,
   h3,
@@ -354,23 +370,39 @@
     text-wrap: balance;
   }
 
-  /* Page and section titles in the display face. h3 and below stay in Plex:
-     they are labels inside a card, and a second typeface at that size is
-     noise rather than voice. */
+  /* Apple's title styles: bold, tracked in as they grow. */
   h1,
   h2 {
-    font-family: var(--font-schibsted), var(--font-plex-sans), ui-sans-serif, sans-serif;
-    letter-spacing: -0.018em;
+    font-family: var(--font-text);
+    letter-spacing: -0.022em;
   }
 
-  /* Focus ring: visible for keyboard users, quiet for mouse users. */
+  /* Focus ring: Apple's halo — visible for keyboard users, quiet for mouse. */
   :focus-visible {
-    outline: 2px solid var(--ring);
+    outline: 3px solid color-mix(in srgb, var(--ring) 55%, transparent);
     outline-offset: 2px;
   }
 
   ::selection {
-    background: color-mix(in oklch, var(--primary) 25%, transparent);
+    background: color-mix(in srgb, var(--brand) 22%, transparent);
+  }
+
+  a,
+  button,
+  [role="button"],
+  summary {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -384,22 +416,85 @@
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
+
+  /* The functional layer: Liquid Glass, approximated. Only for bars, the
+     sidebar, menus and sheets — never for content. */
+  .glass {
+    background-color: var(--glass);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    backdrop-filter: blur(24px) saturate(1.6);
+  }
+}
+
+/* ------------------------------------------------------- house style map ---
+   The pages were written for an editorial look: titles in a serif
+   (`font-editorial`), small capitals in mono for eyebrows and column heads,
+   and italic second lines. These rules translate them into Apple's idiom in
+   one place rather than at 150 call sites. Unlayered on purpose, so they win
+   over the utilities on the same element. */
+
+/* Large titles: SF Display, bold, tracked in. */
+.font-editorial {
+  font-family: var(--font-text);
+  font-weight: 700;
+  letter-spacing: -0.024em;
+}
+
+/* Page titles were sized for a Didone (2.2–3.8rem). In SF Bold that shouts;
+   Apple's Large Title is 34pt and section titles are Title 2 (22pt). The
+   front-page hero opts out with .hero-title. */
+h1.font-editorial:not(.hero-title) {
+  font-size: clamp(1.875rem, 1.5rem + 1.2vw, 2.25rem);
+  line-height: 1.12;
+}
+h2.font-editorial {
+  font-size: clamp(1.3rem, 1.15rem + 0.5vw, 1.5rem);
+  line-height: 1.2;
+}
+h3.font-editorial {
+  font-size: 1.1875rem;
+  line-height: 1.25;
+  font-weight: 600;
+}
+/* Rows that went italic on hover now take the tint, as list rows do. */
+.group:hover .group-hover\:italic {
+  font-style: normal;
+  color: var(--brand);
+}
+
+/* An italic second line in a headline becomes Apple's two-tone headline: the
+   same weight, upright, in the secondary label colour. */
+.font-editorial em,
+.font-editorial .italic,
+h1 em,
+h2 em {
+  font-style: normal;
+  color: var(--muted-foreground);
+}
+
+/* Mono small capitals become the grouped-list section header: SF, 12–13px,
+   medium, lightly tracked. Figures stay in mono (they have no `uppercase`). */
+.font-mono.uppercase {
+  font-family: var(--font-text);
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 /* Long-form case text and model answers. */
 .prose-case {
-  line-height: 1.7;
+  line-height: 1.6;
 }
 
-/* The case brief itself, set as a document (see the serif in layout.tsx).
-   Opt-in: chat, feedback and hints share .prose-case and stay sans. */
+/* The case brief itself, set as a document in New York (Source Serif off
+   Apple devices). Opt-in: chat, feedback and hints share .prose-case and stay
+   in SF. */
 .prose-document {
-  font-family: var(--font-source-serif), ui-serif, Georgia, serif;
+  font-family: var(--font-serif-doc);
   font-size: 1.0625rem;
-  line-height: 1.68;
+  line-height: 1.6;
 }
 .prose-document table {
-  font-family: var(--font-plex-sans), ui-sans-serif, sans-serif;
+  font-family: var(--font-text);
 }
 .prose-case > * + * {
   margin-top: 1rem;
@@ -407,14 +502,14 @@
 .prose-case h1,
 .prose-case h2,
 .prose-case h3 {
-  font-family: var(--font-schibsted), var(--font-plex-sans), ui-sans-serif, sans-serif;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-family: var(--font-text);
+  font-weight: 700;
+  letter-spacing: -0.015em;
   margin-top: 1.75rem;
 }
 .prose-case h1 { font-size: 1.5rem; }
 .prose-case h2 { font-size: 1.25rem; }
-.prose-case h3 { font-size: 1.05rem; }
+.prose-case h3 { font-size: 1.05rem; font-weight: 600; }
 .prose-case ul,
 .prose-case ol {
   padding-left: 1.5rem;
@@ -428,7 +523,7 @@
   padding: 0.1rem 0.35rem;
   border-radius: var(--radius-sm);
   font-size: 0.875em;
-  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-family: var(--font-code);
 }
 .prose-case pre {
   background: var(--muted);
@@ -443,16 +538,22 @@
 }
 .prose-case table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.875rem;
   display: block;
   overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 .prose-case th,
 .prose-case td {
-  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   padding: 0.5rem 0.75rem;
   text-align: left;
+}
+.prose-case tr:last-child td {
+  border-bottom: 0;
 }
 .prose-case th {
   background: var(--muted);
@@ -466,51 +567,16 @@
 
 /* ------------------------------------------------------------ auth forms ---
    Sign-in, sign-up and password pages, scoped by .auth-form in the auth
-   layout. Fields are a single underline rather than a box, labels are small
-   capitals, and titles are set in the editorial serif — the same quiet
-   register as the panel beside them. Unlayered on purpose, so it wins over
-   the utility classes the shared Input and Label carry. */
+   layout: a large title, then standard fields and buttons at Apple's
+   comfortable 44px height. */
 .auth-form h1 {
-  font-family: var(--font-plex-serif), ui-serif, Georgia, serif;
-  font-weight: 500;
-  font-size: 2.9rem;
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-.auth-form label {
-  font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
+  font-family: var(--font-text);
+  font-weight: 700;
+  font-size: 2.125rem;
+  line-height: 1.12;
+  letter-spacing: -0.024em;
 }
 .auth-form input:not([type="checkbox"]):not([type="radio"]) {
   height: 2.75rem;
-  border-width: 0 0 1px;
-  border-radius: 0;
-  background: transparent;
-  padding-left: 0;
-  padding-right: 0;
-  font-size: 0.95rem;
-  box-shadow: none;
-}
-/* Keyboard focus stays obvious: the underline thickens to ink. */
-.auth-form input:not([type="checkbox"]):not([type="radio"]):focus-visible {
-  outline: none;
-  border-bottom-color: var(--foreground);
-  box-shadow: 0 1px 0 var(--foreground);
-}
-.auth-form input:not([type="checkbox"]):not([type="radio"])[aria-invalid="true"] {
-  border-bottom-color: var(--danger);
-  box-shadow: 0 1px 0 var(--danger);
-}
-
-/* --------------------------------------------------------- editorial weight ---
-   Headings in the editorial face were written as `font-normal` for Bodoni,
-   whose display cut was heavy enough at 400. IBM Plex Serif reads best at
-   500 at headline size, so the weight is set once here. Unlayered on purpose:
-   it wins over the `font-normal` utility on the 50-odd headings that carry it. */
-.font-editorial {
-  font-weight: 500;
+  font-size: 1rem;
 }

@@ -74,7 +74,7 @@ export function QuoteCard() {
   // A pull quote, set like one: the words in the serif italic, the source in
   // small capitals. No card and no quotation-mark icon.
   return (
-    <figure className="border-t border-foreground pt-6">
+    <figure className="border-t border-border pt-6">
       <blockquote className="font-editorial text-[1.65rem] italic leading-snug tracking-[-0.005em]">
         &ldquo;{quote.text}&rdquo;
       </blockquote>

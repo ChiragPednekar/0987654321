@@ -56,7 +56,7 @@ export function CertCourseViewer({ course, examTitle, passedIds, checks, signedI
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-widest">
+              <Badge variant="outline" className="font-mono text-[11px] uppercase tracking-widest">
                 Official Prep Course
               </Badge>
               <span className="font-mono text-xs text-muted-foreground">
@@ -138,7 +138,7 @@ export function CertCourseViewer({ course, examTitle, passedIds, checks, signedI
                           {module.durationMinutes} min
                         </span>
                         {isCompleted && (
-                          <Badge variant="secondary" className="px-1.5 py-0 text-[10px] text-emerald-600 dark:text-emerald-400">
+                          <Badge variant="secondary" className="px-1.5 py-0 text-[11px] text-emerald-600 dark:text-emerald-400">
                             Passed
                           </Badge>
                         )}
@@ -237,10 +237,10 @@ export function CertCourseViewer({ course, examTitle, passedIds, checks, signedI
                           >
                             <div>
                               <div className="flex items-center justify-between gap-2">
-                                <span className="font-mono text-[10px] uppercase text-muted-foreground">
+                                <span className="font-mono text-[11px] uppercase text-muted-foreground">
                                   {rc.companyTrack}
                                 </span>
-                                <Badge variant="outline" className={cn("text-[10px] capitalize", DIFFICULTY_CLASS[rc.difficulty])}>
+                                <Badge variant="outline" className={cn("text-[11px] capitalize", DIFFICULTY_CLASS[rc.difficulty])}>
                                   {rc.difficulty}
                                 </Badge>
                               </div>
@@ -296,7 +296,7 @@ export function CertCourseViewer({ course, examTitle, passedIds, checks, signedI
       </div>
 
       {/* -------------------------------------- Final Exam Transition CTA --- */}
-      <div className="rounded-lg border-2 border-foreground bg-card p-6">
+      <div className="rounded-lg border-2 border-brand bg-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">

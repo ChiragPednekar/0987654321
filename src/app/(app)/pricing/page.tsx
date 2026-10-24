@@ -107,7 +107,7 @@ export default async function PricingPage() {
       </section>
 
       {/* ------------------------------------------ pay as you go package --- */}
-      <section className="mt-16 border-t-2 border-foreground pt-5">
+      <section className="mt-16 border-t border-border pt-5">
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
           Pay as you go · no plan needed
         </p>

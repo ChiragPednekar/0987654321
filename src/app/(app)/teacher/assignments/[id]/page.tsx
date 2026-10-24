@@ -189,7 +189,7 @@ export default async function AssignmentDetail({
       </div>
 
       {assignment.instructions ? (
-        <p className="mt-5 max-w-2xl whitespace-pre-line border-l-2 border-foreground/40 pl-4 text-sm leading-relaxed">
+        <p className="mt-5 max-w-2xl whitespace-pre-line rounded-xl bg-card px-4 py-3 shadow-xs dark:shadow-none text-sm leading-relaxed">
           {assignment.instructions}
         </p>
       ) : null}
@@ -313,7 +313,7 @@ async function AutoMarkedAssignment({
       </div>
 
       {instructions ? (
-        <p className="mt-5 max-w-2xl whitespace-pre-line border-l-2 border-foreground/40 pl-4 text-sm leading-relaxed">
+        <p className="mt-5 max-w-2xl whitespace-pre-line rounded-xl bg-card px-4 py-3 shadow-xs dark:shadow-none text-sm leading-relaxed">
           {instructions}
         </p>
       ) : null}

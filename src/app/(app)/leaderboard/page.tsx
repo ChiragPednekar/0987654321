@@ -188,7 +188,7 @@ export default async function LeaderboardPage({
           className={cn(
             "rounded-md border px-3 py-1 text-sm transition-colors",
             !isCohort
-              ? "border-foreground/40 bg-accent font-medium text-foreground"
+              ? "border-transparent bg-brand-surface font-semibold text-brand"
               : "border-border text-muted-foreground hover:text-foreground",
           )}
         >
@@ -201,7 +201,7 @@ export default async function LeaderboardPage({
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-sm transition-colors",
               isMyCohort
-                ? "border-foreground/40 bg-accent font-medium text-foreground"
+                ? "border-transparent bg-brand-surface font-semibold text-brand"
                 : "border-border text-muted-foreground hover:text-foreground",
             )}
           >
@@ -220,7 +220,7 @@ export default async function LeaderboardPage({
               className={cn(
                 "rounded-md border px-3 py-1 text-sm transition-colors",
                 university === name
-                  ? "border-foreground/40 bg-accent font-medium text-foreground"
+                  ? "border-transparent bg-brand-surface font-semibold text-brand"
                   : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
@@ -333,7 +333,7 @@ export default async function LeaderboardPage({
                       {user?.avatar_url && (
                         <AvatarImage src={user.avatar_url} alt="" />
                       )}
-                      <AvatarFallback className="text-[10px]">
+                      <AvatarFallback className="text-[11px]">
                         {initials(user?.full_name)}
                       </AvatarFallback>
                     </Avatar>

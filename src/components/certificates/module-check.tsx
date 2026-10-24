@@ -132,8 +132,8 @@ export function ModuleCheck({
                               ? "border-rose-500/60 bg-rose-500/5"
                               : "border-border opacity-70"
                           : chosen
-                            ? "border-foreground"
-                            : "border-border hover:border-foreground/50",
+                            ? "border-brand bg-brand-surface"
+                            : "border-border hover:border-brand-border",
                       )}
                     >
                       <input

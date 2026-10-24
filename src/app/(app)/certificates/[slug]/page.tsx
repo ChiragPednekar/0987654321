@@ -100,22 +100,22 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
         {/* 4-Step Pathway Progress Bar */}
         <div className="mt-8 grid gap-3 sm:grid-cols-4">
           <div className="rounded border border-border bg-card/60 p-3.5">
-            <span className="font-mono text-[10px] uppercase text-muted-foreground">Step 1</span>
+            <span className="font-mono text-[11px] uppercase text-muted-foreground">Step 1</span>
             <p className="mt-1 text-xs font-semibold text-foreground">Prep Course</p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">4 In-depth modules</p>
           </div>
           <div className="rounded border border-border bg-card/60 p-3.5">
-            <span className="font-mono text-[10px] uppercase text-muted-foreground">Step 2</span>
+            <span className="font-mono text-[11px] uppercase text-muted-foreground">Step 2</span>
             <p className="mt-1 text-xs font-semibold text-foreground">Practice Cases</p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">8 AI-graded scenarios</p>
           </div>
           <div className="rounded border border-border bg-card/60 p-3.5">
-            <span className="font-mono text-[10px] uppercase text-muted-foreground">Step 3</span>
+            <span className="font-mono text-[11px] uppercase text-muted-foreground">Step 3</span>
             <p className="mt-1 text-xs font-semibold text-foreground">Proctored Exam</p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">90 min · 2 cases · 60%</p>
           </div>
           <div className="rounded border border-border bg-card/60 p-3.5">
-            <span className="font-mono text-[10px] uppercase text-muted-foreground">Step 4</span>
+            <span className="font-mono text-[11px] uppercase text-muted-foreground">Step 4</span>
             <p className="mt-1 text-xs font-semibold text-foreground">Verified Certificate</p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">Public link &amp; LinkedIn</p>
           </div>
@@ -136,7 +136,7 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
       </section>
 
       {/* -------------------------------- Section 2: Proctored Exam --- */}
-      <section id="exam-sitting" className="mt-16 border-t-2 border-foreground pt-10 scroll-mt-10">
+      <section id="exam-sitting" className="mt-16 border-t border-border pt-10 scroll-mt-10">
         <div className="flex items-center gap-2">
           <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
             Capstone Assessment
@@ -186,7 +186,7 @@ export default async function ExamPage({ params }: { params: Promise<{ slug: str
           </div>
 
           {/* Pricing & Checkout Card */}
-          <aside className="h-fit rounded-lg border-2 border-foreground bg-card p-6 shadow-sm">
+          <aside className="h-fit rounded-lg border-2 border-brand bg-card p-6 shadow-sm">
             {open ? (
               <>
                 <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Your Exam Sitting</p>

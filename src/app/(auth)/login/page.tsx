@@ -30,7 +30,7 @@ export default async function LoginPage({
       </div>
 
       {profile && (
-        <div className="flex items-center justify-between gap-3 border-l-2 border-foreground/40 bg-card/60 px-4 py-3 text-sm">
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-muted px-4 py-3 text-sm">
           <div className="min-w-0">
             <p className="font-medium truncate">Already signed in</p>
             <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
@@ -44,7 +44,7 @@ export default async function LoginPage({
       {params.error && (
         <div
           role="alert"
-          className="border-l-2 border-danger bg-danger-surface/60 px-4 py-2.5 text-sm text-danger"
+          className="rounded-xl bg-danger-surface px-4 py-2.5 text-sm text-danger"
         >
           {params.error}
         </div>
@@ -56,7 +56,7 @@ export default async function LoginPage({
 
       <p className="text-sm text-muted-foreground">
         No account?{" "}
-        <Link href="/signup" className="text-foreground underline underline-offset-4">
+        <Link href="/signup" className="font-medium text-brand hover:underline">
           Sign up
         </Link>
       </p>

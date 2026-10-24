@@ -90,7 +90,7 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
             className="size-full -scale-x-100 object-cover"
           />
           {/* Subtle live recording badge */}
-          <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-medium text-white backdrop-blur-sm">
+          <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
             <span className="size-1.5 animate-pulse rounded-full bg-rose-500" />
             <span>REC</span>
           </div>
@@ -98,7 +98,7 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
           {/* Audio level indicator over video */}
           {camera.signals.micGranted && (
             <div
-              className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] text-white backdrop-blur-sm"
+              className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[11px] text-white backdrop-blur-sm"
               title={`Microphone active: ${audioLevel}%`}
             >
               <Mic className="size-2.5 text-white/80" />
@@ -148,7 +148,7 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
 
       {/* Gaze tracking strike meter (5 benefit-of-doubt chances) */}
       {hasGazeStrikes && (
-        <div className="flex items-center justify-between border-t border-border/40 bg-muted/30 px-2.5 py-1 text-[10px]">
+        <div className="flex items-center justify-between border-t border-border/40 bg-muted/30 px-2.5 py-1 text-[11px]">
           <span className="text-muted-foreground">Screen gaze</span>
           <div className="flex items-center gap-1">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -163,7 +163,7 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
                 }`}
               />
             ))}
-            <span className="ml-1 font-mono text-[9px] text-muted-foreground">
+            <span className="ml-1 font-mono text-[11px] text-muted-foreground">
               {camera.signals.lookingAwayEvents}/5
             </span>
           </div>
@@ -172,7 +172,7 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
 
       {/* Voice tracking strike meter (3 benefit-of-doubt chances) */}
       {hasVoiceStrikes && (
-        <div className="flex items-center justify-between border-t border-border/40 bg-muted/30 px-2.5 py-1 text-[10px]">
+        <div className="flex items-center justify-between border-t border-border/40 bg-muted/30 px-2.5 py-1 text-[11px]">
           <span className="text-muted-foreground">Voice / audio</span>
           <div className="flex items-center gap-1">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -187,7 +187,7 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
                 }`}
               />
             ))}
-            <span className="ml-1 font-mono text-[9px] text-muted-foreground">
+            <span className="ml-1 font-mono text-[11px] text-muted-foreground">
               {camera.signals.voiceEvents}/3
             </span>
           </div>
@@ -200,7 +200,7 @@ export function CameraPreview({ camera }: { camera: CameraApi }) {
         against the thresholds — not shown to students otherwise.
       */}
       {debug && (
-        <div className="border-t border-border/60 bg-muted/50 px-2 py-1.5 font-mono text-[9px] text-muted-foreground space-y-0.5">
+        <div className="border-t border-border/60 bg-muted/50 px-2 py-1.5 font-mono text-[11px] text-muted-foreground space-y-0.5">
           <p>
             <span className="font-semibold text-foreground">{camera.detector}</span> · faces {camera.live?.faces ?? "–"} · {camera.live?.gazeState ?? "NORMAL"}
           </p>

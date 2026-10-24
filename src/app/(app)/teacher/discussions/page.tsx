@@ -116,21 +116,21 @@ export default async function TeacherDiscussionsPage() {
       <div className="rounded-lg border border-border bg-card/60 p-5">
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded border border-border/80 bg-background p-3.5">
-            <span className="font-mono text-[10px] uppercase text-muted-foreground">1. Google Meet Experience</span>
+            <span className="font-mono text-[11px] uppercase text-muted-foreground">1. Google Meet Experience</span>
             <p className="mt-1 text-sm font-semibold">Live Video &amp; Reactions</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               Multi-peer audio and video, hand-raising, and floating emoji reactions.
             </p>
           </div>
           <div className="rounded border border-border/80 bg-background p-3.5">
-            <span className="font-mono text-[10px] uppercase text-muted-foreground">2. Frictionless Sharing</span>
+            <span className="font-mono text-[11px] uppercase text-muted-foreground">2. Frictionless Sharing</span>
             <p className="mt-1 text-sm font-semibold">1-Click Student Link</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               Direct entry for open links. Private rooms require teacher admission.
             </p>
           </div>
           <div className="rounded border border-border/80 bg-background p-3.5">
-            <span className="font-mono text-[10px] uppercase text-muted-foreground">3. Meeting Chat</span>
+            <span className="font-mono text-[11px] uppercase text-muted-foreground">3. Meeting Chat</span>
             <p className="mt-1 text-sm font-semibold">Media &amp; Note Sharing</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               Real-time in-call chat with image and video sharing up to 25 MB.
@@ -153,7 +153,7 @@ export default async function TeacherDiscussionsPage() {
               const currentCount = countBySession.get(session.id) ?? 0;
 
               return (
-                <Card key={session.id} className="border-foreground/30">
+                <Card key={session.id} className="ring-1 ring-brand-border">
                   <CardContent className="space-y-4 p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -163,9 +163,9 @@ export default async function TeacherDiscussionsPage() {
                             Live Now
                           </span>
                           {session.join_policy === "open" ? (
-                            <Badge variant="outline" className="font-mono text-[10px]">Open link</Badge>
+                            <Badge variant="outline" className="font-mono text-[11px]">Open link</Badge>
                           ) : (
-                            <Badge variant="outline" className="font-mono text-[10px]">Approval required</Badge>
+                            <Badge variant="outline" className="font-mono text-[11px]">Approval required</Badge>
                           )}
                         </div>
                         <h3 className="mt-2 font-editorial text-xl font-normal">

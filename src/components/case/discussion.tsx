@@ -117,7 +117,7 @@ export function Discussion({
             {comment.author?.avatar_url && (
               <AvatarImage src={comment.author.avatar_url} alt="" />
             )}
-            <AvatarFallback className="text-[10px]">
+            <AvatarFallback className="text-[11px]">
               {initials(comment.author?.full_name)}
             </AvatarFallback>
           </Avatar>

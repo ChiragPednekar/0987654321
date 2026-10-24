@@ -16,7 +16,7 @@ import { PLAN_ORDER, PLANS, rupees } from "@/lib/pricing";
  */
 export function LicenceGate({ signedIn = false }: { signedIn?: boolean; userEmail?: string; userName?: string | null }) {
   return (
-    <section className="border-t-2 border-foreground pt-6">
+    <section className="border-t border-border pt-6">
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         Reading is open · practising needs Pro
       </p>

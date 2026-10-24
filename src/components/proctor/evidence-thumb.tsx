@@ -24,7 +24,7 @@ export const EVIDENCE_LABEL: Record<string, string> = {
 export function EvidenceThumb({ photo }: { photo: { kind: string; takenAt: string; url: string } }) {
   const label = EVIDENCE_LABEL[photo.kind] ?? photo.kind;
   const caption = (
-    <span className="block px-1.5 py-1 text-[10px] text-muted-foreground group-hover:text-foreground">
+    <span className="block px-1.5 py-1 text-[11px] text-muted-foreground group-hover:text-foreground">
       {label} · {timeAgo(photo.takenAt)}
     </span>
   );

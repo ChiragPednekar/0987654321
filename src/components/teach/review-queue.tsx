@@ -112,7 +112,7 @@ export function ReviewQueue({
 
   if (rows.length === 0) {
     return (
-      <p className="border-t-2 border-foreground pt-4 text-sm text-muted-foreground">
+      <p className="border-t border-border pt-4 text-sm text-muted-foreground">
         Nobody has joined this batch yet. Share the join code with your
         students.
       </p>
@@ -159,7 +159,7 @@ export function ReviewQueue({
               className={cn(
                 "rounded-md border px-3 py-1 text-xs transition-colors",
                 filter === f.value
-                  ? "border-foreground/40 bg-accent font-medium text-foreground"
+                  ? "border-transparent bg-brand-surface font-semibold text-brand"
                   : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
@@ -182,7 +182,7 @@ export function ReviewQueue({
         <p className="py-4 text-sm text-muted-foreground">Nothing matches this filter.</p>
       ) : null}
 
-    <ul className="divide-y divide-border border-y border-foreground/80">
+    <ul className="divide-y divide-border border-y border-border">
       {visible.map((row) => {
         const open = openId === row.user_id;
         const notStarted = !row.submitted_at;

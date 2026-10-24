@@ -56,7 +56,7 @@ export function UserFilters() {
             className={cn(
               "rounded-md border px-3 py-1 text-xs capitalize transition-colors",
               role === r
-                ? "border-foreground/40 bg-accent font-medium text-foreground"
+                ? "border-transparent bg-brand-surface font-semibold text-brand"
                 : "border-border text-muted-foreground hover:text-foreground",
             )}
           >

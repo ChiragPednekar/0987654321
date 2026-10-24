@@ -17,7 +17,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationBell } from "@/components/notification-bell";
 import type { NotificationRow, UserRole, UserRow } from "@/lib/types/database";
 import { roleHome } from "@/lib/role-home";
@@ -109,7 +108,7 @@ export function SiteNav({
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background">
+    <header className="glass sticky top-0 z-40 border-b border-glass-border">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4 sm:px-6">
         <Link href={homeHref} className="flex items-center" aria-label="CaseCode home">
           <Logo />
@@ -132,10 +131,10 @@ export function SiteNav({
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-sm transition-colors",
+                  "rounded-full px-3 py-1.5 text-[13px] transition-colors",
                   active
-                    ? "bg-brand-surface font-medium text-brand"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "bg-accent font-medium text-foreground"
+                    : "text-foreground/75 hover:text-foreground",
                 )}
               >
                 {link.label}
@@ -147,10 +146,10 @@ export function SiteNav({
         <div className="ml-auto flex items-center gap-2">
           {profile && profile.current_streak > 0 && (
             <div
-              className="hidden items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground sm:flex"
+              className="hidden items-center gap-1.5 rounded-full bg-warning-surface px-2.5 py-1 text-xs font-semibold text-warning sm:flex"
               title={`${profile.current_streak} day streak`}
             >
-              <Flame className="size-3.5 text-[var(--warning)]" />
+              <Flame className="size-3.5" aria-hidden />
               <span className="tabular">{profile.current_streak}</span>
             </div>
           )}
@@ -161,8 +160,6 @@ export function SiteNav({
               unreadCount={unreadCount}
             />
           )}
-
-          <ThemeToggle />
 
           {profile ? (
             <DropdownMenu>
@@ -220,9 +217,7 @@ export function SiteNav({
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/login">Log in</Link>
               </Button>
-              {/* Ink, not brand blue: on the front pages the only colour is
-                  the type, and this matches the hero's primary action. */}
-              <Button size="sm" asChild className="rounded-none bg-foreground text-background shadow-none hover:bg-foreground/85 active:bg-foreground/75">
+              <Button size="sm" asChild>
                 <Link href="/signup">Sign up</Link>
               </Button>
             </div>
@@ -242,17 +237,17 @@ export function SiteNav({
       </div>
 
       {mobileOpen && (
-        <nav className="border-t border-border bg-background px-4 py-2 md:hidden">
+        <nav className="max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-glass-border px-3 py-2 md:hidden">
           {LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "block rounded-md px-3 py-2 text-sm",
+                "flex min-h-11 items-center rounded-[10px] px-3 text-[0.9375rem]",
                 pathname.startsWith(link.href)
-                  ? "bg-brand-surface font-medium text-brand"
-                  : "text-muted-foreground",
+                  ? "bg-accent font-medium text-foreground"
+                  : "text-foreground/80",
               )}
             >
               {link.label}

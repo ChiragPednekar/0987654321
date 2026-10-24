@@ -35,7 +35,7 @@ export function PlanTable({ buyer, loginNext = "/upgrade" }: { buyer: Buyer; log
 
   return (
     <div>
-      <div className="grid gap-x-10 gap-y-10 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         {PLAN_ORDER.map((code) => {
           const plan = PLANS[code];
           const featured = code === "season";
@@ -43,7 +43,7 @@ export function PlanTable({ buyer, loginNext = "/upgrade" }: { buyer: Buyer; log
             <section
               key={code}
               id={code}
-              className={cn("border-t-2 pt-5", featured ? "border-foreground" : "border-foreground/30")}
+              className={cn("flex flex-col rounded-2xl bg-card p-6 shadow-xs dark:shadow-none", featured && "ring-2 ring-action")}
             >
               <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                 {featured ? "Built for placement season" : code === "annual" ? "Year-round prep" : "Flexible"}
@@ -60,7 +60,7 @@ export function PlanTable({ buyer, loginNext = "/upgrade" }: { buyer: Buyer; log
               <p className="mt-1 font-mono text-xs text-muted-foreground">
                 {code === "monthly" ? "billed each month you choose to renew" : `works out to ${perMonth(plan)} a month`}
               </p>
-              <ul className="mt-5 divide-y divide-border border-y border-border text-sm">
+              <ul className="mt-5 divide-y divide-border-subtle border-y border-border-subtle text-sm">
                 <li className="py-2.5">
                   {USAGE_WINDOW.gradings} graded answers and {USAGE_WINDOW.interviews} AI mock interviews every{" "}
                   {USAGE_WINDOW.hours} hours
@@ -70,7 +70,7 @@ export function PlanTable({ buyer, loginNext = "/upgrade" }: { buyer: Buyer; log
                 </li>
                 <li className="py-2.5">SQL, Excel, aptitude, drills, CV and deck reviews</li>
               </ul>
-              <div className="mt-5">
+              <div className="mt-auto pt-5">
                 {buyer.blocked && buyer.signedIn ? null : (
                   <CheckoutButton
                     item={{ kind: "plan", code }}
@@ -107,7 +107,7 @@ function PlanStatus({ buyer }: { buyer: Buyer }) {
     ) : null;
   }
   return (
-    <p className="mt-6 border-l-2 border-foreground/40 pl-4 text-sm">
+    <p className="mt-6 rounded-xl bg-card px-4 py-3 shadow-xs dark:shadow-none text-sm">
       {sub ? (
         <>
           <span className="font-medium">

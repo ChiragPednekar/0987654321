@@ -176,7 +176,7 @@ export function ExamRoom({
 
   if (retryGrading) {
     return (
-      <div className="border-l-2 border-foreground/40 pl-4">
+      <div className="rounded-xl bg-card px-4 py-3 shadow-xs dark:shadow-none">
         <p className="text-sm">Your answers were submitted but have not been marked yet.</p>
         <Button variant="ink" className="mt-4" onClick={() => submit()} disabled={busy}>
           {busy ? <Loader2 className="animate-spin" /> : null}
@@ -214,7 +214,7 @@ export function ExamRoom({
         <ProctorOverlay count={proctor.signals.blurCount} onResume={proctor.acknowledge} />
       )}
 
-      <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b-2 border-foreground bg-background py-3">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background py-3">
         <p className="font-editorial text-xl">{title}</p>
         <p
           className={cn(
@@ -236,7 +236,7 @@ export function ExamRoom({
               onClick={() => setActive(i)}
               className={cn(
                 "border px-3 py-1.5 text-sm",
-                i === active ? "border-foreground bg-foreground text-background" : "border-border hover:border-foreground",
+                i === active ? "border-action bg-action text-action-foreground" : "border-border hover:border-brand-border",
               )}
             >
               Case {i + 1}
@@ -254,7 +254,7 @@ export function ExamRoom({
             <h2 className="font-editorial text-2xl font-normal">{current.title}</h2>
             <p className="whitespace-pre-line">{current.scenario}</p>
             {current.instructions && (
-              <div className="border-l-2 border-foreground/40 pl-4">
+              <div className="rounded-xl bg-card px-4 py-3 shadow-xs dark:shadow-none">
                 <p className="font-medium">Your task</p>
                 <p className="mt-1 whitespace-pre-line text-muted-foreground">{current.instructions}</p>
               </div>

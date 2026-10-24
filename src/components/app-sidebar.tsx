@@ -266,19 +266,19 @@ export function AppSidebar({
     <aside
       data-collapsed={collapsed}
       className={cn(
-        "sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 border-r border-border md:flex md:flex-col",
+        "glass sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 border-r border-glass-border md:flex md:flex-col",
         // Width is the only thing that animates; animating layout of the whole
         // page would make every route transition feel rubbery.
         ready && "transition-[width] duration-200",
         collapsed ? "w-[4.25rem]" : "w-56",
       )}
     >
-      <nav className="flex-1 overflow-y-auto px-2 py-4">
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-2.5 py-4">
         {groups.map((group) => (
           <div key={group.heading} className="mb-4">
             <p
               className={cn(
-                "px-3 pb-1.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-subtle-foreground",
+                "px-3 pb-1 text-[11px] font-semibold text-subtle-foreground",
                 collapsed && "sr-only",
               )}
             >
@@ -297,16 +297,16 @@ export function AppSidebar({
                       // title only has to stand in when it is hidden.
                       title={collapsed ? item.label : undefined}
                       className={cn(
-                        // Active is ink and a rule at the edge, like a tab in a
-                        // ring binder — not a tinted pill.
-                        "relative flex items-center gap-3 rounded-sm px-3 py-[7px] text-sm transition-colors",
+                        // Apple's sidebar: the selected row is a rounded
+                        // fill, its symbol in the accent colour (sidebars.md).
+                        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-[6px] text-[13px] transition-colors",
                         active
-                          ? "bg-card font-medium text-foreground shadow-[inset_2px_0_0_var(--brand)]"
-                          : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
+                          ? "bg-[color-mix(in_srgb,var(--foreground)_9%,transparent)] font-semibold text-foreground"
+                          : "text-foreground/85 hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)]",
                         collapsed && "justify-center px-0",
                       )}
                     >
-                      <Icon className="size-4 shrink-0" />
+                      <Icon className={cn("size-[17px] shrink-0", active ? "text-brand" : "text-brand/80")} />
                       <span className={cn(collapsed && "sr-only")}>{item.label}</span>
                     </Link>
                   </li>
@@ -322,7 +322,7 @@ export function AppSidebar({
         onClick={toggle}
         aria-expanded={!collapsed}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="flex items-center gap-3 border-t border-border px-4 py-3 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+        className="flex items-center gap-2.5 border-t border-glass-border px-4 py-3 text-[13px] text-muted-foreground hover:text-foreground"
       >
         <ChevronLeft
           className={cn(

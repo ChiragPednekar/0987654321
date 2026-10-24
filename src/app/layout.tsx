@@ -1,60 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Serif, Schibsted_Grotesk, Source_Serif_4 } from "next/font/google";
+import { Inter, Source_Serif_4 } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ProctorEndedHost } from "@/components/proctor/proctor-ended";
 import "./globals.css";
 
 /**
- * IBM Plex: a working typeface drawn for software and documentation, with the
- * slightly engineered character that suits scores, rubrics and spreadsheets.
+ * Type follows Apple's system: SF Pro for everything, New York for the case
+ * brief, SF Mono for code. Those ship with Apple devices and cannot be served
+ * to anyone else, so the stacks in globals.css name them first and fall back
+ * to the two faces loaded here — Inter (the closest open cut of SF's
+ * proportions) and Source Serif 4 — on Windows and Android.
  *
- * Only 400, 500 and 600 are loaded, on purpose. The type hierarchy is regular
- * for reading, medium for labels and controls, semibold for headings — and
- * with no 700 file present, a stray `font-bold` renders at 600 instead of
- * shouting.
+ * The variables are set on <html>, not <body>, so the stacks declared on
+ * :root in globals.css can resolve them.
  */
-const plexSans = IBM_Plex_Sans({
-  variable: "--font-plex-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
-  display: "swap",
-});
-
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  display: "swap",
-});
-
-/**
- * Headings. A newspaper grotesk with a little bite in the R, G and a — enough
- * character that a page title reads as a title, without competing with the
- * interface text set in Plex underneath it.
- */
-const display = Schibsted_Grotesk({
-  variable: "--font-schibsted",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  display: "swap",
-});
-
-/**
- * The editorial face: the landing hero, the sign-in panel, and page and
- * section titles on the dashboards. IBM Plex Serif — a sober, corporate serif
- * in the register of a consulting report, and the same family as the Plex
- * Sans the interface is set in, so headings and text belong together. It
- * replaced Bodoni Moda on 2026-10-21: the Didone read as a fashion magazine
- * rather than professional. Preloaded, because a dashboard title flashing
- * from the fallback serif on every visit would undo the point of it.
- */
-const editorial = IBM_Plex_Serif({
-  variable: "--font-plex-serif",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
   display: "swap",
 });
 
@@ -97,8 +60,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f1f3ee" },
-    { media: "(prefers-color-scheme: dark)", color: "#121714" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
 };
 
@@ -106,13 +69,17 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${inter.variable} ${documentSerif.variable}`}
+    >
       <body
-        className={`${plexSans.variable} ${plexMono.variable} ${display.variable} ${documentSerif.variable} ${editorial.variable} min-h-screen font-sans antialiased`}
+        className="min-h-screen font-sans antialiased"
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
@@ -123,7 +90,7 @@ export default function RootLayout({
             toastOptions={{
               classNames: {
                 toast:
-                  "!bg-popover !text-popover-foreground !border-border !rounded-md !shadow-md !font-sans",
+                  "!bg-popover !text-popover-foreground !border-border-subtle !rounded-xl !shadow-lg !font-sans",
               },
             }}
           />

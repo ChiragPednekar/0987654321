@@ -39,13 +39,13 @@ export default async function BatchesPage() {
       </div>
 
       {!batches || batches.length === 0 ? (
-        <p className="mt-8 border-t-2 border-foreground pt-4 text-sm text-muted-foreground">
+        <p className="mt-8 border-t border-border pt-4 text-sm text-muted-foreground">
           No batches yet. Create one and share its join code with your
           students.
         </p>
       ) : (
         <div className="mt-8">
-          <div className="hidden grid-cols-[1fr_7rem_8rem] gap-4 border-b border-foreground pb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground sm:grid">
+          <div className="hidden grid-cols-[1fr_7rem_8rem] gap-4 border-b border-border pb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground sm:grid">
             <span>Batch</span>
             <span className="text-right">Students</span>
             <span className="text-right">Join code</span>

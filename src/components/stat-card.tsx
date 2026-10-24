@@ -2,17 +2,14 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * One number, set like a column in a ledger.
+ * One number, as a tile in the style of Apple's Health and Fitness summaries:
+ * a white rounded tile, the label in the tone's colour at the top, the figure
+ * large in SF Rounded, and a footnote under it.
  *
- * No box and no icon: a rule across the top, a small label, and the figure in
- * the display face. A row of four bordered cards with an icon in each corner
- * is the default dashboard of every generated app, and the icons said nothing
- * the label did not. The rule carries the tone instead — ink normally, green
- * when healthy, amber when it needs attention, red when something is wrong —
- * so the meaning sits right above the number it qualifies.
- *
- * `icon` and `accent` are still accepted so no call site has to change; they
- * are no longer drawn.
+ * The tone colours the label, not the number, so the meaning sits right above
+ * the figure it qualifies and is also said in words — colour never carries it
+ * alone. `icon` and `accent` are still accepted so no call site has to change;
+ * they are not drawn.
  */
 export function StatCard({
   label,
@@ -28,17 +25,17 @@ export function StatCard({
   accent?: string;
   tone?: "default" | "positive" | "warning" | "danger";
 }) {
-  const rules = {
-    default: "border-foreground",
-    positive: "border-success",
-    warning: "border-warning",
-    danger: "border-danger",
+  const labels = {
+    default: "text-muted-foreground",
+    positive: "text-success",
+    warning: "text-warning",
+    danger: "text-danger",
   } as const;
 
   return (
-    <div className={cn("border-t-2 pb-1 pt-3", rules[tone])}>
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-2.5 font-editorial text-[2.2rem] font-normal leading-none tracking-[-0.02em] tabular sm:text-[2.6rem]">
+    <div className="rounded-xl bg-card p-4 shadow-xs dark:shadow-none">
+      <p className={cn("text-[13px] font-semibold", labels[tone])}>{label}</p>
+      <p className="mt-2 font-rounded text-[2rem] font-bold leading-none tracking-[-0.02em] tabular sm:text-[2.25rem]">
         {value}
       </p>
       {sublabel && (

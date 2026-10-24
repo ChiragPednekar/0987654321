@@ -7,11 +7,11 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       type={type}
       ref={ref}
       className={cn(
-        "flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm transition-colors hover:border-[color-mix(in_oklch,var(--input)_60%,var(--brand))] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25",
+        "flex h-10 w-full rounded-[10px] border border-input bg-card px-3.5 py-1 text-[0.9375rem] transition-[border-color,box-shadow] focus-visible:border-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/20",
         "placeholder:text-muted-foreground/80",
         // A field that failed validation says so in colour, not only in the
         // message underneath it.
-        "aria-[invalid=true]:border-danger aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-[color-mix(in_oklch,var(--danger)_25%,transparent)]",
+        "aria-[invalid=true]:border-danger aria-[invalid=true]:ring-4 aria-[invalid=true]:ring-danger/20",
         "file:border-0 file:bg-transparent file:text-sm file:font-medium",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,

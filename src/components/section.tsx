@@ -1,15 +1,11 @@
 import { cn } from "@/lib/utils";
 
 /**
- * A section of an app page: a title in the editorial serif over an ink rule,
- * then its content on the page itself.
- *
- * The dashboards were stacks of identical white cards, each with a small
- * title in its corner — every section boxed whether or not it needed a box,
- * which is what made them read as a template. This is the structure the
- * landing page uses: the rule says where a section starts, and the paper does
- * the rest. Rows inside are separated by hairlines (`SectionList`). Shared by
- * the student and teacher dashboards.
+ * A section of an app page, in the shape of Apple's inset grouped list: a
+ * bold title (Title 3) with an optional action at its trailing edge, then the
+ * content. Rows go in a `SectionList`, which is the white rounded group on the
+ * grey page with inset separators between rows. Shared by the student and
+ * teacher dashboards.
  */
 export function Section({
   title,
@@ -20,9 +16,9 @@ export function Section({
   children,
 }: {
   title: string;
-  /** Shown in mono beside the title, e.g. the number of rows. */
+  /** Shown beside the title, e.g. the number of rows. */
   count?: number;
-  /** A link or button at the right of the rule. */
+  /** A link or button at the trailing edge of the header. */
   action?: React.ReactNode;
   description?: React.ReactNode;
   className?: string;
@@ -30,36 +26,49 @@ export function Section({
 }) {
   return (
     <section className={cn("mt-10", className)}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-foreground pb-2">
-        <h2 className="font-editorial text-[1.6rem] font-normal leading-tight tracking-[-0.01em]">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1 pb-2">
+        <h2 className="text-[1.25rem] font-bold leading-tight tracking-[-0.018em]">
           {title}
           {count !== undefined && (
-            <span className="ml-2 font-mono text-sm font-normal text-muted-foreground tabular">
+            <span className="ml-2 text-base font-medium text-muted-foreground tabular">
               {count}
             </span>
           )}
         </h2>
-        {action}
+        {action && <div className="text-sm">{action}</div>}
       </div>
-      {description && <p className="mt-2 text-xs text-muted-foreground">{description}</p>}
-      <div className="mt-1">{children}</div>
+      {description && <p className="-mt-1 mb-2 px-1 text-[13px] text-muted-foreground">{description}</p>}
+      <div>{children}</div>
     </section>
   );
 }
 
-/** Rows under a Section, ruled like a register. */
+/** Rows under a Section: an inset grouped list. */
 export function SectionList({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <ul className={cn("divide-y divide-border", className)}>{children}</ul>;
+  return (
+    <ul
+      className={cn(
+        "divide-y divide-border-subtle overflow-hidden rounded-xl bg-card px-4 shadow-xs dark:shadow-none",
+        className,
+      )}
+    >
+      {children}
+    </ul>
+  );
 }
 
 /** What a Section says when it has nothing in it yet. */
 export function SectionEmpty({ children }: { children: React.ReactNode }) {
-  return <p className="py-4 text-sm text-muted-foreground">{children}</p>;
+  return (
+    <p className="rounded-xl bg-card px-4 py-5 text-center text-sm text-muted-foreground shadow-xs dark:shadow-none">
+      {children}
+    </p>
+  );
 }
 
 /**
- * Something worth the teacher's attention, set in the margin of the page
- * rather than boxed: a rule in the tone's colour down the left edge.
+ * Something worth the teacher's attention: a rounded callout, tinted when it
+ * is a warning.
  */
 export function Note({
   tone = "default",
@@ -75,12 +84,12 @@ export function Note({
   return (
     <div
       className={cn(
-        "border-l-2 px-4 py-2.5 text-sm",
-        tone === "warning" ? "border-warning bg-warning-surface/60" : "border-foreground/40 bg-card/60",
+        "rounded-xl px-4 py-3 text-sm",
+        tone === "warning" ? "bg-warning-surface" : "bg-card shadow-xs dark:shadow-none",
         className,
       )}
     >
-      <p className="font-medium">{title}</p>
+      <p className={cn("font-semibold", tone === "warning" && "text-warning")}>{title}</p>
       {children && <p className="mt-0.5 text-muted-foreground">{children}</p>}
     </div>
   );

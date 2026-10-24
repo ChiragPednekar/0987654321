@@ -63,7 +63,7 @@ export default async function AssignmentsPage() {
       </div>
 
       {!assignments || assignments.length === 0 ? (
-        <p className="mt-8 border-t-2 border-foreground pt-4 text-sm text-muted-foreground">
+        <p className="mt-8 border-t border-border pt-4 text-sm text-muted-foreground">
           Nothing set yet. Tick cases, exercises or questions in the library
           and add them to a batch.
         </p>
@@ -71,7 +71,7 @@ export default async function AssignmentsPage() {
         // A register, not a card per row: due date, what it is, how many have
         // handed in, and whether anything is waiting on the teacher.
         <div className="mt-8">
-          <div className="hidden grid-cols-[4.5rem_1fr_9rem_7rem] gap-4 border-b border-foreground pb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground md:grid">
+          <div className="hidden grid-cols-[4.5rem_1fr_9rem_7rem] gap-4 border-b border-border pb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground md:grid">
             <span>Due</span>
             <span>Assignment</span>
             <span>Handed in</span>
