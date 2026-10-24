@@ -45,15 +45,16 @@ export async function collegeData(institutionId: string) {
   // Batch IN filters to avoid long URLs for whole-college rosters.
   const users: Pick<UserRow,"id"|"full_name"|"email"|"open_to_opportunities"|"deactivated_at">[] = [];
   const attempts: PlacementAttempt[] = [], reviews: PlacementReview[] = [];
-  const profiles = [], batches = [];
+  const profiles = [], batches = [], gdReviews: { user_id: string; scores: Record<string, number> }[] = [];
   for (let offset=0; offset<members.length; offset+=150) {
     const ids=members.slice(offset,offset+150).map(m=>m.user_id);
-    const [u,p,b] = await Promise.all([
+    const [u,p,b,g] = await Promise.all([
       allRows((a,c)=>db.from("users").select("id,full_name,email,open_to_opportunities,deactivated_at").in("id",ids).order("id").range(a,c)),
       allRows((a,c)=>db.from("preparation_profiles").select("*").in("user_id",ids).order("user_id").range(a,c)),
       allRows((a,c)=>db.from("classroom_members").select("user_id,classroom_id,classrooms(name)").in("user_id",ids).eq("role","student").order("classroom_id").order("user_id").range(a,c)),
+      allRows((a,c)=>db.from("gd_faculty_reviews").select("id,user_id,scores").in("user_id",ids).order("id").range(a,c)),
     ]);
-    users.push(...u.filter(x=>!x.deactivated_at)); profiles.push(...p); batches.push(...b);
+    users.push(...u.filter(x=>!x.deactivated_at)); profiles.push(...p); batches.push(...b); gdReviews.push(...g);
   }
   for (const assessment of assessments) {
     const rows=await allRows((a,b)=>db.from("placement_attempts").select("*").eq("assessment_id",assessment.id).order("id").range(a,b));
@@ -66,7 +67,7 @@ export async function collegeData(institutionId: string) {
   for (let i=0;i<reports.length;i+=150) {
     interviewRequests.push(...await allRows((a,b)=>db.from("placement_interview_requests").select("*").in("report_id",reports.slice(i,i+150).map(x=>x.id)).order("created_at",{ascending:false}).order("id").range(a,b)));
   }
-  return { users, profiles, batches, assessments, attempts, reviews, requests, reports, interviewRequests };
+  return { users, profiles, batches, assessments, attempts, reviews, requests, reports, interviewRequests, gdReviews };
 }
 export type CollegeData = Awaited<ReturnType<typeof collegeData>>;
 export function tokenHash(token:string) { return createHash("sha256").update(token).digest("hex"); }

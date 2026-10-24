@@ -52,6 +52,36 @@ function ProctoringRecord({ attempt, photos }: { attempt: PlacementAttempt; phot
   );
 }
 
+const GD_SKILLS = ["contribution", "listening", "collaboration", "clarity"] as const;
+
+/**
+ * Teachers' reviews of this student in group discussions, newest first, with
+ * the topic and who reviewed. Read with the service role: the page has already
+ * proved the viewer staffs a college this student belongs to.
+ */
+async function gdFeedback(userId: string) {
+  const db = createAdminClient();
+  const { data: reviews } = await db.from("gd_faculty_reviews").select("*").eq("user_id", userId)
+    .order("created_at", { ascending: false }).limit(50);
+  if (!reviews?.length) return [];
+  const [{ data: sessions }, { data: reviewers }] = await Promise.all([
+    db.from("gd_sessions").select("id, topic_id").in("id", [...new Set(reviews.map((r) => r.session_id))]),
+    db.from("users").select("id, full_name").in("id", [...new Set(reviews.map((r) => r.reviewer_id))]),
+  ]);
+  const topicIds = [...new Set((sessions ?? []).map((s) => s.topic_id).filter(Boolean))] as string[];
+  const { data: topics } = topicIds.length
+    ? await db.from("gd_topics").select("id, title").in("id", topicIds)
+    : { data: [] as { id: string; title: string }[] };
+  return reviews.map((r) => {
+    const topicId = sessions?.find((s) => s.id === r.session_id)?.topic_id;
+    return {
+      ...r,
+      topic: topics?.find((t) => t.id === topicId)?.title ?? "Group discussion",
+      reviewer: reviewers?.find((u) => u.id === r.reviewer_id)?.full_name ?? "Teacher",
+    };
+  });
+}
+
 export default async function StudentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ institution?: string }> }) {
   const { id } = await params;
   const { institution } = await searchParams;
@@ -64,11 +94,15 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
   const profile = data.profiles.find((p) => p.user_id === id);
   const attempts = data.attempts.filter((a) => a.user_id === id).sort((a, b) => b.created_at.localeCompare(a.created_at));
   const reviews = latestReviews(data.reviews);
+  const db = createAdminClient();
   // Evidence photos are matched to each sitting by account and time window.
-  const photos = await photosForFindings(
-    createAdminClient(),
+  const [photos, discussions] = await Promise.all([
+    photosForFindings(
+    db,
     attempts.filter((a) => a.integrity).map((a) => ({ id: a.id, user_id: a.user_id, created_at: a.created_at, server_elapsed_seconds: a.elapsed_seconds })),
-  );
+    ),
+    gdFeedback(id),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -86,6 +120,42 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
       <p className="rounded-lg bg-muted/40 p-4 text-sm">
         Only common college assessments appear here. The private diagnostic and practice attempts stay in the student&apos;s own workspace. Results from different tasks are shown separately, not as a before-and-after comparison.
       </p>
+      <section className="space-y-3">
+        <h2 className="text-xl font-medium">Group discussion feedback</h2>
+        {discussions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No teacher has reviewed this student in a group discussion yet.</p>
+        ) : (
+          <>
+            <div className="grid gap-3 sm:grid-cols-4">
+              {GD_SKILLS.map((skill) => {
+                const values = discussions.map((d) => Number(d.scores[skill])).filter(Number.isFinite);
+                const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+                return (
+                  <div key={skill} className="rounded-lg border p-3">
+                    <p className="text-xs capitalize text-muted-foreground">{skill}</p>
+                    <p className="mt-1 text-lg font-semibold tabular">{avg === null ? "—" : `${avg.toFixed(1)} / 5`}</p>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Average across {discussions.length} teacher {discussions.length === 1 ? "review" : "reviews"}, from what teachers observed in the room. Discussions are not recorded or proctored.
+            </p>
+            {discussions.map((d) => (
+              <article key={d.id} className="rounded-lg border p-4">
+                <p className="text-sm font-medium">{d.topic}</p>
+                <p className="text-xs text-muted-foreground">
+                  {d.reviewer} · {new Date(d.created_at).toLocaleDateString()} ·{" "}
+                  {GD_SKILLS.map((k) => `${k} ${d.scores[k] ?? "—"}/5`).join(" · ")}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-sm">{d.feedback}</p>
+              </article>
+            ))}
+          </>
+        )}
+      </section>
+
+      <h2 className="text-xl font-medium">Common assessments</h2>
       {!attempts.length && <p>Insufficient evidence. This student has not submitted a common assessment.</p>}
       {attempts.map((a) => {
         const assessment = data.assessments.find((x) => x.id === a.assessment_id)!;

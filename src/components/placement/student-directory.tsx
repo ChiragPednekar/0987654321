@@ -59,7 +59,11 @@ export function StudentDirectory({
       const review = chosen ? reviews.get(chosen.id) : undefined;
       const pending = attempts.filter((a) => !reviews.has(a.id)).length;
       const practice = activity[u.id] ?? { solved: 0, lastActive: null };
-      return { ...u, profile, attempts, chosen, review, pending, practice };
+      // Teacher reviews from group discussions: the mean of the four 0–5 marks.
+      const gd = data.gdReviews.filter((r) => r.user_id === u.id);
+      const gdMarks = gd.flatMap((r) => Object.values(r.scores).map(Number)).filter(Number.isFinite);
+      const gdAvg = gdMarks.length ? gdMarks.reduce((a, b) => a + b, 0) / gdMarks.length : null;
+      return { ...u, profile, attempts, chosen, review, pending, practice, gdCount: gd.length, gdAvg };
     })
     .filter((u) => {
       if (query && !`${u.full_name} ${u.email}`.toLowerCase().includes(query.toLowerCase())) return false;
@@ -125,7 +129,7 @@ export function StudentDirectory({
         <table className="w-full text-left text-sm">
           <thead className="bg-muted/40 text-xs text-muted-foreground">
             <tr>
-              {["Student", "Target role / programme", "Practice", "Assessments", "Selected assessment", "Sharing"].map((h) => (
+              {["Student", "Target role / programme", "Practice", "Assessments", "GD feedback", "Selected assessment", "Sharing"].map((h) => (
                 <th key={h} className="p-3 font-medium">{h}</th>
               ))}
             </tr>
@@ -151,6 +155,13 @@ export function StudentDirectory({
                   )}
                 </td>
                 <td className="p-3 text-xs">{u.attempts.length} done · {u.pending} to review</td>
+                <td className="p-3 text-xs">
+                  {u.gdAvg === null ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : (
+                    <>{u.gdAvg.toFixed(1)} / 5<p className="text-muted-foreground">{u.gdCount} teacher {u.gdCount === 1 ? "review" : "reviews"}</p></>
+                  )}
+                </td>
                 <td className="p-3">
                   {assessment ? (
                     u.review ? (
