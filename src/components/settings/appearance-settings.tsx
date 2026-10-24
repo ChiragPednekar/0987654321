@@ -69,7 +69,7 @@ export function AppearanceSettings() {
                 className={cn(
                   "flex flex-1 flex-col items-center gap-1.5 rounded-lg border px-3 py-3 text-xs transition-colors",
                   mounted && theme === option.value
-                    ? "border-primary bg-primary/5 font-medium"
+                    ? "border-brand bg-brand-surface font-semibold text-brand"
                     : "border-border text-muted-foreground hover:text-foreground",
                 )}
                 aria-pressed={mounted && theme === option.value}

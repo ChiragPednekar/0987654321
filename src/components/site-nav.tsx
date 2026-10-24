@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NotificationBell } from "@/components/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { NotificationRow, UserRole, UserRow } from "@/lib/types/database";
 import { roleHome } from "@/lib/role-home";
 
@@ -160,6 +161,8 @@ export function SiteNav({
               unreadCount={unreadCount}
             />
           )}
+
+          <ThemeToggle />
 
           {profile ? (
             <DropdownMenu>
