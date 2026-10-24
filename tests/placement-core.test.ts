@@ -6,7 +6,7 @@ import type { PlacementAttempt, PlacementReview } from "@/lib/placement/types";
 const attempt = (id: string, pct: number, over: Partial<PlacementAttempt> = {}): PlacementAttempt => ({
   id, assessment_id: "a1", diagnostic_key: null, user_id: `u-${id}`, answer: "", status: "evaluated",
   result: { breakdown: {}, percentage: pct, feedback: { strengths: [], weaknesses: [], improvements: [], verdict: "" } },
-  created_at: "2026-10-01T00:00:00Z", evaluated_at: "2026-10-01T00:00:00Z", ...over,
+  created_at: "2026-10-01T00:00:00Z", evaluated_at: "2026-10-01T00:00:00Z", integrity: null, elapsed_seconds: null, ...over,
 });
 const review = (id: string, attemptId: string, pct: number, at: string): PlacementReview => ({
   id, attempt_id: attemptId, reviewer_id: "t", scores: {}, percentage: pct, feedback: "", reason: "", created_at: at,
@@ -88,5 +88,17 @@ describe("explained scores", () => {
     expect(cf.required).toEqual(["analysis", "recommendation"]);
     // Gemini's responseSchema rejects ["string","null"]; one type per field.
     expect(cf.properties.analysis.properties.quote.type).toBe("string");
+  });
+});
+
+describe("proof of proctoring", () => {
+  it("needs exam mode and a camera that was watching, refused or absent", async () => {
+    const { hasProctoringProof, signalsSchema } = await import("@/lib/integrity-request");
+    const s = (over: object) => signalsSchema.parse({ proctored: true, cameraRequested: true, ...over });
+    expect(hasProctoringProof(s({ cameraGranted: true, cameraSamples: 10 }))).toBe(true);
+    expect(hasProctoringProof(s({ cameraDenied: true }))).toBe(true);
+    expect(hasProctoringProof(s({ cameraGranted: true, cameraSamples: 0 }))).toBe(false);
+    expect(hasProctoringProof(s({ proctored: false, cameraGranted: true, cameraSamples: 10 }))).toBe(false);
+    expect(hasProctoringProof(signalsSchema.parse({ proctored: true }))).toBe(false);
   });
 });

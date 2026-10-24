@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { signalsSchema } from "@/lib/integrity-request";
+import { hasProctoringProof, signalsSchema } from "@/lib/integrity-request";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateSubmission } from "@/lib/ai/evaluate";
@@ -128,14 +128,7 @@ export async function POST(request: NextRequest) {
 
   // Proctoring verification: ensure signals indicate proctoring was running and not bypassed
   const { signals } = body;
-  const isCameraLegit =
-    signals.cameraUnavailable ||
-    (signals.cameraRequested &&
-      (signals.cameraDenied ||
-        signals.detectorFailed ||
-        (signals.cameraGranted && signals.cameraSamples > 0)));
-
-  if (!practice && (!signals.proctored || !isCameraLegit)) {
+  if (!practice && !hasProctoringProof(signals)) {
     return NextResponse.json(
       { error: "Submission rejected: proof of proctoring is required to submit your test." },
       { status: 403 },

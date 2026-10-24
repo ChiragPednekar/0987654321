@@ -19,6 +19,13 @@ export type PlacementAttempt = {
   id: string; assessment_id: string | null; diagnostic_key: string | null; user_id: string;
   answer: string; status: "processing" | "evaluated" | "failed"; result: PracticeResult | null;
   created_at: string; evaluated_at: string | null;
+  /** Common assessments only; null for the diagnostic and for attempts before proctoring. */
+  integrity: AttemptIntegrity | null; elapsed_seconds: number | null;
+};
+export type AttemptIntegrity = {
+  severity: "clean" | "suspect" | "severe";
+  flags: { code: string; label: string; points: number }[];
+  camera: "on" | "denied" | "unavailable" | "failed";
 };
 export type PlacementReview = {
   id: string; attempt_id: string; reviewer_id: string; scores: Record<string, number>;
@@ -59,6 +66,7 @@ export type PlacementTables = {
   placement_reports: Table<PlacementReport>;
   placement_interview_requests: Table<InterviewRequest>;
   practice_defenses: Table<Defense>;
+  placement_sittings: Table<{ assessment_id: string; user_id: string; started_at: string }>;
   gd_faculty_reviews: Table<GdReview>;
   assignment_review_history: Table<{ id: string; assignment_submission_id: string; previous: Json; revised: Json; created_at: string }>;
 };

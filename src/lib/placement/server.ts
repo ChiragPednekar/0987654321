@@ -82,7 +82,7 @@ export async function reportEvidence(report: PlacementReport) {
     const profile = data.profiles.find(p=>p.user_id===user.id);
     const evidence = data.attempts.filter(a=>a.user_id===user.id && a.assessment_id && report.assessment_ids.includes(a.assessment_id) && a.status==="evaluated" && latest.has(a.id)).map(a=>{
       const review=latest.get(a.id)!;
-      return { assessment_id:a.assessment_id!, date:a.evaluated_at, reviewed_at:review.created_at,
+      return { assessment_id:a.assessment_id!, date:a.evaluated_at, reviewed_at:review.created_at, proctored:a.integrity!==null,
         scores:review.scores, percentage:review.percentage,
         feedback:report.include_feedback ? review.feedback : null,
         work:report.include_work ? a.answer : null };

@@ -54,3 +54,17 @@ export const signalsSchema = z
     micDenied: z.boolean().default(false),
   })
   .default(EMPTY_SIGNALS);
+
+/**
+ * Whether the signals show the proctor actually ran: exam mode was entered,
+ * and the camera was either watching or asked for and refused or unavailable.
+ * A refused camera still counts — it is flagged for review, not grounds to
+ * turn a student away — but a client that never asked is not proctored.
+ */
+export function hasProctoringProof(signals: z.infer<typeof signalsSchema>): boolean {
+  const camera =
+    signals.cameraUnavailable ||
+    (signals.cameraRequested &&
+      (signals.cameraDenied || signals.detectorFailed || (signals.cameraGranted && signals.cameraSamples > 0)));
+  return signals.proctored && camera;
+}
