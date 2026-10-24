@@ -90,6 +90,8 @@ export interface EvaluationFeedback {
   strengths: string[];
   weaknesses: string[];
   improvements: string[];
+  criterion_feedback?: Record<string, { quote: string | null; reason: string; next_step: string }>;
+  improved_answer?: string;
 }
 
 export interface Attachment {
@@ -1119,7 +1121,7 @@ export type SubmissionVoteRow = {
  */
 export interface Database {
   public: {
-    Tables: {
+    Tables: import("@/lib/placement/types").PlacementTables & {
       users: {
         Row: UserRow;
         Insert: Partial<UserRow>;
@@ -1987,6 +1989,7 @@ export interface Database {
       user_case_best: { Row: UserCaseBestRow; Relationships: [] };
     };
     Functions: {
+      reserve_practice_defense: { Args: { p_user: string; p_topic: string; p_answer: string; p_response: string; p_follow_up: string; p_input_mode: string; p_submission: string | null }; Returns: string | null };
       is_admin: { Args: Record<string, never>; Returns: boolean };
       has_pro: { Args: { p_user: string }; Returns: boolean };
       /** Entitlement to practise, not merely browse (20250101000032). */

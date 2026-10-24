@@ -170,7 +170,8 @@ export function AnswerEditor({
           contest_id: contestId,
           answer,
           answer_sections,
-          time_spent_seconds: Math.floor((Date.now() - startedAt) / 1000),
+          time_spent_seconds: sharedProctor?.practice ? elapsed : Math.floor((Date.now() - startedAt) / 1000),
+          practice_mode: Boolean(sharedProctor?.practice),
           signals: proctor.signals,
         }),
       });
@@ -262,8 +263,7 @@ export function AnswerEditor({
       <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-xs">
         <Lock className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
         <p className="text-muted-foreground">
-          Exam conditions. Pasting is disabled — type your answer here.
-          Switching tabs or leaving this window ends the test.
+          {sharedProctor?.practice ? "Private practice. Use hints and learning resources, pause when needed, and retry after feedback." : "Exam conditions. Pasting is disabled — type your answer here. Switching tabs or leaving this window ends the test."}
         </p>
       </div>
 
@@ -301,7 +301,7 @@ export function AnswerEditor({
           */}
           <span className="flex items-center gap-1.5 text-[var(--warning,#d97706)]">
             <Lock className="size-3.5" />
-            {proctor.fullscreen ? "Exam mode" : "Exam mode (no fullscreen)"}
+            {sharedProctor?.practice ? "Practice" : proctor.fullscreen ? "Exam mode" : "Exam mode (no fullscreen)"}
           </span>
           <span className="flex items-center gap-1.5">
             <Timer className="size-3.5" />

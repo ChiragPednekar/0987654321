@@ -1,0 +1,2 @@
+"use client";
+export default function PlacementError({reset}:{reset:()=>void}) {return <div className="p-8"><h2 className="text-xl font-medium">Placement data is temporarily unavailable</h2><p className="my-3 text-sm text-muted-foreground">Please retry. A new installation needs the placement database migration before this workspace can load.</p><button className="rounded border px-4 py-2" onClick={reset}>Retry</button></div>;}

@@ -31,6 +31,8 @@ FEEDBACK RULES
 - Never invent quotes.
 - Weaknesses must be specific ("no mention of burn multiple or runway"), never generic ("needs more depth").
 - Improvements must be actionable next steps, not restatements of the weaknesses.
+- Explain every criterion in criterion_feedback: quote an exact short excerpt the score rests on (or leave quote empty when the point is an omission), give the reason for the points in one or two sentences, and one concrete next step.
+- Give an improved_answer: a worked example under 250 words that fixes the biggest gaps, uses only the supplied facts, labels assumptions and ends with why it works. Do not invent facts, credentials or guarantees of interview success.
 
 AUTHORSHIP
 

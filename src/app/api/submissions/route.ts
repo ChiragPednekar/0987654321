@@ -20,6 +20,7 @@ export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   case_id: z.string().uuid(),
+  practice_mode: z.boolean().default(false),
   contest_id: z.string().uuid().optional().nullable(),
   answer: z.string().min(MIN_ANSWER_CHARS).max(MAX_ANSWER_CHARS),
   // Present when the sectioned editor was used; {} for free text. Kept
@@ -119,8 +120,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Case not found" }, { status: 404 });
   }
 
+  const practice = body.practice_mode && !body.contest_id;
+
   // The test on this page may have been ended (camera or leaving the window).
-  const lockedCase = await lockoutResponse(user.id, `/cases/${caseData.slug}`);
+  const lockedCase = !practice && await lockoutResponse(user.id, `/cases/${caseData.slug}`);
   if (lockedCase) return lockedCase;
 
   // Proctoring verification: ensure signals indicate proctoring was running and not bypassed
@@ -132,7 +135,7 @@ export async function POST(request: NextRequest) {
         signals.detectorFailed ||
         (signals.cameraGranted && signals.cameraSamples > 0)));
 
-  if (!signals.proctored || !isCameraLegit) {
+  if (!practice && (!signals.proctored || !isCameraLegit)) {
     return NextResponse.json(
       { error: "Submission rejected: proof of proctoring is required to submit your test." },
       { status: 403 },
@@ -307,7 +310,7 @@ export async function POST(request: NextRequest) {
       .eq("user_id", user.id)
       .eq("case_id", body.case_id);
 
-    const penaltyPct = Math.min(
+    const penaltyPct = practice ? 0 : Math.min(
       50,
       (reveals ?? []).reduce((sum, row) => {
         const hint = Array.isArray(row.case_hints)
@@ -335,7 +338,7 @@ export async function POST(request: NextRequest) {
       body.case_id,
     );
 
-    const integrity = await recordIntegrity(admin, {
+    const integrity = practice ? { verdict: { severity: "clean" as const, penaltyPct: 0, flags: [] as {label:string;points:number;behavioural?:boolean}[] }, warning: null, blocked: false } : await recordIntegrity(admin, {
       userId: user.id,
       caseId: body.case_id,
       submissionId: submission.id,
@@ -386,6 +389,7 @@ export async function POST(request: NextRequest) {
       max_score: result.maxScore,
       feedback: {
         ...result.feedback,
+        evaluation_type: practice ? "private_practice" : "ai_assessment",
         hint_penalty_pct: penaltyPct,
         // Embedded alongside the hint penalty it sits next to, so the score
         // panel can explain the deduction without a second round trip. The

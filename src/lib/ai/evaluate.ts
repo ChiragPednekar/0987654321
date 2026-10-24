@@ -7,7 +7,7 @@ import type {
 } from "@/lib/types/database";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./prompts";
 import { callModel } from "./providers";
-import { evaluationResponseSchema } from "./schema";
+import { criterionFeedback, evaluationResponseSchema } from "./schema";
 
 export interface EvaluationResult {
   breakdown: Record<string, number>;
@@ -106,6 +106,8 @@ export async function evaluateSubmission(
           weaknesses: parsed.feedback.weaknesses.slice(0, 6),
           improvements: parsed.feedback.improvements.slice(0, 6),
           verdict: parsed.verdict,
+          criterion_feedback: criterionFeedback(criteria, parsed.feedback.criterion_feedback, answer),
+          improved_answer: parsed.feedback.improved_answer?.trim() || undefined,
         },
         aiLikelihood: parsed.ai_likelihood ?? null,
         model,

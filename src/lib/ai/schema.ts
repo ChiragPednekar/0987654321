@@ -12,6 +12,12 @@ export const evaluationResponseSchema = z.object({
     strengths: z.array(z.string()),
     weaknesses: z.array(z.string()),
     improvements: z.array(z.string()),
+    // Optional so an older or terser model reply still parses; a missing
+    // explanation leaves that criterion with its bar and no note.
+    criterion_feedback: z
+      .record(z.string(), z.object({ quote: z.string().nullable().optional(), reason: z.string(), next_step: z.string() }))
+      .optional(),
+    improved_answer: z.string().max(12_000).optional(),
   }),
   verdict: z.string(),
   /**
@@ -56,8 +62,22 @@ export function buildJsonSchema(criteria: RubricCriteria) {
       feedback: {
         type: "object",
         additionalProperties: false,
-        required: ["strengths", "weaknesses", "improvements"],
+        required: ["strengths", "weaknesses", "improvements", "criterion_feedback", "improved_answer"],
         properties: {
+          criterion_feedback: {
+            type: "object", additionalProperties: false, required: keys,
+            properties: Object.fromEntries(keys.map(key => [key, {
+              type: "object", additionalProperties: false, required: ["quote", "reason", "next_step"],
+              properties: {
+                // A plain string, not ["string","null"]: Gemini's responseSchema is an
+                // OpenAPI subset that takes one type per field. "" means an omission.
+                quote: {type:"string",description:"A short exact quote (under 25 words) from the student's answer, or an empty string when the point is about something missing. Never invent a quote."},
+                reason: {type:"string",description:"Explain the points awarded or deducted for this criterion using specific evidence or a specific omission."},
+                next_step: {type:"string",description:"One concrete correction the student can practise."},
+              },
+            }])),
+          },
+          improved_answer: {type:"string",description:"A worked example of a stronger answer, under 250 words. Use only the supplied facts, label assumptions, and end with one sentence on why it works. This is an AI example, not an expert endorsement."},
           strengths: {
             type: "array",
             items: { type: "string" },
@@ -92,4 +112,38 @@ export function buildJsonSchema(criteria: RubricCriteria) {
       },
     },
   } as const;
+}
+
+export type CriterionNote = { quote: string | null; reason: string; next_step: string };
+
+/**
+ * The per-criterion explanations, kept to the rubric's own keys and with any
+ * quote the student did not actually write dropped. A model that paraphrases
+ * and calls it a quote would put words in the student's mouth, and the panel
+ * shows quotes as their words.
+ */
+export function criterionFeedback(
+  criteria: RubricCriteria,
+  notes: Record<string, { quote?: string | null; reason: string; next_step: string }> | undefined,
+  answer: string,
+): Record<string, CriterionNote> {
+  const out: Record<string, CriterionNote> = {};
+  if (!notes) return out;
+  const haystack = normaliseQuote(answer);
+  for (const key of Object.keys(criteria)) {
+    const note = notes[key];
+    if (!note?.reason?.trim()) continue;
+    const quote = note.quote?.trim().replace(/^["'“‘]+|["'”’]+$/g, "") ?? "";
+    out[key] = {
+      quote: quote && haystack.includes(normaliseQuote(quote)) ? quote : null,
+      reason: note.reason.trim(),
+      next_step: note.next_step.trim(),
+    };
+  }
+  return out;
+}
+
+/** Whitespace and curly quotes differ between what was typed and what is quoted back. */
+function normaliseQuote(text: string) {
+  return text.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").toLowerCase();
 }

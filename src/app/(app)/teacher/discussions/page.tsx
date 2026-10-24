@@ -225,6 +225,7 @@ export default async function TeacherDiscussionsPage() {
                   </div>
                   <span className="font-mono text-xs text-muted-foreground">
                     Ended · {timeAgo(session.created_at)}
+                    {session.status === "completed" && <Link href={`/teacher/discussions/${session.id}/review`} className="ml-3 underline">Review participants</Link>}
                   </span>
                 </li>
               );

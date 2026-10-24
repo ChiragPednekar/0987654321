@@ -3,7 +3,6 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
-import { lockoutResponse, recordLockout, lockMessage } from "@/lib/exam-lockouts";
 
 export const dynamic = "force-dynamic";
 
@@ -38,9 +37,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const locked = await lockoutResponse(user.id, `/cases/${body.slug}`);
-  if (locked) return locked;
-
   const admin = createAdminClient();
 
   if (!(await canSolve(admin, user.id))) {
@@ -59,67 +55,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Case not found." }, { status: 404 });
   }
 
-  // Check for an abandoned in-progress attempt (Gap 4: dodged flag prevention)
-  const { data: existingAttempt } = await admin
-    .from("solve_attempts")
-    .select("started_at")
-    .eq("user_id", user.id)
-    .eq("case_id", caseData.id)
-    .maybeSingle();
+  // Ordinary case pages are learning sessions. Reloading or taking a break
+  // must never create an exam strike. Formal contests use their own entry clock.
+  const { error: stampError } = await admin.from("solve_attempts").upsert({
+    user_id:user.id,case_id:caseData.id,started_at:new Date().toISOString(),
+  },{onConflict:"user_id,case_id"});
+  if(stampError) return NextResponse.json({error:"Could not start practice."},{status:500});
+  return NextResponse.json({scenario:caseData.scenario,instructions:caseData.instructions,supporting_data:caseData.supporting_data,attachments:caseData.attachments,expected_framework:caseData.expected_framework});
 
-  if (existingAttempt?.started_at) {
-    const elapsedSinceStart =
-      (Date.now() - new Date(existingAttempt.started_at).getTime()) / 1000;
-
-    // If an attempt was started more than 45 seconds ago and never completed/submitted,
-    // it was abandoned. Treat as unsubmitted exit violation -> record strike lockout!
-    if (elapsedSinceStart > 45) {
-      await admin
-        .from("solve_attempts")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("case_id", caseData.id);
-
-      const lock = await recordLockout(admin, {
-        userId: user.id,
-        path: `/cases/${caseData.slug}`,
-        reason: "no_face",
-        signals: {
-          violation: "abandoned_test",
-          message: "A test on this question was previously started and abandoned without submitting.",
-          elapsedSinceStart,
-        },
-      });
-
-      return NextResponse.json(
-        {
-          error: lock
-            ? lockMessage(lock)
-            : "Test was started and abandoned without submitting. Question is locked.",
-          lock,
-        },
-        { status: 403 },
-      );
-    }
-  }
-
-  // Stamp server start clock
-  await admin
-    .from("solve_attempts")
-    .upsert(
-      {
-        user_id: user.id,
-        case_id: caseData.id,
-        started_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,case_id" },
-    );
-
-  return NextResponse.json({
-    scenario: caseData.scenario,
-    instructions: caseData.instructions,
-    supporting_data: caseData.supporting_data,
-    attachments: caseData.attachments,
-    expected_framework: caseData.expected_framework,
-  });
 }

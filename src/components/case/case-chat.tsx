@@ -220,7 +220,7 @@ export function CaseChat({
             maxLength={CONVERSATION_LIMITS.caseChat.maxMessageChars}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            onPaste={sharedProctor?.proctor.handlers.onPaste}
+            onPaste={sharedProctor?.practice ? undefined : sharedProctor?.proctor.handlers.onPaste}
             onKeyDown={(e) => {
               sharedProctor?.proctor.handlers.onKeyDown(e);
               // Enter sends, Shift+Enter breaks the line — the convention

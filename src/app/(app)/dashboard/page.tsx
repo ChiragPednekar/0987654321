@@ -25,6 +25,8 @@ import {
   type CohortStanding,
 } from "@/components/target-school-card";
 import { DOMAINS } from "@/lib/constants";
+import { preparationState, type NextStep } from "@/lib/placement/next-practice";
+import { ArrowRight } from "lucide-react";
 import { formatNumber, timeAgo } from "@/lib/utils";
 import type { ActivityType, Domain } from "@/lib/types/database";
 
@@ -44,6 +46,14 @@ export default async function DashboardPage() {
   if (!profile) redirect("/login?next=/dashboard");
 
   const supabase = await createClient();
+
+  // A recommendation is a nicety on this page, never a reason for it to fail.
+  const nextStep: NextStep | null = await preparationState(profile.id)
+    .then((state) => state.next)
+    .catch((error) => {
+      console.error("[dashboard] next practice unavailable", error);
+      return null;
+    });
 
   const [
     { data: domainRows },
@@ -306,6 +316,28 @@ export default async function DashboardPage() {
           <Link href="/cases">Solve a case</Link>
         </Button>
       </header>
+
+      <Link
+        href={nextStep?.href ?? "/preparation"}
+        className="group mt-8 block rounded-xl border border-primary/30 bg-primary/5 p-5 transition-colors hover:bg-primary/10"
+      >
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">
+          Your next practice{nextStep ? ` · ${nextStep.minutes}` : ""}
+        </p>
+        <p className="mt-2 flex items-center gap-2 text-xl font-medium">
+          {nextStep?.title ?? "Open your preparation plan"}
+          <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {nextStep?.reason ?? "Set your target role, take the free diagnostic and follow a weekly plan built around it."}
+        </p>
+      </Link>
+      <p className="mt-2 text-xs text-muted-foreground">
+        <Link href="/preparation" className="underline underline-offset-2 hover:text-foreground">
+          Your full weekly plan
+        </Link>{" "}
+        · goals, diagnostic, college assessments and spoken practice.
+      </p>
 
       {dailyCase && (
         <div className="mt-10">

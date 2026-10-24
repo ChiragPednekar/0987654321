@@ -43,6 +43,7 @@ const PUBLIC_LINKS = [
 
 const STUDENT_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/preparation", label: "Preparation plan" },
   { href: "/cases", label: "Cases" },
   { href: "/paths", label: "Paths" },
   { href: "/groups", label: "Groups" },
@@ -85,16 +86,18 @@ export function SiteNav({
   profile,
   notifications = [],
   unreadCount = 0,
+  isInstitutionStaff = false,
 }: {
   profile: UserRow | null;
   notifications?: NotificationRow[];
   unreadCount?: number;
+  isInstitutionStaff?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
-  const LINKS = profile ? linksFor(profile.role) : PUBLIC_LINKS;
+  const LINKS = profile ? [...(profile.role === "recruiter" ? [{href:"/recruiter",label:"Recruiter dashboard"}] : linksFor(profile.role)), ...((isInstitutionStaff || profile.role === "admin") ? [{href:"/placement",label:"Placement Cell"}] : [])] : PUBLIC_LINKS;
   // The wordmark goes to your own dashboard, not always the student one.
   const homeHref = profile ? roleHome(profile.role) : "/";
 

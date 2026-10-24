@@ -1,5 +1,7 @@
-import { AlertCircle, ArrowUpRight, CheckCircle2, ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { AlertCircle, ArrowUpRight, CheckCircle2, Mic, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Markdown } from "@/components/markdown";
 import { cn } from "@/lib/utils";
 import type { EvaluationFeedback, ScoreRow } from "@/lib/types/database";
 
@@ -42,6 +44,7 @@ export function ScorePanel({
   criteria: Record<string, number>;
 }) {
   const feedback = score.feedback as EvaluationFeedback & {
+    evaluation_type?: string;
     verdict?: string;
     hint_penalty_pct?: number;
     integrity?: {
@@ -64,6 +67,9 @@ export function ScorePanel({
       : null;
   const percentage = Number(score.percentage);
   const t = tone(percentage);
+  // Absent on answers graded before per-criterion explanations existed.
+  const notes = feedback?.criterion_feedback;
+  const practice = feedback?.evaluation_type === "private_practice";
 
   // A ring reads as a proportion without needing to be measured, which a bare
   // "63/80" does not. 44px radius, so the circumference is the dash length.
@@ -206,6 +212,19 @@ export function ScorePanel({
                     {got}
                     <span className="text-muted-foreground">/{max}</span>
                   </span>
+                  {notes?.[key] && (
+                    <div className="col-span-2 space-y-1 text-xs leading-relaxed text-muted-foreground sm:col-span-3">
+                      {notes[key].quote && (
+                        <p className="border-l-2 border-border pl-2 italic">
+                          &ldquo;{notes[key].quote}&rdquo;
+                        </p>
+                      )}
+                      <p>{notes[key].reason}</p>
+                      {notes[key].next_step && (
+                        <p className="text-foreground/80">Next: {notes[key].next_step}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -254,9 +273,45 @@ export function ScorePanel({
         </Card>
       )}
 
+      {feedback?.improved_answer && (
+        <Card>
+          <CardContent className="p-6">
+            <details>
+              <summary className="cursor-pointer text-sm font-medium">
+                See a stronger answer, and why it works
+              </summary>
+              <Markdown className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {feedback.improved_answer}
+              </Markdown>
+              <p className="mt-3 text-xs text-muted-foreground">
+                An AI-written example built from this case&apos;s facts, not the
+                only right answer. Try the next case without looking back at it.
+              </p>
+            </details>
+          </CardContent>
+        </Card>
+      )}
+
+      <Link
+        href={`/preparation?submission=${score.submission_id}#spoken`}
+        className="flex items-center gap-3 rounded-lg border p-4 text-sm transition-colors hover:bg-muted/40"
+      >
+        <Mic className="size-4 shrink-0 text-primary" />
+        <span>
+          <span className="font-medium">Now defend it out loud.</span>{" "}
+          <span className="text-muted-foreground">
+            Explain your recommendation in 90 seconds and handle a changed
+            assumption — the part a real interview tests.
+          </span>
+        </span>
+      </Link>
+
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Graded by {score.model ?? "AI"} against this case&apos;s rubric. Scores are
-        indicative — argue with the feedback, that&apos;s part of the practice.
+        {practice ? "AI-evaluated private practice" : "AI-evaluated"} · graded by{" "}
+        {score.model ?? "AI"} against this case&apos;s rubric.{" "}
+        {practice
+          ? "Practice results stay private and never appear in a company report."
+          : "Scores are indicative — argue with the feedback, that\u2019s part of the practice."}
       </p>
     </div>
   );

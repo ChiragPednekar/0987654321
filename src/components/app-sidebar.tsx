@@ -73,6 +73,7 @@ const STUDENT_GROUPS: { heading: string; items: Item[] }[] = [
     heading: "Practise",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/preparation", label: "Preparation plan", icon: Route },
       { href: "/cases", label: "Cases", icon: Library },
       { href: "/companies", label: "Companies", icon: Building2 },
       { href: "/daily", label: "Daily quiz", icon: Newspaper },
@@ -177,6 +178,7 @@ const ADMIN_GROUPS: { heading: string; items: Item[] }[] = [
     items: [
       { href: "/dashboard", label: "Student product", icon: GraduationCap },
       { href: "/teacher", label: "Teaching product", icon: ClipboardCheck },
+      { href: "/placement", label: "Placement Cell", icon: Building2 },
     ],
   },
 ];
@@ -223,7 +225,14 @@ export function AppSidebar({
    * anyone left over the link would only bounce. Promote the account to
    * `teacher` instead; that is what the role is for.
    */
+  const placementGroups: {heading:string;items:Item[]}[] = [{ heading: "Placement Cell", items: [
+    { href: "/placement", label: "College dashboard", icon: Building2 },
+    { href: "/settings", label: "Settings", icon: Users },
+  ] }];
   const groups = (
+    pathname.startsWith("/placement") && !pathname.startsWith("/placement-report")
+      ? placementGroups
+      :
     role === "admin"
       ? ADMIN_GROUPS
       : role === "recruiter"
@@ -240,6 +249,10 @@ export function AppSidebar({
       }),
     }))
     .filter((group) => group.items.length > 0);
+
+  if (isInstitutionStaff && !pathname.startsWith("/placement") && role !== "admin") {
+    groups.push({heading:"College",items:[{href:"/placement",label:"Placement Cell",icon:Building2}]});
+  }
 
   // Only the most specific match is highlighted. A plain prefix test lit up
   // "Dashboard" (/teacher) on every teacher page, and "Question bank" next to

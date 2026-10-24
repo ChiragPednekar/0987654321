@@ -37,6 +37,7 @@ const COMMON: Page[] = [
 ];
 
 const STUDENT_PAGES: Page[] = [
+  { title: "Preparation plan", href: "/preparation", icon: Route },
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Case Library", href: "/cases", icon: BookOpen },
   { title: "Skill Tracks", href: "/paths", icon: Route },
@@ -56,6 +57,7 @@ const TEACHER_PAGES: Page[] = [
 ];
 
 const ADMIN_PAGES: Page[] = [
+  { title: "Placement Cell", href: "/placement", icon: Users },
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { title: "Users", href: "/admin/users", icon: Users },
   { title: "Licences", href: "/admin/licences", icon: FileText },

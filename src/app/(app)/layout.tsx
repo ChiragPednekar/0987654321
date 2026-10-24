@@ -59,6 +59,7 @@ export default async function AppLayout({
         profile={profile}
         notifications={notifications}
         unreadCount={unreadCount}
+        isInstitutionStaff={isInstitutionStaff}
       />
       <CommandPalette role={profile?.role ?? null} />
       {/*
