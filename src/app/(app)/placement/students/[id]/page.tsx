@@ -2,9 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requirePlacement, collegeData } from "@/lib/placement/server";
+import { GD_SKILLS, latestReviews } from "@/lib/placement/core";
+import { requirePlacement, collegeData, gdFeedbackForStudents } from "@/lib/placement/server";
 import { ReviewForm } from "@/components/placement/forms";
-import { latestReviews } from "@/lib/placement/core";
 import { photosForFindings } from "@/lib/proctor-evidence";
 import { EvidenceThumb } from "@/components/proctor/evidence-thumb";
 import { formatDuration } from "@/lib/utils";
@@ -52,36 +52,6 @@ function ProctoringRecord({ attempt, photos }: { attempt: PlacementAttempt; phot
   );
 }
 
-const GD_SKILLS = ["contribution", "listening", "collaboration", "clarity"] as const;
-
-/**
- * Teachers' reviews of this student in group discussions, newest first, with
- * the topic and who reviewed. Read with the service role: the page has already
- * proved the viewer staffs a college this student belongs to.
- */
-async function gdFeedback(userId: string) {
-  const db = createAdminClient();
-  const { data: reviews } = await db.from("gd_faculty_reviews").select("*").eq("user_id", userId)
-    .order("created_at", { ascending: false }).limit(50);
-  if (!reviews?.length) return [];
-  const [{ data: sessions }, { data: reviewers }] = await Promise.all([
-    db.from("gd_sessions").select("id, topic_id").in("id", [...new Set(reviews.map((r) => r.session_id))]),
-    db.from("users").select("id, full_name").in("id", [...new Set(reviews.map((r) => r.reviewer_id))]),
-  ]);
-  const topicIds = [...new Set((sessions ?? []).map((s) => s.topic_id).filter(Boolean))] as string[];
-  const { data: topics } = topicIds.length
-    ? await db.from("gd_topics").select("id, title").in("id", topicIds)
-    : { data: [] as { id: string; title: string }[] };
-  return reviews.map((r) => {
-    const topicId = sessions?.find((s) => s.id === r.session_id)?.topic_id;
-    return {
-      ...r,
-      topic: topics?.find((t) => t.id === topicId)?.title ?? "Group discussion",
-      reviewer: reviewers?.find((u) => u.id === r.reviewer_id)?.full_name ?? "Teacher",
-    };
-  });
-}
-
 export default async function StudentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ institution?: string }> }) {
   const { id } = await params;
   const { institution } = await searchParams;
@@ -96,13 +66,14 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
   const reviews = latestReviews(data.reviews);
   const db = createAdminClient();
   // Evidence photos are matched to each sitting by account and time window.
-  const [photos, discussions] = await Promise.all([
+  const [photos, gdMap] = await Promise.all([
     photosForFindings(
-    db,
-    attempts.filter((a) => a.integrity).map((a) => ({ id: a.id, user_id: a.user_id, created_at: a.created_at, server_elapsed_seconds: a.elapsed_seconds })),
+      db,
+      attempts.filter((a) => a.integrity).map((a) => ({ id: a.id, user_id: a.user_id, created_at: a.created_at, server_elapsed_seconds: a.elapsed_seconds })),
     ),
-    gdFeedback(id),
+    gdFeedbackForStudents([id]),
   ]);
+  const discussions = gdMap.get(id) ?? [];
 
   return (
     <div className="space-y-6">

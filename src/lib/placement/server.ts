@@ -72,14 +72,59 @@ export async function collegeData(institutionId: string) {
 export type CollegeData = Awaited<ReturnType<typeof collegeData>>;
 export function tokenHash(token:string) { return createHash("sha256").update(token).digest("hex"); }
 
-/** Only reviewed common assessments, current college membership and current opt-in.
+export type GdFeedbackDetail = {
+  id: string;
+  user_id: string;
+  session_id: string;
+  reviewer_id: string;
+  reviewer: string;
+  topic: string;
+  scores: Record<string, number>;
+  feedback: string;
+  created_at: string;
+};
+
+export async function gdFeedbackForStudents(userIds: string[]) {
+  const map = new Map<string, GdFeedbackDetail[]>();
+  if (!userIds.length) return map;
+  const db = createAdminClient();
+  const { data: reviews } = await db.from("gd_faculty_reviews").select("*").in("user_id", userIds)
+    .order("created_at", { ascending: false }).limit(500);
+  if (!reviews?.length) return map;
+  const [{ data: sessions }, { data: reviewers }] = await Promise.all([
+    db.from("gd_sessions").select("id, topic_id").in("id", [...new Set(reviews.map((r) => r.session_id))]),
+    db.from("users").select("id, full_name").in("id", [...new Set(reviews.map((r) => r.reviewer_id))]),
+  ]);
+  const topicIds = [...new Set((sessions ?? []).map((s) => s.topic_id).filter(Boolean))] as string[];
+  const { data: topics } = topicIds.length
+    ? await db.from("gd_topics").select("id, title").in("id", topicIds)
+    : { data: [] as { id: string; title: string }[] };
+
+  for (const r of reviews) {
+    const topicId = sessions?.find((s) => s.id === r.session_id)?.topic_id;
+    const item: GdFeedbackDetail = {
+      ...r,
+      scores: r.scores as Record<string, number>,
+      topic: topics?.find((t) => t.id === topicId)?.title ?? "Group discussion",
+      reviewer: reviewers?.find((u) => u.id === r.reviewer_id)?.full_name ?? "Teacher",
+    };
+    const list = map.get(r.user_id) ?? [];
+    list.push(item);
+    map.set(r.user_id, list);
+  }
+  return map;
+}
+
+/** Only reviewed common assessments, group discussion feedback, current college membership and current opt-in.
  * No private practice, diagnostic, raw AI verdicts, camera evidence or hidden contacts.
  */
 export async function reportEvidence(report: PlacementReport) {
   const data = await collegeData(report.institution_id);
   const latest = latestReviews(data.reviews);
   const assessments = data.assessments.filter(a=>report.assessment_ids.includes(a.id));
-  const candidates = data.users.filter(u=>report.student_ids.includes(u.id) && u.open_to_opportunities).map(user=>{
+  const candidateUsers = data.users.filter(u=>report.student_ids.includes(u.id) && u.open_to_opportunities);
+  const gdMap = await gdFeedbackForStudents(candidateUsers.map(u=>u.id));
+  const candidates = candidateUsers.map(user=>{
     const profile = data.profiles.find(p=>p.user_id===user.id);
     const evidence = data.attempts.filter(a=>a.user_id===user.id && a.assessment_id && report.assessment_ids.includes(a.assessment_id) && a.status==="evaluated" && latest.has(a.id)).map(a=>{
       const review=latest.get(a.id)!;
@@ -88,11 +133,20 @@ export async function reportEvidence(report: PlacementReport) {
         feedback:report.include_feedback ? review.feedback : null,
         work:report.include_work ? a.answer : null };
     });
+    const gd = (gdMap.get(user.id) ?? []).map(g => ({
+      id: g.id,
+      topic: g.topic,
+      reviewer: g.reviewer,
+      date: g.created_at,
+      scores: g.scores,
+      feedback: report.include_feedback ? g.feedback : null,
+    }));
     return { id:user.id, name:user.full_name??"Student", target_role:profile?.target_role??"", specialisation:profile?.specialisation??"",
       programme:profile?.programme??"", graduation_year:profile?.graduation_year??null,
       email:report.include_contact && profile?.share_contact ? user.email : null,
       resume_url:report.include_resume && profile?.share_resume && profile.resume_url.startsWith("https://") ? profile.resume_url : null,
-      evidence };
+      evidence,
+      gd };
   }).filter(c=>c.evidence.length>0);
   return { candidates, assessments:assessments.map(a=>({id:a.id,title:a.title,target_role:a.target_role,criteria:a.criteria})),
     cohortSize:data.users.length };

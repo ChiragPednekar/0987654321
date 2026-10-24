@@ -4,6 +4,8 @@ import type { PlacementAttempt, PlacementReview } from "./types";
 export const TARGET_ROLES = ["Finance analyst", "Sales & marketing", "Business analyst", "Consulting", "Operations", "Human resources", "Product management"] as const;
 export const COMMON_CRITERIA = { problem_framing: 20, analysis: 30, recommendation: 30, communication: 20 };
 export const DEFENSE_CRITERIA = { clarity: 25, structure: 25, evidence: 25, handling_questions: 25 };
+export const GD_SKILLS = ["contribution", "listening", "collaboration", "clarity"] as const;
+export type GdSkill = (typeof GD_SKILLS)[number];
 export const FOLLOW_UP = "Your main assumption turns out to be wrong and the available budget falls by 20%. What would you change, what evidence would you collect, and what would you tell the stakeholder?";
 /** One baseline per student; a new version of the task gets a new key. */
 export const DIAGNOSTIC_KEY = "baseline-v1";

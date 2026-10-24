@@ -102,3 +102,10 @@ describe("proof of proctoring", () => {
     expect(hasProctoringProof(signalsSchema.parse({ proctored: true }))).toBe(false);
   });
 });
+
+describe("group discussion feedback", () => {
+  it("defines the standard criteria for group discussions", async () => {
+    const { GD_SKILLS } = await import("@/lib/placement/core");
+    expect(GD_SKILLS).toEqual(["contribution", "listening", "collaboration", "clarity"]);
+  });
+});
