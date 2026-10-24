@@ -5,7 +5,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClientOrNull: () => null }));
 
 import { callModel } from "@/lib/ai/providers";
-import { RateLimitError } from "@/lib/ai/errors";
+import { aiBusyMessage, DailyLimitError, describeReset, RateLimitError } from "@/lib/ai/errors";
 
 /**
  * Google answers 503 "model is currently experiencing high demand" in busy
@@ -34,6 +34,7 @@ describe("Gemini overload handling", () => {
     vi.stubEnv("GEMINI_API_KEY", "test-key");
     vi.stubEnv("GEMINI_MODEL", "primary-model");
     vi.stubEnv("GEMINI_FALLBACK_MODEL", "backup-model");
+    vi.stubEnv("GEMINI_SECOND_FALLBACK_MODEL", "light-model");
     calls = [];
   });
 
@@ -47,7 +48,7 @@ describe("Gemini overload handling", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        calls.push(url.includes("backup-model") ? "backup" : "primary");
+        calls.push(url.includes("backup-model") ? "backup" : url.includes("light-model") ? "light" : "primary");
         return reply(statuses.shift() ?? 503);
       }),
     );
@@ -82,9 +83,34 @@ describe("Gemini overload handling", () => {
   });
 
   it("reports 'busy' — not a generic failure — when every model refuses", async () => {
-    stubFetch([503, 503, 503, 503, 503, 503]);
+    stubFetch([503, 503, 503, 503, 503, 503, 503, 503, 503]);
     await expect(run()).rejects.toBeInstanceOf(RateLimitError);
-    expect(calls).toHaveLength(6);
+    expect(calls).toHaveLength(9);
+  });
+
+  it("falls through to the lighter model when both others are out of quota", async () => {
+    stubFetch([429, 429, 200]);
+    const result = await run();
+    expect(result.model).toBe("light-model");
+    expect(calls).toEqual(["primary", "backup", "light"]);
+  });
+
+  it("reports a spent daily quota as a daily limit, with when it resets", async () => {
+    const daily = JSON.stringify({
+      error: {
+        details: [
+          { violations: [{ quotaId: "GenerateRequestsPerDayPerProjectPerModel-FreeTier" }] },
+          { retryDelay: "10800s" },
+        ],
+      },
+    });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(daily, { status: 429 })));
+    const error = await run().catch((e) => e);
+    expect(error).toBeInstanceOf(DailyLimitError);
+    expect(error).toBeInstanceOf(RateLimitError); // routes still treat it as "busy, nothing lost"
+    expect(aiBusyMessage(error, "try again", "nothing was used from your allowance")).toBe(
+      "The AI has reached today's usage limit. It resets in about 3 hours — try again then. Nothing was used from your allowance.",
+    );
   });
 
   it("does not ask a student to wait hours when a daily quota is spent", async () => {
@@ -101,5 +127,23 @@ describe("Gemini overload handling", () => {
     stubFetch([400]);
     await expect(run()).rejects.toThrow(/Gemini API error 400/);
     expect(calls).toEqual(["primary"]);
+  });
+});
+
+describe("aiBusyMessage", () => {
+  it("keeps the short-wait wording for a per-minute limit", () => {
+    expect(aiBusyMessage(new RateLimitError("busy", 40), "send again", "your message is saved")).toBe(
+      "The AI is busy. Wait about 40 seconds and send again — your message is saved.",
+    );
+    expect(aiBusyMessage(new RateLimitError("busy", null), "send again", "your message is saved")).toBe(
+      "The AI is busy. Wait a moment and send again — your message is saved.",
+    );
+  });
+
+  it("says when a daily limit resets, in words a student can use", () => {
+    expect(describeReset(null)).toBe("within a day");
+    expect(describeReset(30 * 60)).toBe("in about 30 minutes");
+    expect(describeReset(3600)).toBe("in about 1 hour");
+    expect(describeReset(70714)).toBe("in about 20 hours");
   });
 });

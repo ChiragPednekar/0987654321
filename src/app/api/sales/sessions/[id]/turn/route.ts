@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buyerTurn } from "@/lib/ai/sales";
-import { RateLimitError } from "@/lib/ai/errors";
+import { aiBusyMessage, RateLimitError } from "@/lib/ai/errors";
 import { recordUsage } from "@/lib/usage";
 import type { SalesScenarioRow } from "@/lib/types/database";
 import { lockoutResponse } from "@/lib/exam-lockouts";
@@ -169,9 +169,7 @@ export async function POST(
       const wait = err.retryAfterSeconds;
       return NextResponse.json(
         {
-          error: wait
-            ? `The AI is busy. Wait about ${wait} seconds and send again.`
-            : "The AI is busy. Wait a moment and send again.",
+          error: aiBusyMessage(err, "send again", "your message is kept"),
           code: "rate_limited",
           retry_after_seconds: wait,
         },

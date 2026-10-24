@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { chargeQuota, getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { critiqueBullets } from "@/lib/ai/resume-critique";
-import { RateLimitError } from "@/lib/ai/errors";
+import { aiBusyMessage, RateLimitError } from "@/lib/ai/errors";
 import { recordUsage } from "@/lib/usage";
 import { RESUME_LIMITS, parseBullets } from "@/lib/resume";
 
@@ -138,9 +138,7 @@ export async function POST(request: NextRequest) {
       const wait = err.retryAfterSeconds;
       return NextResponse.json(
         {
-          error: wait
-            ? `The AI is busy. Wait about ${wait} seconds and try again — nothing was used from your allowance.`
-            : "The AI is busy. Wait a moment and try again — nothing was used from your allowance.",
+          error: aiBusyMessage(err, "try again", "nothing was used from your allowance"),
           code: "rate_limited",
           retry_after_seconds: wait,
         },

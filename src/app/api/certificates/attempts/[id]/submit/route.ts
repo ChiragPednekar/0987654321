@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateSubmission, type EvaluationResult } from "@/lib/ai/evaluate";
-import { RateLimitError } from "@/lib/ai/errors";
+import { DailyLimitError, describeReset, RateLimitError } from "@/lib/ai/errors";
 import { recordUsage } from "@/lib/usage";
 import { MAX_ANSWER_CHARS, MIN_ANSWER_CHARS } from "@/lib/constants";
 import { signalsSchema } from "@/lib/integrity-request";
@@ -197,7 +197,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json(
       {
         error: busy
-          ? "Your answers are saved. The grader is busy — press submit again in a minute to have them marked."
+          ? err instanceof DailyLimitError
+            ? `Your answers are saved. The grader has reached today's usage limit and resets ${describeReset(err.retryAfterSeconds)} — press submit again then to have them marked.`
+            : "Your answers are saved. The grader is busy — press submit again in a minute to have them marked."
           : "Your answers are saved, but grading failed. Press submit again to retry — nothing can be changed now.",
         code: "grading_retry",
       },

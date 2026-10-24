@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { debriefSales } from "@/lib/ai/sales";
-import { RateLimitError } from "@/lib/ai/errors";
+import { aiBusyMessage, RateLimitError } from "@/lib/ai/errors";
 import { recordUsage } from "@/lib/usage";
 import type { SalesScenarioRow } from "@/lib/types/database";
 import { lockoutResponse } from "@/lib/exam-lockouts";
@@ -102,7 +102,7 @@ export async function POST(
     console.error("[sales] debrief failed", err);
     if (err instanceof RateLimitError) {
       return NextResponse.json(
-        { error: "The AI is busy. Wait a moment and reload — your meeting is saved.", code: "rate_limited" },
+        { error: aiBusyMessage(err, "reload", "your meeting is saved"), code: "rate_limited" },
         { status: 429 },
       );
     }

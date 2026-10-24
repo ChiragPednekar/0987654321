@@ -10,6 +10,7 @@ import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { ROLEPLAY_GUARD } from "@/lib/ai/untrusted";
 import { lockoutResponse } from "@/lib/exam-lockouts";
 import { CONVERSATION_LIMITS } from "@/lib/conversation-limits";
+import { aiBusyMessage, RateLimitError } from "@/lib/ai/errors";
 
 // A model turn takes several seconds; the default function timeout is tight.
 export const maxDuration = 60;
@@ -217,6 +218,12 @@ export async function POST(request: NextRequest) {
   try {
     reply = await callChat(interviewerSystemPrompt(caseData) + ROLEPLAY_GUARD, turns);
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return NextResponse.json(
+        { error: aiBusyMessage(error, "send again", "your conversation is saved"), code: "rate_limited" },
+        { status: 429 },
+      );
+    }
     return NextResponse.json(
       {
         error:

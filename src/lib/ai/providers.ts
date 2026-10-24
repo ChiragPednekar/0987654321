@@ -4,7 +4,7 @@ import OpenAI from "openai";
 import type { RubricCriteria } from "@/lib/types/database";
 import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import { buildJsonSchema } from "./schema";
-import { parseRetryAfter, RateLimitError, SpendCapError } from "./errors";
+import { DailyLimitError, isDailyQuota, parseRetryAfter, RateLimitError, SpendCapError } from "./errors";
 
 export interface ProviderResult {
   raw: string;
@@ -245,6 +245,7 @@ async function callGemini({
 
   const primary = process.env.GEMINI_MODEL || "gemini-3.6-flash";
   const fallback = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash";
+  const lastResort = process.env.GEMINI_SECOND_FALLBACK_MODEL || "gemini-3.5-flash-lite";
 
   // Gemini's responseSchema is an OpenAPI subset: it rejects
   // additionalProperties, so strip it from the shared builder's output.
@@ -281,7 +282,10 @@ async function callGemini({
    * rather than a generic failure. A 4xx other than 429 is our request being
    * wrong, and retrying it would not help.
    */
-  const models = primary === fallback ? [primary] : [primary, fallback];
+  // Each model has its own quota (the free tier allows 20 requests a day per
+  // model), so a third, lighter model keeps answering after the other two are
+  // spent for the day.
+  const models = [...new Set([primary, fallback, lastResort])];
   let response: Response | null = null;
   let model = primary;
   let retryAfter: number | null = null;
@@ -322,6 +326,9 @@ async function callGemini({
 
   if (!response?.ok) {
     console.error("[ai] Gemini unavailable on every model", models, lastDetail.slice(0, 1500));
+    if (isDailyQuota(lastDetail)) {
+      throw new DailyLimitError("The AI has reached today's usage limit.", retryAfter);
+    }
     // A short wait is worth telling the student. A long one is a daily quota
     // (the free tier's resets once a day), and "wait about 70714 seconds" helps
     // nobody — so past two minutes the student just hears "busy, try shortly".

@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { assessPersonalInterview } from "@/lib/ai/pi-interview";
 import { PI_MAX_SCORE } from "@/lib/pi";
 import { recordUsage } from "@/lib/usage";
-import { RateLimitError } from "@/lib/ai/errors";
+import { aiBusyMessage, RateLimitError } from "@/lib/ai/errors";
 import { z } from "zod";
 import { signalsSchema } from "@/lib/integrity-request";
 import { recordActivityIntegrity } from "@/lib/proctoring";
@@ -178,9 +178,7 @@ export async function POST(
       const wait = err.retryAfterSeconds;
       return NextResponse.json(
         {
-          error: wait
-            ? `The AI is busy right now. Wait about ${wait} seconds and finish again — your interview is saved.`
-            : "The AI is busy right now. Wait a moment and finish again — your interview is saved.",
+          error: aiBusyMessage(err, "finish again", "your interview is saved"),
           code: "rate_limited",
           retry_after_seconds: wait,
         },

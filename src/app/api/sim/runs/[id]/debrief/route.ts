@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { chargeQuota, getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { debriefRun } from "@/lib/ai/sim-debrief";
-import { RateLimitError } from "@/lib/ai/errors";
+import { aiBusyMessage, RateLimitError } from "@/lib/ai/errors";
 import { recordUsage } from "@/lib/usage";
 import type { Decisions, RoundOutcome } from "@/lib/sim/engine";
 import { lockoutResponse } from "@/lib/exam-lockouts";
@@ -115,9 +115,7 @@ export async function POST(
       const wait = err.retryAfterSeconds;
       return NextResponse.json(
         {
-          error: wait
-            ? `The AI is busy. Wait about ${wait} seconds and reload — your run is saved.`
-            : "The AI is busy. Wait a moment and reload — your run is saved.",
+          error: aiBusyMessage(err, "reload", "your run is saved"),
           code: "rate_limited",
           retry_after_seconds: wait,
         },

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { counterpartyTurn } from "@/lib/ai/negotiate";
-import { RateLimitError } from "@/lib/ai/errors";
+import { aiBusyMessage, RateLimitError } from "@/lib/ai/errors";
 import { recordUsage } from "@/lib/usage";
 import {
   isComplete,
@@ -181,9 +181,7 @@ export async function POST(
       const wait = err.retryAfterSeconds;
       return NextResponse.json(
         {
-          error: wait
-            ? `The AI is busy. Wait about ${wait} seconds and send again — your message is saved.`
-            : "The AI is busy. Wait a moment and send again — your message is saved.",
+          error: aiBusyMessage(err, "send again", "your message is saved"),
           code: "rate_limited",
           retry_after_seconds: wait,
         },

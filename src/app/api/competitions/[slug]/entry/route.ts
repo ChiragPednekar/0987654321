@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve, SOLVE_DENIAL } from "@/lib/entitlement";
 import { chargeQuota, getQuotaStatus, quotaDenial } from "@/lib/quota";
 import { evaluateSubmission } from "@/lib/ai/evaluate";
-import { RateLimitError } from "@/lib/ai/errors";
+import { aiBusyMessage, RateLimitError } from "@/lib/ai/errors";
 import { recordUsage } from "@/lib/usage";
 import { MAX_ANSWER_CHARS, MIN_ANSWER_CHARS } from "@/lib/constants";
 import { signalsSchema } from "@/lib/integrity-request";
@@ -229,9 +229,7 @@ export async function POST(
       const wait = err.retryAfterSeconds;
       return NextResponse.json(
         {
-          error: wait
-            ? `The AI is busy. Wait about ${wait} seconds and submit again — nothing was lost.`
-            : "The AI is busy. Wait a moment and submit again — nothing was lost.",
+          error: aiBusyMessage(err, "submit again", "nothing was lost"),
           code: "rate_limited",
           retry_after_seconds: wait,
         },

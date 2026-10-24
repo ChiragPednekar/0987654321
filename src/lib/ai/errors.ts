@@ -20,16 +20,57 @@ export class RateLimitError extends Error {
 }
 
 /**
- * The platform's own daily ceiling on model calls has been reached.
+ * A daily allowance has run out: the provider's per-day quota (Gemini's free
+ * tier allows 20 requests a day per model) or the platform's own ceiling.
  *
- * A RateLimitError, so every route that already tells a student "busy, try
- * again shortly" says the same here rather than reporting a fault.
+ * Still a RateLimitError, so every route treats it as "not your fault, nothing
+ * lost" — but "wait a moment" would be untrue for something that resets in
+ * hours, so aiBusyMessage() says when it resets instead.
  */
-export class SpendCapError extends RateLimitError {
+export class DailyLimitError extends RateLimitError {
+  constructor(message: string, retryAfterSeconds: number | null) {
+    super(message, retryAfterSeconds);
+    this.name = "DailyLimitError";
+  }
+}
+
+/**
+ * The platform's own daily ceiling on model calls has been reached.
+ */
+export class SpendCapError extends DailyLimitError {
   constructor(retryAfterSeconds: number) {
     super("The daily AI limit for the platform has been reached.", retryAfterSeconds);
     this.name = "SpendCapError";
   }
+}
+
+/** True when a provider's 429 body names a per-day quota rather than a per-minute one. */
+export function isDailyQuota(detail: string): boolean {
+  return /PerDay/i.test(detail);
+}
+
+/** "about 3 hours", "about 40 minutes", or "within a day" when the provider did not say. */
+export function describeReset(seconds: number | null): string {
+  if (seconds === null || seconds <= 0) return "within a day";
+  if (seconds < 55 * 60) return `in about ${Math.max(1, Math.round(seconds / 60))} minutes`;
+  const hours = Math.round(seconds / 3600);
+  return `in about ${hours} hour${hours === 1 ? "" : "s"}`;
+}
+
+/**
+ * What a student is told when the AI refused for capacity. One wording for
+ * every route; each passes what to do again and what was kept, e.g.
+ * aiBusyMessage(err, "try again", "nothing was used from your allowance").
+ */
+export function aiBusyMessage(err: RateLimitError, retry: string, kept: string): string {
+  if (err instanceof DailyLimitError) {
+    const keptSentence = kept.charAt(0).toUpperCase() + kept.slice(1);
+    return `The AI has reached today's usage limit. It resets ${describeReset(err.retryAfterSeconds)} — ${retry} then. ${keptSentence}.`;
+  }
+  const wait = err.retryAfterSeconds;
+  return wait
+    ? `The AI is busy. Wait about ${wait} seconds and ${retry} — ${kept}.`
+    : `The AI is busy. Wait a moment and ${retry} — ${kept}.`;
 }
 
 /** Pulls a retry delay out of whatever shape the provider used to say it. */

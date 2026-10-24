@@ -1,7 +1,7 @@
 import "server-only";
 
 import OpenAI from "openai";
-import { parseRetryAfter, RateLimitError } from "./errors";
+import { DailyLimitError, isDailyQuota, parseRetryAfter, RateLimitError } from "./errors";
 
 /**
  * Free-form conversational completion for the Case Chat interviewer (spec §6).
@@ -156,7 +156,8 @@ function geminiSleep(ms: number) {
  * — unable to read the gateway's error — left the student watching a spinner.
  * Now each attempt is cut off at GEMINI_ATTEMPT_MS; an overloaded or slow
  * model is retried once, then the request moves to the fallback model, which
- * runs on separate capacity; a 429 (quota) moves straight to the fallback. The
+ * runs on separate capacity; a 429 (quota) moves straight to the fallback, and
+ * a 429 anywhere also earns one try on a lighter model with its own quota. The
  * worst case answers in about 47 seconds, inside the route's 60.
  */
 async function chatGemini(
@@ -169,8 +170,10 @@ async function chatGemini(
 
   const primary = process.env.GEMINI_MODEL || "gemini-3.6-flash";
   const fallback = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash";
-  // Two tries on the primary, one on the fallback.
-  const plan = primary === fallback ? [primary, primary, primary] : [primary, primary, fallback];
+  const lastResort = process.env.GEMINI_SECOND_FALLBACK_MODEL || "gemini-3.5-flash-lite";
+  // Two tries on the primary, one on the fallback, one on a lighter model with
+  // its own quota (see providers.ts).
+  const plan = primary === fallback ? [primary, primary, primary, lastResort] : [primary, primary, fallback, lastResort];
 
   const body = JSON.stringify({
     systemInstruction: { parts: [{ text: system }] },
@@ -191,10 +194,15 @@ async function chatGemini(
 
   let lastProblem = "";
   let retryAfter: number | null = null;
+  let dailyQuota = false;
   for (let i = 0; i < plan.length; i++) {
     const model = plan[i];
     // A quota on the primary will not lift on a second try; skip to the fallback.
     if (i === 1 && retryAfter !== null && plan[2] !== primary) continue;
+    // The lighter model is only for quota exhaustion, which Google refuses
+    // instantly. After slow or overloaded attempts it would push the turn past
+    // the route's 60 seconds, so it is skipped unless a 429 was seen.
+    if (i === 3 && retryAfter === null) continue;
     if (i === 1) await geminiSleep(1_200);
 
     const controller = new AbortController();
@@ -221,6 +229,7 @@ async function chatGemini(
         const detail = await response.text();
         if (response.status === 429) {
           retryAfter = parseRetryAfter(detail) ?? 0;
+          dailyQuota = isDailyQuota(detail);
           lastProblem = `${model} is over its quota`;
           continue;
         }
@@ -259,6 +268,9 @@ async function chatGemini(
   }
 
   console.error("[ai] Gemini chat unavailable on every attempt", plan, lastProblem);
+  if (dailyQuota) {
+    throw new DailyLimitError("The AI has reached today's usage limit.", retryAfter || null);
+  }
   throw new RateLimitError(
     "The AI interviewer is busy right now. Please try again in a moment.",
     retryAfter !== null && retryAfter > 0 && retryAfter <= 120 ? retryAfter : null,

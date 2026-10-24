@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { callChat } from "@/lib/ai/chat";
 import { buildPiSystemPrompt } from "@/lib/ai/pi-interview";
 import { recordUsage } from "@/lib/usage";
-import { RateLimitError } from "@/lib/ai/errors";
+import { aiBusyMessage, RateLimitError } from "@/lib/ai/errors";
 import { PI_MAX_QUESTIONS } from "@/lib/pi";
 import { lockoutResponse } from "@/lib/exam-lockouts";
 import { CONVERSATION_LIMITS } from "@/lib/conversation-limits";
@@ -135,9 +135,7 @@ export async function POST(
       const wait = err.retryAfterSeconds;
       return NextResponse.json(
         {
-          error: wait
-            ? `The AI is busy right now. Wait about ${wait} seconds and try again — nothing has been lost.`
-            : "The AI is busy right now. Wait a moment and try again — nothing has been lost.",
+          error: aiBusyMessage(err, "try again", "nothing has been lost"),
           code: "rate_limited",
           retry_after_seconds: wait,
         },
