@@ -29,6 +29,12 @@ const bodySchema = z.object({
       framework: z.string().max(MAX_ANSWER_CHARS).optional(),
       analysis: z.string().max(MAX_ANSWER_CHARS).optional(),
       recommendation: z.string().max(MAX_ANSWER_CHARS).optional(),
+      // The seven-step case answer (CASE_ANSWER_SECTIONS).
+      clarify: z.string().max(MAX_ANSWER_CHARS).optional(),
+      hypothesis: z.string().max(MAX_ANSWER_CHARS).optional(),
+      structure: z.string().max(MAX_ANSWER_CHARS).optional(),
+      risks: z.string().max(MAX_ANSWER_CHARS).optional(),
+      next_steps: z.string().max(MAX_ANSWER_CHARS).optional(),
     })
     .default({}),
   time_spent_seconds: z.number().int().min(0).max(86_400).default(0),

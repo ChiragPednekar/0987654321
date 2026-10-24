@@ -558,6 +558,7 @@ export default async function CaseDetailPage({
                   caseSlug={caseData.slug}
                   signedIn={Boolean(profile)}
                   storageKey={`casecode:draft:${caseData.id}`}
+                  format={caseData.format}
                 />
               ) : (
                 <LicenceGate

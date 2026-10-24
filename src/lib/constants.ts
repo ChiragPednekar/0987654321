@@ -222,7 +222,89 @@ export const ANSWER_SECTIONS = [
   },
 ] as const;
 
-export type AnswerSectionKey = (typeof ANSWER_SECTIONS)[number]["key"];
+/**
+ * The case-study answer, in the seven steps an MBB interviewer listens for
+ * (chosen by the owner, 2026-10-24). Used for every full case — on the case
+ * page and in certificate exams — while other written formats (memos, essays,
+ * behavioural answers) keep the three-part ANSWER_SECTIONS above, which fit
+ * them better. Clarify, hypothesis, risks and next steps are the parts
+ * students most often skip and interviewers most often mark.
+ */
+export const CASE_ANSWER_SECTIONS = [
+  {
+    key: "clarify",
+    label: "Clarify the problem",
+    hint: "Restate the question in one line: the objective, the scope, and any constraint.",
+    placeholder:
+      "The client wants to know why operating profit fell 20% this year, across all segments,\n" +
+      "and what to do in the next 12 months. Success = profit back to last year's level.",
+    minChars: 40,
+  },
+  {
+    key: "hypothesis",
+    label: "Initial hypothesis",
+    hint: "What you expect the answer to be before looking at the data — and so where you will look first.",
+    placeholder: "Revenue is flat, so I expect the problem is on the cost side, probably in one segment.",
+    minChars: 30,
+  },
+  {
+    key: "structure",
+    label: "Structure",
+    hint: "Break the problem into 3–4 branches that don't overlap and cover everything (MECE), with sub-points.",
+    placeholder:
+      "Profit\n" +
+      "├─ Revenue: price × volume, by segment\n" +
+      "└─ Costs: variable (materials, labour, logistics) and fixed, by segment",
+    minChars: 80,
+  },
+  {
+    key: "analysis",
+    label: "Analysis",
+    hint: "Work through the branches in order. For each: the data, the calculation shown, and the so-what.",
+    placeholder:
+      "Services: cost ₹259 Cr → ₹298 Cr (+15%) while its revenue rose only 4%.\n" +
+      "Profit fall = ₹285 Cr − ₹250 Cr = ₹35 Cr; Services explains ₹25 Cr of it (71%).\n" +
+      "So what: this is a Services cost problem, not a revenue problem.",
+    minChars: 150,
+  },
+  {
+    key: "recommendation",
+    label: "Recommendation",
+    hint: "Lead with the decision in one sentence, then 2–3 reasons, each backed by a number.",
+    placeholder:
+      "Cut Services labour cost, worth about ₹35 Cr a year: it caused most of the fall,\n" +
+      "and the other segments are stable.",
+    minChars: 60,
+  },
+  {
+    key: "risks",
+    label: "Risks",
+    hint: "The 1–2 things that could make your recommendation wrong, and how to reduce each.",
+    placeholder: "If the labour increase is market-wide, savings will be partial — benchmark wage rates first.",
+    minChars: 40,
+  },
+  {
+    key: "next_steps",
+    label: "Next steps",
+    hint: "2–3 concrete actions with a timeline: what to do first, and what to measure.",
+    placeholder:
+      "Weeks 1–2: benchmark wages and overtime hours. Month 1: renegotiate the top contracts.\n" +
+      "Track Services margin monthly.",
+    minChars: 40,
+  },
+] as const;
+
+export type AnswerSectionDef = {
+  readonly key: AnswerSectionKey;
+  readonly label: string;
+  readonly hint: string;
+  readonly placeholder: string;
+  readonly minChars: number;
+};
+
+export type AnswerSectionKey =
+  | (typeof ANSWER_SECTIONS)[number]["key"]
+  | (typeof CASE_ANSWER_SECTIONS)[number]["key"];
 
 /**
  * What a student is asked to write.

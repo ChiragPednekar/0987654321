@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { useProctor } from "@/hooks/use-proctor";
 import { ProctorGate, ProctorOverlay } from "@/components/case/proctor-overlay";
 import { CameraPreview } from "@/components/proctor/camera-preview";
 import { SupportingData } from "@/components/case/case-problem-view";
-import { MAX_ANSWER_CHARS, MIN_ANSWER_CHARS } from "@/lib/constants";
+import { CASE_ANSWER_SECTIONS, MAX_ANSWER_CHARS, MIN_ANSWER_CHARS } from "@/lib/constants";
+import { carryOverDraft, composeAnswer, type SectionValues } from "@/lib/answer-sections";
+import { SectionedAnswer } from "@/components/case/sectioned-answer";
 import { cn } from "@/lib/utils";
 
 export interface ExamCase {
@@ -63,24 +64,43 @@ export function ExamRoom({
   // Drafts kept in this browser, restored on first render. The editor only
   // renders after the student enters exam mode, so there is no server markup
   // for this to disagree with.
-  const [answers, setAnswers] = React.useState<Record<string, string>>(() => {
+  // Each case is answered in the seven steps of a case answer, kept per case.
+  // A draft saved before the boxes existed was one text per case: it opens in
+  // the Analysis box rather than being lost.
+  const [sectionsByCase, setSectionsByCase] = React.useState<Record<string, SectionValues>>(() => {
     try {
-      return JSON.parse(localStorage.getItem(`cert-attempt:${attemptId}`) ?? "{}");
+      const saved = JSON.parse(localStorage.getItem(`cert-attempt:${attemptId}`) ?? "{}") as Record<string, unknown>;
+      return Object.fromEntries(
+        Object.entries(saved).map(([caseId, value]) => [
+          caseId,
+          typeof value === "string"
+            ? carryOverDraft(CASE_ANSWER_SECTIONS, { analysis: value })
+            : carryOverDraft(CASE_ANSWER_SECTIONS, (value ?? {}) as Record<string, string>),
+        ]),
+      );
     } catch {
       return {};
     }
   });
+  // What is submitted and graded: each case's boxes as one answer, as before.
+  const answers = React.useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(sectionsByCase).map(([caseId, values]) => [caseId, composeAnswer(CASE_ANSWER_SECTIONS, values)]),
+      ),
+    [sectionsByCase],
+  );
   const [busy, setBusy] = React.useState(false);
   const [now, setNow] = React.useState(() => Date.now());
   const submitted = React.useRef(false);
 
   React.useEffect(() => {
     try {
-      localStorage.setItem(storageKey, JSON.stringify(answers));
+      localStorage.setItem(storageKey, JSON.stringify(sectionsByCase));
     } catch {
       /* storage unavailable: drafts live in memory only */
     }
-  }, [answers, storageKey]);
+  }, [sectionsByCase, storageKey]);
 
   // Start the server clock the first time exam mode is entered.
   React.useEffect(() => {
@@ -245,16 +265,17 @@ export function ExamRoom({
           </article>
 
           <div className="space-y-2">
-            <Textarea
-              value={answers[current.id] ?? ""}
-              onChange={(e) => setAnswers((a) => ({ ...a, [current.id]: e.target.value }))}
+            <SectionedAnswer
+              idPrefix={`exam-${current.id}`}
+              defs={CASE_ANSWER_SECTIONS}
+              values={sectionsByCase[current.id] ?? {}}
+              onChange={(key, value) =>
+                setSectionsByCase((all) => ({ ...all, [current.id]: { ...all[current.id], [key]: value } }))
+              }
               onKeyDown={proctor.handlers.onKeyDown}
               onPaste={proctor.handlers.onPaste}
-              maxLength={MAX_ANSWER_CHARS}
-              placeholder="Your answer: structure, analysis, recommendation. Pasting is disabled."
-              className="min-h-[460px] resize-y font-mono text-[13px] leading-relaxed"
             />
-            <p className="text-xs text-muted-foreground tabular">
+            <p className={cn("text-xs tabular", (answers[current.id] ?? "").length > MAX_ANSWER_CHARS ? "text-destructive" : "text-muted-foreground")}>
               {(answers[current.id] ?? "").length.toLocaleString()}/{MAX_ANSWER_CHARS.toLocaleString()}
               {(answers[current.id] ?? "").trim().length < MIN_ANSWER_CHARS && ` · at least ${MIN_ANSWER_CHARS} characters to be marked`}
             </p>

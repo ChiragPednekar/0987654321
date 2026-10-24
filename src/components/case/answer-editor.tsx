@@ -9,11 +9,21 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  ANSWER_SECTIONS,
   MAX_ANSWER_CHARS,
   MIN_ANSWER_CHARS,
   type AnswerSectionKey,
+  type AnswerSectionDef,
 } from "@/lib/constants";
+import {
+  carryOverDraft,
+  composeAnswer,
+  emptySections,
+  filledSections,
+  firstIncomplete,
+  sectionsFor,
+  type SectionValues,
+} from "@/lib/answer-sections";
+import { SectionedAnswer } from "./sectioned-answer";
 import { cn, formatDuration } from "@/lib/utils";
 import type { AnswerSections } from "@/lib/types/database";
 import { useProctor } from "@/hooks/use-proctor";
@@ -29,53 +39,36 @@ interface AnswerEditorProps {
   signedIn: boolean;
   /** Restores an in-progress draft between reloads. */
   storageKey: string;
+  /** The case's format: a full case is answered in the seven steps. */
+  format?: string | null;
 }
 
 type Mode = "structured" | "free";
-
-type SectionState = Record<AnswerSectionKey, string>;
-
-const EMPTY_SECTIONS = Object.fromEntries(
-  ANSWER_SECTIONS.map((s) => [s.key, ""]),
-) as SectionState;
-
-/**
- * Renders the sections into the single markdown answer the grader reads, so
- * the whole evaluation path stays identical whichever mode was used.
- */
-function composeAnswer(sections: SectionState): string {
-  return ANSWER_SECTIONS.map(({ key, label }) => {
-    const body = sections[key].trim();
-    return body ? `## ${label}\n\n${body}` : "";
-  })
-    .filter(Boolean)
-    .join("\n\n");
-}
 
 /**
  * The draft this browser saved for the case, or an empty one. Null-safe on the
  * server, where the editor is not shown and storage does not exist: the
  * textareas only render after Start, so the server and the first client render
- * still agree.
+ * still agree. A draft from the earlier three-box layout carries over.
  */
-function loadDraft(key: string): { mode: Mode; sections: SectionState; freeText: string } {
-  const empty = { mode: "structured" as Mode, sections: EMPTY_SECTIONS, freeText: "" };
+function loadDraft(key: string, defs: readonly AnswerSectionDef[]): { mode: Mode; sections: SectionValues; freeText: string } {
+  const empty = { mode: "structured" as Mode, sections: emptySections(defs), freeText: "" };
   const saved = readStoredOnce(key);
   if (!saved) return empty;
   try {
     const parsed = JSON.parse(saved) as {
       mode?: Mode;
-      sections?: SectionState;
+      sections?: Record<string, string>;
       freeText?: string;
     } | null;
     return {
       mode: parsed?.mode ?? empty.mode,
-      sections: { ...EMPTY_SECTIONS, ...parsed?.sections },
+      sections: carryOverDraft(defs, parsed?.sections ?? {}),
       freeText: parsed?.freeText ?? "",
     };
   } catch {
     // Drafts saved by the older single-textarea editor were plain strings.
-    return { mode: "free", sections: EMPTY_SECTIONS, freeText: saved };
+    return { mode: "free", sections: empty.sections, freeText: saved };
   }
 }
 
@@ -85,15 +78,17 @@ export function AnswerEditor({
   contestId,
   signedIn,
   storageKey,
+  format,
 }: AnswerEditorProps) {
+  const defs = sectionsFor(format);
   const router = useRouter();
   const sharedProctor = useCaseProctor();
   // The saved draft seeds the editor once, as it first renders. The page keys
   // this component by the draft, so another case is a fresh mount with its own
   // draft rather than this one's state carried across.
-  const [draft] = React.useState(() => loadDraft(storageKey));
+  const [draft] = React.useState(() => loadDraft(storageKey, defs));
   const [mode, setMode] = React.useState<Mode>(draft.mode);
-  const [sections, setSections] = React.useState<SectionState>(draft.sections);
+  const [sections, setSections] = React.useState<SectionValues>(draft.sections);
   const [freeText, setFreeText] = React.useState(draft.freeText);
   const [submitting, setSubmitting] = React.useState(false);
   const [localElapsed, setLocalElapsed] = React.useState(0);
@@ -121,7 +116,7 @@ export function AnswerEditor({
     });
   }, [signedIn, sharedProctor, caseId]);
 
-  const answer = mode === "structured" ? composeAnswer(sections) : freeText;
+  const answer = mode === "structured" ? composeAnswer(defs, sections) : freeText;
 
   // Persist the draft — losing 45 minutes of writing to a stray refresh is
   // the fastest way to lose a user.
@@ -153,10 +148,7 @@ export function AnswerEditor({
 
   // In structured mode, name the section that still needs work rather than
   // just refusing to submit.
-  const incompleteSection =
-    mode === "structured"
-      ? ANSWER_SECTIONS.find((s) => sections[s.key].trim().length < s.minChars)
-      : undefined;
+  const incompleteSection = mode === "structured" ? firstIncomplete(defs, sections) : undefined;
 
   function updateSection(key: AnswerSectionKey, value: string) {
     setSections((prev) => ({ ...prev, [key]: value }));
@@ -167,14 +159,7 @@ export function AnswerEditor({
     setSubmitting(true);
 
     // Only send sections when they were actually used; free text stores {}.
-    const answer_sections: AnswerSections =
-      mode === "structured"
-        ? Object.fromEntries(
-            ANSWER_SECTIONS.map(({ key }) => [key, sections[key].trim()]).filter(
-              ([, v]) => v,
-            ),
-          )
-        : {};
+    const answer_sections: AnswerSections = mode === "structured" ? filledSections(defs, sections) : {};
 
     try {
       const response = await fetch("/api/submissions", {
@@ -198,7 +183,7 @@ export function AnswerEditor({
       }
 
       window.localStorage.removeItem(storageKey);
-      setSections(EMPTY_SECTIONS);
+      setSections(emptySections(defs));
       setFreeText("");
       // Release the beforeunload guard and fullscreen before navigating, or the
       // router push below trips the very dialog meant to deter abandoning an
@@ -333,65 +318,21 @@ export function AnswerEditor({
       </div>
 
       {mode === "structured" ? (
-        <div className="space-y-4">
-          {ANSWER_SECTIONS.map((section) => {
-            const value = sections[section.key];
-            const short = value.trim().length < section.minChars;
-            return (
-              <div key={section.key} className="space-y-1.5">
-                <div className="flex items-baseline justify-between gap-3">
-                  <label
-                    htmlFor={`section-${section.key}`}
-                    className="text-sm font-medium"
-                  >
-                    {section.label}
-                  </label>
-                  <span
-                    className={cn(
-                      "text-xs tabular",
-                      short ? "text-muted-foreground" : "text-[var(--success)]",
-                    )}
-                  >
-                    {/*
-                      `minChars` is a floor, but "299/60" is read by everyone as
-                      299 out of a permitted 60 — the universal meaning of that
-                      format — so a student who had written a good answer saw
-                      what looked like a five-times overrun and started cutting.
-                      Say which direction the number points instead.
-                    */}
-                    {short
-                      ? `${section.minChars - value.trim().length} more characters`
-                      : `${value.trim().length} characters`}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">{section.hint}</p>
-                <Textarea
-                  id={`section-${section.key}`}
-                  value={value}
-                  onChange={(event) =>
-                    updateSection(section.key, event.target.value)
-                  }
-                  onKeyDown={proctor.handlers.onKeyDown}
-                  onPaste={proctor.handlers.onPaste}
-                  placeholder={section.placeholder}
-                  className="min-h-[150px] resize-y font-mono text-[13px] leading-relaxed"
-                  spellCheck
-                />
-              </div>
-            );
-          })}
-        </div>
+        <SectionedAnswer
+          defs={defs}
+          values={sections}
+          onChange={updateSection}
+          onKeyDown={proctor.handlers.onKeyDown}
+          onPaste={proctor.handlers.onPaste}
+        />
       ) : (
         <Textarea
           value={freeText}
           onChange={(event) => setFreeText(event.target.value)}
           placeholder={
-            "Structure your answer. A strong response usually has:\n\n" +
-            "1. How you're breaking the problem down\n" +
-            "2. The analysis, with the numbers actually computed\n" +
-            "3. Risks and what would change your mind\n" +
-            "4. A clear recommendation you commit to\n\n" +
-            "Markdown works here."
+            "Structure your answer. A strong response has:\n\n" +
+            defs.map((d, i) => `${i + 1}. ${d.label}`).join("\n") +
+            "\n\nMarkdown works here."
           }
           onKeyDown={proctor.handlers.onKeyDown}
           onPaste={proctor.handlers.onPaste}

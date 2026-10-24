@@ -202,9 +202,16 @@ export type RubricRow = {
  * the editor, the stored row and the history view cannot drift apart.
  */
 export type AnswerSections = {
+  // The three-part format (memos, essays and other written formats).
   framework?: string;
   analysis?: string;
   recommendation?: string;
+  // The seven-step case answer (CASE_ANSWER_SECTIONS); shares analysis and recommendation.
+  clarify?: string;
+  hypothesis?: string;
+  structure?: string;
+  risks?: string;
+  next_steps?: string;
 };
 
 export type DrillQuestionRow = {
