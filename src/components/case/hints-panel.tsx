@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Markdown } from "@/components/markdown";
 
 export interface HintStub {
   id: string;
@@ -127,9 +128,7 @@ export function HintsPanel({
               </div>
 
               {body && (
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  {body}
-                </p>
+                <Markdown className="mt-3 text-sm leading-relaxed text-muted-foreground">{body}</Markdown>
               )}
             </CardContent>
           </Card>

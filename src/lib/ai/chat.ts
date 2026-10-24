@@ -139,6 +139,26 @@ async function chatAnthropic(
   };
 }
 
+/** One Gemini attempt may take this long before it is abandoned and retried. */
+const GEMINI_ATTEMPT_MS = 15_000;
+
+class AttemptTimeout extends Error {}
+
+function geminiSleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Gemini for conversational turns, made as sturdy as grading's callGemini.
+ *
+ * A turn used to be one bare request with no time limit: when Gemini was busy
+ * it could sit until the platform killed the route at 60 seconds, and the page
+ * — unable to read the gateway's error — left the student watching a spinner.
+ * Now each attempt is cut off at GEMINI_ATTEMPT_MS; an overloaded or slow
+ * model is retried once, then the request moves to the fallback model, which
+ * runs on separate capacity; a 429 (quota) moves straight to the fallback. The
+ * worst case answers in about 47 seconds, inside the route's 60.
+ */
 async function chatGemini(
   system: string,
   turns: ChatTurn[],
@@ -147,56 +167,104 @@ async function chatGemini(
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
 
-  const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+  const primary = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+  const fallback = process.env.GEMINI_FALLBACK_MODEL || "gemini-3.5-flash";
+  // Two tries on the primary, one on the fallback.
+  const plan = primary === fallback ? [primary, primary, primary] : [primary, primary, fallback];
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: turns.map((turn) => ({
-          // Gemini's word for the assistant is "model".
-          role: turn.role === "interviewer" ? "model" : "user",
-          parts: [{ text: turn.content }],
-        })),
-        generationConfig: {
-          temperature: TEMPERATURE,
-          maxOutputTokens: maxTokens,
-          // No thinking for a conversational turn: it is billed as output,
-          // and it counts against maxOutputTokens, so a model that thought
-          // for 700 tokens could cut its own reply short.
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      }),
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: system }] },
+    contents: turns.map((turn) => ({
+      // Gemini's word for the assistant is "model".
+      role: turn.role === "interviewer" ? "model" : "user",
+      parts: [{ text: turn.content }],
+    })),
+    generationConfig: {
+      temperature: TEMPERATURE,
+      maxOutputTokens: maxTokens,
+      // No thinking for a conversational turn: it is billed as output,
+      // and it counts against maxOutputTokens, so a model that thought
+      // for 700 tokens could cut its own reply short.
+      thinkingConfig: { thinkingBudget: 0 },
     },
-  );
+  });
 
-  if (!response.ok) {
-    const detail = await response.text();
-    if (response.status === 429) {
-      throw new RateLimitError(
-        "The AI provider is rate limiting us.",
-        parseRetryAfter(detail),
+  let lastProblem = "";
+  let retryAfter: number | null = null;
+  for (let i = 0; i < plan.length; i++) {
+    const model = plan[i];
+    // A quota on the primary will not lift on a second try; skip to the fallback.
+    if (i === 1 && retryAfter !== null && plan[2] !== primary) continue;
+    if (i === 1) await geminiSleep(1_200);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(new AttemptTimeout()), GEMINI_ATTEMPT_MS);
+    let response: Response;
+    try {
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+          body,
+          signal: controller.signal,
+        },
       );
+    } catch (error) {
+      clearTimeout(timer);
+      lastProblem = controller.signal.aborted ? `${model} took longer than ${GEMINI_ATTEMPT_MS / 1000}s` : String(error);
+      continue;
     }
-    throw new Error(`Gemini API error ${response.status}: ${detail}`);
+
+    try {
+      if (!response.ok) {
+        const detail = await response.text();
+        if (response.status === 429) {
+          retryAfter = parseRetryAfter(detail) ?? 0;
+          lastProblem = `${model} is over its quota`;
+          continue;
+        }
+        if ([500, 502, 503, 504].includes(response.status)) {
+          lastProblem = `${model} answered ${response.status}`;
+          continue;
+        }
+        // Our request is wrong; another try would not help.
+        throw new Error(`Gemini API error ${response.status}: ${detail}`);
+      }
+
+      const data = await response.json();
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (!content) {
+        lastProblem = `${model} returned an empty reply`;
+        continue;
+      }
+
+      return {
+        content,
+        model,
+        tokensUsed: data.usageMetadata?.totalTokenCount ?? 0,
+        inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
+        outputTokens: (data.usageMetadata?.candidatesTokenCount ?? 0) + (data.usageMetadata?.thoughtsTokenCount ?? 0),
+        cachedTokens: data.usageMetadata?.cachedContentTokenCount ?? 0,
+      };
+    } catch (error) {
+      if (error instanceof AttemptTimeout || controller.signal.aborted) {
+        lastProblem = `${model} took longer than ${GEMINI_ATTEMPT_MS / 1000}s`;
+        continue;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  const data = await response.json();
-  const content = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-  if (!content) throw new Error("Model returned an empty response");
-
-  return {
-    content,
-    model,
-    tokensUsed: data.usageMetadata?.totalTokenCount ?? 0,
-    inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
-    outputTokens: (data.usageMetadata?.candidatesTokenCount ?? 0) + (data.usageMetadata?.thoughtsTokenCount ?? 0),
-    cachedTokens: data.usageMetadata?.cachedContentTokenCount ?? 0,
-  };
+  console.error("[ai] Gemini chat unavailable on every attempt", plan, lastProblem);
+  throw new RateLimitError(
+    "The AI interviewer is busy right now. Please try again in a moment.",
+    retryAfter !== null && retryAfter > 0 && retryAfter <= 120 ? retryAfter : null,
+  );
 }
+
 
 export function callChat(
   system: string,

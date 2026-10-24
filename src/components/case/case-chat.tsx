@@ -60,6 +60,10 @@ export function CaseChat({
     // echo your own words back reads as lag.
     if (message) setTurns((prev) => [...prev, { role: "candidate", content: message }]);
 
+    // The server answers within ~50 seconds even when the AI is struggling; this
+    // is the backstop so the button can never spin forever.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 58_000);
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -69,11 +73,13 @@ export function CaseChat({
           session_id: sessionId ?? undefined,
           message,
         }),
+        signal: controller.signal,
       });
 
-      const payload = await response.json();
-      if (!response.ok) {
-        toast.error(payload.error ?? "The interviewer did not respond.");
+      // A platform timeout answers with an HTML page, not JSON.
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload) {
+        toast.error(payload?.error ?? "The interviewer did not respond. Please try again.");
         // Roll the optimistic turn back so the transcript still matches the
         // server's, which is what the next request will be graded against.
         if (message) setTurns((prev) => prev.slice(0, -1));
@@ -85,9 +91,14 @@ export function CaseChat({
       setTurns((prev) => [...prev, { role: "interviewer", content: data.reply }]);
       setClosed(data.closed);
     } catch {
-      toast.error("Network error.");
+      toast.error(
+        controller.signal.aborted
+          ? "The interviewer is taking too long. Please try again."
+          : "Network error. Check your connection and try again.",
+      );
       if (message) setTurns((prev) => prev.slice(0, -1));
     } finally {
+      clearTimeout(timer);
       setBusy(false);
     }
   }
