@@ -3,6 +3,8 @@
 import { Camera, Eye, Loader2, Lock, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CameraApi } from "@/hooks/use-camera-proctor";
+import { cameraReady } from "@/lib/proctor-readiness";
+export { cameraReady } from "@/lib/proctor-readiness";
 
 /**
  * What a student sees when they leave the page mid-answer in exam mode.
@@ -139,7 +141,7 @@ export function ProctorGate({
    */
   camera?: CameraApi;
 }) {
-  const waitingForCamera = camera !== undefined && camera.status === "requesting";
+  const waitingForCamera = camera !== undefined && (camera.status === "requesting" || (camera.status === "on" && camera.detector !== "failed" && !cameraReady(camera)));
   const cameraOff = camera !== undefined && !waitingForCamera && !cameraReady(camera);
 
   return (
@@ -160,12 +162,12 @@ export function ProctorGate({
       {cameraOff ? (
         <Button className="mt-5" onClick={() => void camera.request()}>
           <Camera />
-          {cameraRefused(camera) ? "Try the camera again" : "Turn on camera"}
+          {cameraRefused(camera) || camera.detector === "failed" ? "Try the camera again" : "Turn on camera"}
         </Button>
       ) : waitingForCamera ? (
         <Button className="mt-5" disabled>
           <Loader2 className="animate-spin" />
-          Allow the camera in your browser…
+          {camera?.status === "on" ? "Loading camera checks…" : "Allow the camera in your browser…"}
         </Button>
       ) : (
         <Button className="mt-5" onClick={() => void onStart()} disabled={starting}>
@@ -175,24 +177,6 @@ export function ProctorGate({
       )}
     </div>
   );
-}
-
-/**
- * Whether a surface may start the attempt as far as the camera is concerned:
- * only when it is on.
- *
- * It used to be enough for the camera question to have any answer, refused
- * included, so a student without a webcam could still sit the paper. That made
- * refusing the camera the way round every camera rule — an attempt nobody is
- * watching cannot be ended for a phone — so the camera is now required.
- * useProctor.start() enforces the same rule, in case a surface's own button
- * forgets to.
- *
- * It must also be on before the start click goes fullscreen, as before: some
- * browsers leave fullscreen to show a permission prompt.
- */
-export function cameraReady(camera: CameraApi): boolean {
-  return camera.status === "on";
 }
 
 /** The browser or the machine said no, as opposed to not having been asked. */
@@ -210,20 +194,21 @@ function cameraRefused(camera: CameraApi): boolean {
  * screen goes back to looking as it did.
  */
 export function CameraStep({ camera }: { camera: CameraApi }) {
-  if (camera.status === "on") return null;
+  if (cameraReady(camera)) return null;
+  const loadingChecks = camera.status === "on" && camera.detector !== "failed";
   return (
     <div className="text-center">
       <CameraConsent camera={camera} />
-      {camera.status !== "requesting" && (
+      {camera.status !== "requesting" && !loadingChecks && (
         <Button className="mt-3" variant="outline" onClick={() => void camera.request()}>
           <Camera />
-          {cameraRefused(camera) ? "Try the camera again" : "Turn on camera"}
+          {cameraRefused(camera) || camera.detector === "failed" ? "Try the camera again" : "Turn on camera"}
         </Button>
       )}
-      {camera.status === "requesting" && (
+      {(camera.status === "requesting" || loadingChecks) && (
         <Button className="mt-3" variant="outline" disabled>
           <Loader2 className="animate-spin" />
-          Allow the camera in your browser…
+          {loadingChecks ? "Loading camera checks…" : "Allow the camera in your browser…"}
         </Button>
       )}
     </div>
@@ -240,7 +225,9 @@ export function CameraStep({ camera }: { camera: CameraApi }) {
  */
 function CameraConsent({ camera }: { camera: CameraApi }) {
   const state =
-    camera.status === "on"
+    camera.status === "on" && camera.detector === "failed"
+      ? { tone: "text-danger", text: "Camera checks could not load. Check your connection and try the camera again. The test has not started." }
+      : camera.status === "on"
       ? { tone: "text-success", text: "Camera is on." }
       : camera.status === "denied"
         ? {

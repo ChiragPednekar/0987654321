@@ -687,7 +687,10 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
     // its counters, photos and violation must not carry over into it.
     const nextAttempt = stopped.current;
     stopped.current = false;
-    if (status === "requesting" || status === "on") return;
+    if (status === "requesting" || (status === "on" && detector !== "failed")) return;
+    // Retry a failed model load with fresh devices and detectors. Previously
+    // the live camera made request() return forever, even after loading failed.
+    if (status === "on") teardown();
     if (nextAttempt) {
       setSignals(EMPTY_STATE_SIGNALS);
       trackerRef.current = createTracker();
@@ -702,7 +705,8 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       fallbackDwellRef.current.reset();
     }
 
-    patch({ cameraRequested: true, cameraDenied: false, cameraUnavailable: false });
+    patch({ cameraRequested: true, cameraDenied: false, cameraUnavailable: false, detectorFailed: false });
+    setDetector("idle");
     setStatus("requesting");
     setWaitedTooLong(false);
     const patience = setTimeout(() => setWaitedTooLong(true), PROMPT_PATIENCE_MS);
@@ -987,7 +991,7 @@ export function useCameraProctor(enabled: boolean, counting: boolean): CameraApi
       setDetector("failed");
       patch({ detectorFailed: true });
     }
-  }, [enabled, status, patch, sample, teardown]);
+  }, [enabled, status, detector, patch, sample, teardown]);
 
   const reset = React.useCallback(() => {
     stopped.current = false;

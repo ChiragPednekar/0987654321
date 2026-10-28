@@ -5,6 +5,7 @@ import { EMPTY_SIGNALS, type ProctorSignals } from "@/lib/integrity";
 import { useCameraProctor, type CameraApi } from "@/hooks/use-camera-proctor";
 import type { EndReason } from "@/lib/camera-proctor";
 import { setEndedTest, type EndedTest } from "@/hooks/proctor-ended-store";
+import { cameraReady } from "@/lib/proctor-readiness";
 
 /**
  * Watches how an answer is being written.
@@ -335,7 +336,7 @@ export function useProctor(enabled: boolean): ProctorApi {
   }, []);
 
   const { stop: stopCamera, reset: resetCamera } = camera;
-  const cameraOn = camera.status === "on";
+  const cameraOn = cameraReady(camera);
 
   /** Clears this hook's own counters and state. The camera keeps its own. */
   const resetOwn = React.useCallback(() => {

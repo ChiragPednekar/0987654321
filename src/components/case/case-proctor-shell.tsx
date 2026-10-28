@@ -4,7 +4,7 @@ import * as React from "react";
 import { Lock, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { useProctor, type ProctorApi } from "@/hooks/use-proctor";
-import { ProctorGate, ProctorOverlay } from "@/components/case/proctor-overlay";
+import { ProctorGate, ProctorOverlay, cameraReady } from "@/components/case/proctor-overlay";
 import { CameraPreview } from "@/components/proctor/camera-preview";
 import { Tabs } from "@/components/ui/tabs";
 import { formatDuration } from "@/lib/utils";
@@ -94,6 +94,7 @@ export function CaseProctorShell({
   }
 
   const handleStart = React.useCallback(async () => {
+    if (!cameraReady(proctor.camera) || opening || proctor.ended) return;
     setCompleted(false);
     setStartedAt(Date.now());
     setElapsed(0);
@@ -121,7 +122,7 @@ export function CaseProctorShell({
     } finally {
       setOpening(false);
     }
-  }, [proctor, slug]);
+  }, [proctor, slug, opening]);
 
   React.useEffect(() => {
     if (!proctor.examMode) return;
@@ -176,7 +177,7 @@ export function CaseProctorShell({
     }
   }
 
-  const reviewing = (completed || hasSubmitted) && (tab === "review" || tab === "solution");
+  const reviewing = (completed || hasSubmitted) && (tab === "review" || tab === "top" || tab === "discussion");
 
   if (enabled && !proctor.examMode && !reviewing) {
     return (
