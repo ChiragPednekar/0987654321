@@ -292,7 +292,7 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6">
       {/* --------------------------------------------------- greeting --- */}
-      <header className="flex flex-wrap items-end justify-between gap-6">
+      <header className="dashboard-hero flex flex-wrap items-end justify-between gap-6 p-6 sm:p-8">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
             {today}
@@ -319,9 +319,9 @@ export default async function DashboardPage() {
 
       <Link
         href={nextStep?.href ?? "/preparation"}
-        className="group mt-8 block rounded-xl border border-primary/30 bg-primary/5 p-5 transition-colors hover:bg-primary/10"
+        className="group mt-6 block rounded-xl border border-brand-border bg-brand-surface p-5 shadow-sm transition-[background-color,box-shadow] hover:bg-[color-mix(in_srgb,var(--brand)_15%,var(--card))] hover:shadow-md"
       >
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">
+        <p className="text-xs font-semibold uppercase tracking-widest text-brand">
           Your next practice{nextStep ? ` · ${nextStep.minutes}` : ""}
         </p>
         <p className="mt-2 flex items-center gap-2 text-xl font-medium">
@@ -374,12 +374,12 @@ export default async function DashboardPage() {
           side they compare instead of scrolling past each other. */}
       <div className="grid min-w-0 gap-x-12 lg:grid-cols-2">
         <Section title="Points by week" description="Last 8 weeks. Points come from graded cases.">
-          <div className="pt-4">
+          <div className="mt-3 rounded-xl border border-border-subtle bg-card p-4 shadow-sm dark:shadow-none">
             <WeeklyPointsLazy data={weekly} />
           </div>
         </Section>
         <Section title="Every day" description="The last 8 weeks, one square a day. Consistency beats intensity.">
-          <div className="pt-4">
+          <div className="mt-3 rounded-xl border border-border-subtle bg-card p-4 shadow-sm dark:shadow-none">
             <SubmissionHeatmap counts={heatmapCounts} />
           </div>
         </Section>
@@ -392,7 +392,7 @@ export default async function DashboardPage() {
           description="Average score by domain. The dents are your homework."
           className="lg:col-span-2"
         >
-          <div className="pt-4">
+          <div className="mt-3 rounded-xl border border-border-subtle bg-card p-4 shadow-sm dark:shadow-none">
             <SkillRadarLazy data={radarData} />
           </div>
           <SectionList className="mt-4 border-t border-border">

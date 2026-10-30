@@ -48,7 +48,7 @@ export function SectionList({ className, children }: { className?: string; child
   return (
     <ul
       className={cn(
-        "min-w-0 divide-y divide-border-subtle overflow-hidden rounded-xl bg-card px-4 shadow-xs dark:shadow-none",
+        "min-w-0 divide-y divide-border-subtle overflow-hidden rounded-xl border border-border-subtle bg-card px-4 shadow-sm dark:shadow-none",
         className,
       )}
     >
@@ -60,7 +60,7 @@ export function SectionList({ className, children }: { className?: string; child
 /** What a Section says when it has nothing in it yet. */
 export function SectionEmpty({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-xl bg-card px-4 py-5 text-center text-sm text-muted-foreground shadow-xs dark:shadow-none">
+    <p className="rounded-xl border border-border-subtle bg-card px-4 py-5 text-center text-sm text-muted-foreground shadow-sm dark:shadow-none">
       {children}
     </p>
   );

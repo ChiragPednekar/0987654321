@@ -133,7 +133,7 @@ export default async function TeacherDashboard() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="dashboard-hero flex flex-wrap items-end justify-between gap-4 p-6 sm:p-8">
         <div>
           <h1 className="font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">Dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">

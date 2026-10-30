@@ -39,10 +39,8 @@ export function DailyCaseCard({
   const seconds = useTicking<number | null>(() => Math.floor(msUntilReset() / 1000), 1000, null);
   const remaining = seconds === null ? null : seconds * 1000;
 
-  // An editorial band rather than a card: the case title in the serif,
-  // the facts in small mono, and one ink action.
   return (
-    <section className="border-y border-border py-7">
+    <section className="rounded-xl border border-border-subtle bg-card p-6 shadow-sm dark:shadow-none">
       <div className="flex flex-col items-stretch gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-x-10">
         <div className="min-w-0 flex-1">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">

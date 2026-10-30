@@ -301,7 +301,7 @@ export function AppSidebar({
                         // fill, its symbol in the accent colour (sidebars.md).
                         "group relative flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
                         active
-                          ? "bg-[color-mix(in_srgb,var(--foreground)_9%,transparent)] font-semibold text-foreground"
+                          ? "bg-brand-surface font-semibold text-brand before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-brand"
                           : "text-foreground/85 hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)]",
                         collapsed && "justify-center px-0",
                       )}

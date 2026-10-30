@@ -26,14 +26,14 @@ export function StatCard({
   tone?: "default" | "positive" | "warning" | "danger";
 }) {
   const labels = {
-    default: "text-muted-foreground",
+    default: "text-brand",
     positive: "text-success",
     warning: "text-warning",
     danger: "text-danger",
   } as const;
 
   return (
-    <div className="rounded-xl bg-card p-4 shadow-xs dark:shadow-none">
+    <div className="rounded-xl border border-border-subtle bg-card p-4 shadow-sm dark:shadow-none">
       <p className={cn("text-[13px] font-semibold", labels[tone])}>{label}</p>
       <p className="mt-2 font-rounded text-[2rem] font-bold leading-none tracking-[-0.02em] tabular sm:text-[2.25rem]">
         {value}

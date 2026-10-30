@@ -30,7 +30,7 @@ export default async function PlacementPage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="dashboard-hero flex flex-wrap items-end justify-between gap-4 p-6 sm:p-8">
         <div>
           <h1 className="text-2xl font-semibold">{institution.name}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
