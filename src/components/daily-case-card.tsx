@@ -43,7 +43,7 @@ export function DailyCaseCard({
   // the facts in small mono, and one ink action.
   return (
     <section className="border-y border-border py-7">
-      <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+      <div className="flex flex-col items-stretch gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-x-10">
         <div className="min-w-0 flex-1">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             Today&apos;s case

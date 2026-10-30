@@ -377,10 +377,27 @@
     letter-spacing: -0.022em;
   }
 
-  /* Focus ring: Apple's halo — visible for keyboard users, quiet for mouse. */
+  /* Solid focus ring for keyboard users; pointer interactions stay quiet. */
   :focus-visible {
-    outline: 3px solid color-mix(in srgb, var(--ring) 55%, transparent);
+    outline: 2px solid var(--ring);
     outline-offset: 2px;
+  }
+
+  /* The first Tab press should take the user past repeated app navigation. */
+  .skip-link {
+    position: fixed;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 100;
+    transform: translateY(-200%);
+    border-radius: 0.625rem;
+    background: var(--action);
+    color: var(--action-foreground);
+    padding: 0.7rem 1rem;
+    font-weight: 600;
+  }
+  .skip-link:focus-visible {
+    transform: translateY(0);
   }
 
   ::selection {
@@ -392,6 +409,14 @@
   [role="button"],
   summary {
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+
+@media (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 

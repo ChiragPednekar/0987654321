@@ -372,7 +372,7 @@ export default async function DashboardPage() {
       {/* --------------------------------------------- effort over time --- */}
       {/* Paired: both answer "how much have I been doing lately", and side by
           side they compare instead of scrolling past each other. */}
-      <div className="grid gap-x-12 lg:grid-cols-2">
+      <div className="grid min-w-0 gap-x-12 lg:grid-cols-2">
         <Section title="Points by week" description="Last 8 weeks. Points come from graded cases.">
           <div className="pt-4">
             <WeeklyPointsLazy data={weekly} />
@@ -385,7 +385,7 @@ export default async function DashboardPage() {
         </Section>
       </div>
 
-      <div className="grid gap-x-12 lg:grid-cols-3">
+      <div className="grid min-w-0 gap-x-12 lg:grid-cols-3">
         {/* -------------------------------------------------- radar --- */}
         <Section
           title="Skill radar"
@@ -403,13 +403,13 @@ export default async function DashboardPage() {
                 <li key={domain.value}>
                   <Link
                     href={`/cases?domain=${domain.value}`}
-                    className="group flex items-center gap-4 py-2.5"
+                    className="group grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 py-3 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto]"
                   >
-                    <span className="w-36 shrink-0 font-editorial text-lg group-hover:italic sm:w-56">
+                    <span className="col-start-1 row-start-1 min-w-0 font-editorial text-lg group-hover:italic">
                       {domain.label}
                     </span>
-                    <Progress value={score} className="h-1 flex-1" />
-                    <span className="w-28 shrink-0 text-right font-mono text-xs text-muted-foreground tabular">
+                    <Progress value={score} className="col-span-2 row-start-2 h-1 sm:col-span-1 sm:col-start-2 sm:row-start-1" />
+                    <span className="col-start-2 row-start-1 text-right font-mono text-xs text-muted-foreground tabular sm:col-start-3">
                       {row?.cases_solved ?? 0} solved{score > 0 && ` · ${score.toFixed(0)}%`}
                     </span>
                   </Link>
@@ -461,7 +461,7 @@ export default async function DashboardPage() {
 
       {quota ? <QuotaCard quota={quota} /> : null}
 
-      <div className="grid gap-x-12 lg:grid-cols-2">
+      <div className="grid min-w-0 gap-x-12 lg:grid-cols-2">
         <TargetSchoolCard standing={standing} />
         <div className="mt-10">
           <QuoteCard />
@@ -469,7 +469,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ---------------------------------------------------- activity --- */}
-      <div className="grid gap-x-12 lg:grid-cols-2">
+      <div className="grid min-w-0 gap-x-12 lg:grid-cols-2">
         <Section title="Recent activity">
           {activity && activity.length > 0 ? (
             <SectionList>
@@ -530,9 +530,9 @@ export default async function DashboardPage() {
               <li key={item.id}>
                 <Link
                   href={`/cases/${item.slug}`}
-                  className="flex items-baseline justify-between gap-3 py-2.5 text-sm hover:underline"
+                  className="flex min-w-0 items-baseline justify-between gap-3 py-2.5 text-sm hover:underline"
                 >
-                  <span className="truncate font-medium">{item.title}</span>
+                  <span className="min-w-0 truncate font-medium" title={item.title}>{item.title}</span>
                   <span className="shrink-0 font-mono text-xs text-muted-foreground">
                     {item.estimated_minutes} min
                   </span>

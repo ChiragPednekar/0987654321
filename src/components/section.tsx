@@ -25,7 +25,7 @@ export function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("mt-10", className)}>
+    <section className={cn("mt-10 min-w-0", className)}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1 pb-2">
         <h2 className="text-[1.25rem] font-bold leading-tight tracking-[-0.018em]">
           {title}
@@ -48,7 +48,7 @@ export function SectionList({ className, children }: { className?: string; child
   return (
     <ul
       className={cn(
-        "divide-y divide-border-subtle overflow-hidden rounded-xl bg-card px-4 shadow-xs dark:shadow-none",
+        "min-w-0 divide-y divide-border-subtle overflow-hidden rounded-xl bg-card px-4 shadow-xs dark:shadow-none",
         className,
       )}
     >

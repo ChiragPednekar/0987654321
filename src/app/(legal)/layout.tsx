@@ -30,7 +30,7 @@ export default function LegalLayout({
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <article
           className="prose-legal space-y-6 text-sm leading-relaxed text-muted-foreground
             [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:tracking-tight [&_h1]:text-foreground

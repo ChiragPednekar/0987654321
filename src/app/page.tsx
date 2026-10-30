@@ -69,7 +69,7 @@ export default async function LandingPage() {
     <div className="flex min-h-screen flex-col">
       <SiteNav profile={profile} />
 
-      <main className="flex-1">
+      <main id="main-content" tabIndex={-1} className="flex-1">
         {/* ------------------------------------------------------- hero --- */}
         <section className="mx-auto max-w-4xl px-4 pb-20 pt-20 text-center sm:px-6 sm:pb-28 sm:pt-28">
           <p className="text-[15px] font-semibold text-muted-foreground">

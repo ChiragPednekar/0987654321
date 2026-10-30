@@ -78,7 +78,7 @@ export function NotificationBell({
           aria-label={
             unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
           }
-          className="relative rounded-md p-2 text-muted-foreground transition-colors hover:text-foreground"
+          className="touch-target relative flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:text-foreground"
         >
           <Bell className="size-4" />
           {unread > 0 && (

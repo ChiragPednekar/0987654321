@@ -74,7 +74,7 @@ export default async function AppLayout({
             role={profile.role}
             isInstitutionStaff={isInstitutionStaff}
           />
-          <main className="min-w-0 flex-1">{children}</main>
+          <main id="main-content" tabIndex={-1} className="min-w-0 flex-1">{children}</main>
           {/*
             What a teacher has ticked in the library, on whatever page they are
             on, ready to add to a batch. Renders nothing until something is
@@ -83,7 +83,7 @@ export default async function AppLayout({
           {(profile.role === "teacher" || profile.role === "admin") && <LibraryPickerBar />}
         </div>
       ) : (
-        <main className="flex-1">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1">{children}</main>
       )}
       <footer className="border-t border-border py-6">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 text-xs text-muted-foreground sm:px-6">

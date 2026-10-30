@@ -14,7 +14,7 @@ export default function AuthLayout({
 }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-[1fr_1fr]">
-      <div className="flex flex-col px-4 py-6 sm:px-6">
+      <main id="main-content" tabIndex={-1} className="flex flex-col px-4 py-6 sm:px-6">
         <Link href="/" className="self-start" aria-label="CaseCode home">
           <Logo />
         </Link>
@@ -23,7 +23,7 @@ export default function AuthLayout({
             {children}
           </div>
         </div>
-      </div>
+      </main>
 
       <aside className="hidden flex-col justify-center bg-card px-14 py-12 lg:flex xl:px-20">
         <p className="text-[15px] font-semibold text-muted-foreground">

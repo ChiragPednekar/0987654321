@@ -64,7 +64,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ co
   });
 
   return (
-    <main className="min-h-screen bg-background px-4 py-10 sm:px-6">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-background px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-3xl">
         <Link href="/" aria-label="CaseCode home">
           <Logo />

@@ -278,7 +278,7 @@ export function AppSidebar({
           <div key={group.heading} className="mb-4">
             <p
               className={cn(
-                "px-3 pb-1 text-[11px] font-semibold text-subtle-foreground",
+                "px-3 pb-1 text-xs font-semibold text-subtle-foreground",
                 collapsed && "sr-only",
               )}
             >
@@ -299,7 +299,7 @@ export function AppSidebar({
                       className={cn(
                         // Apple's sidebar: the selected row is a rounded
                         // fill, its symbol in the accent colour (sidebars.md).
-                        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-[6px] text-[13px] transition-colors",
+                        "group relative flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
                         active
                           ? "bg-[color-mix(in_srgb,var(--foreground)_9%,transparent)] font-semibold text-foreground"
                           : "text-foreground/85 hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)]",

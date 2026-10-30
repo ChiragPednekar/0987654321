@@ -5,6 +5,7 @@ import { summarizeEvidence } from "@/lib/placement/core";
 import { StudentDirectory } from "@/components/placement/student-directory";
 import { AssessmentForm, PlacementAction } from "@/components/placement/forms";
 import { CollegeOverview, loadOverview } from "@/components/placement/college-overview";
+import { Button } from "@/components/ui/button";
 
 export const metadata = { title: "Placement Cell" };
 
@@ -36,12 +37,9 @@ export default async function PlacementPage({ searchParams }: { searchParams: Pr
             Prepare the whole batch. Review the evidence. Share the right candidates.
           </p>
         </div>
-        <Link
-          className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground"
-          href={`/placement/reports/new?institution=${id}`}
-        >
-          Create company report
-        </Link>
+        <Button asChild>
+          <Link href={`/placement/reports/new?institution=${id}`}>Create company report</Link>
+        </Button>
       </header>
 
       <CollegeOverview overview={overview} data={data} now={now} />
@@ -78,7 +76,9 @@ export default async function PlacementPage({ searchParams }: { searchParams: Pr
               </p>
             </div>
             <div className="flex gap-2">
-              <Link href={`/preparation/assessments/${a.id}`} className="rounded border px-3 py-2 text-xs">View task</Link>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/preparation/assessments/${a.id}`}>View task</Link>
+              </Button>
               {a.status === "draft" && (
                 <PlacementAction body={{ action: "assessment_status", id: a.id, status: "open" }}>Open to students</PlacementAction>
               )}

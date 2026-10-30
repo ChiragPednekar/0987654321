@@ -144,10 +144,10 @@ export default async function TeacherDashboard() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" className="rounded-none">
+          <Button asChild variant="outline">
             <Link href="/teacher/discussions">Group discussion</Link>
           </Button>
-          <Button asChild variant="outline" className="rounded-none">
+          <Button asChild variant="outline">
             <Link href="/teacher/questions/new">New question</Link>
           </Button>
           <Button variant="ink" asChild>

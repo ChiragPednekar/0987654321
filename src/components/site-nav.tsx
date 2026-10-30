@@ -111,7 +111,7 @@ export function SiteNav({
   return (
     <header className="glass sticky top-0 z-40 border-b border-glass-border">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4 sm:px-6">
-        <Link href={homeHref} className="flex items-center" aria-label="CaseCode home">
+        <Link href={homeHref} className="touch-target flex items-center" aria-label="CaseCode home">
           <Logo />
         </Link>
 
@@ -168,7 +168,7 @@ export function SiteNav({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="rounded-full transition-opacity hover:opacity-80"
+                  className="touch-target flex items-center justify-center rounded-full transition-opacity hover:opacity-80"
                   aria-label="Account menu"
                 >
                   <Avatar className="size-8">
@@ -231,8 +231,9 @@ export function SiteNav({
             size="icon"
             className="md:hidden"
             onClick={() => setMobileOpen((v) => !v)}
-            aria-label="Toggle navigation"
+            aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
             aria-expanded={mobileOpen}
+            aria-controls="mobile-navigation"
           >
             {mobileOpen ? <X /> : <Menu />}
           </Button>
@@ -240,12 +241,13 @@ export function SiteNav({
       </div>
 
       {mobileOpen && (
-        <nav className="max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-glass-border px-3 py-2 md:hidden">
+        <nav id="mobile-navigation" aria-label="Mobile navigation" className="max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-glass-border px-3 py-2 md:hidden">
           {LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setMobileOpen(false)}
+              aria-current={pathname === link.href ? "page" : undefined}
               className={cn(
                 "flex min-h-11 items-center rounded-[10px] px-3 text-[0.9375rem]",
                 pathname.startsWith(link.href)
