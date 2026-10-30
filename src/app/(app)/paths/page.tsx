@@ -1,16 +1,13 @@
-import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Page, PageHeader } from "@/components/page-header";
+import { TrackCard } from "@/components/track-card";
+import { EmptyState } from "@/components/empty-state";
+import { domainIllustration } from "@/components/illustrations";
 import { PickToggle } from "@/components/teacher/library-picker";
 import { PickHint } from "@/components/teacher/pick-hint";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { DOMAIN_LABEL } from "@/lib/constants";
-import type { Domain } from "@/lib/types/database";
 
-export const metadata: Metadata = { title: "Learning paths" };
+export const metadata: Metadata = { title: "Paths" };
 
 export default async function PathsPage() {
   const supabase = await createClient();
@@ -21,7 +18,7 @@ export default async function PathsPage() {
   const [{ data: paths }, { data: progress }] = await Promise.all([
     supabase
       .from("learning_paths")
-      .select("*, learning_path_steps(id)")
+      .select("*, learning_path_steps(id, step_order, cases(slug, title))")
       .eq("is_published", true)
       .order("sort_order"),
     profile
@@ -36,73 +33,68 @@ export default async function PathsPage() {
     (progress ?? []).map((row) => [row.path_id, row]),
   );
 
+  const list = paths ?? [];
+  const finished = list.filter((p) => progressByPath.get(p.id)?.completed_at).length;
+  const stepTotal = list.reduce(
+    (sum, p) => sum + (Array.isArray(p.learning_path_steps) ? p.learning_path_steps.length : 0),
+    0,
+  );
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Learning paths</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Ordered sequences. Clear a step to unlock the next one.
-      </p>
+    <Page>
+      <PageHeader
+        eyebrow="Practise"
+        title="Paths"
+        subtitle="Ordered sequences of cases. Clear a step to unlock the next one."
+        stats={[
+          { value: list.length, label: list.length === 1 ? "path" : "paths" },
+          { value: stepTotal, label: "steps" },
+          ...(profile ? [{ value: finished, label: "finished" }] : []),
+        ]}
+      />
       {canAssign && <PickHint noun="paths (each step becomes a case assignment)" />}
 
-      <div className="mt-8 grid gap-6 md:grid-cols-2">
-        {(paths ?? []).map((path) => {
-          const steps = Array.isArray(path.learning_path_steps)
-            ? path.learning_path_steps.length
-            : 0;
-          const mine = progressByPath.get(path.id);
-          const completed = mine?.completed_steps ?? 0;
-          const percentage = steps > 0 ? (completed / steps) * 100 : 0;
+      {list.length === 0 ? (
+        <EmptyState
+          className="mt-8"
+          illustration="issueTree"
+          title="No paths yet"
+          description="Paths appear here once they're published."
+        />
+      ) : (
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {list.map((path) => {
+            const steps = (Array.isArray(path.learning_path_steps) ? path.learning_path_steps : []) as {
+              id: string;
+              step_order: number;
+              cases: { slug: string; title: string } | { slug: string; title: string }[] | null;
+            }[];
+            const ordered = [...steps].sort((a, b) => a.step_order - b.step_order);
+            const mine = progressByPath.get(path.id);
+            const completed = Math.min(mine?.completed_steps ?? 0, ordered.length);
+            const nextStep = mine?.completed_at ? undefined : ordered[completed];
+            const nextCase = nextStep ? (Array.isArray(nextStep.cases) ? nextStep.cases[0] : nextStep.cases) : null;
 
-          return (
-            <Link key={path.id} href={`/paths/${path.slug}`}>
-              <Card className="h-full transition-colors hover:border-foreground/25">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-2">
-                      {canAssign && (
-                        <PickToggle kind="path" id={path.id} title={`${path.title} (${steps} steps)`} />
-                      )}
-                      <CardTitle className="text-base">{path.title}</CardTitle>
-                    </div>
-                    <Badge variant="secondary">
-                      {DOMAIN_LABEL[path.domain as Domain]}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {path.description}
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Progress value={percentage} />
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="tabular">
-                      {completed} of {steps} steps
-                    </span>
-                    <span className="flex items-center gap-1 text-foreground">
-                      {mine?.completed_at
-                        ? "Complete"
-                        : completed > 0
-                          ? "Continue"
-                          : "Start"}
-                      <ArrowRight className="size-3" />
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
-
-      {(!paths || paths.length === 0) && (
-        <Card className="mt-8">
-          <CardContent className="py-16 text-center">
-            <p className="text-sm text-muted-foreground">
-              No learning paths yet. Run the seed script to create them.
-            </p>
-          </CardContent>
-        </Card>
+            return (
+              <TrackCard
+                key={path.id}
+                href={`/paths/${path.slug}`}
+                title={path.title}
+                description={path.description ?? undefined}
+                illustration={domainIllustration(path.domain)}
+                solved={completed}
+                total={ordered.length}
+                next={nextCase ? { title: nextCase.title, href: `/paths/${path.slug}` } : undefined}
+                action={
+                  canAssign ? (
+                    <PickToggle kind="path" id={path.id} title={`${path.title} (${ordered.length} steps)`} />
+                  ) : undefined
+                }
+              />
+            );
+          })}
+        </div>
       )}
-    </div>
+    </Page>
   );
 }

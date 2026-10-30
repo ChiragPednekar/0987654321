@@ -71,14 +71,30 @@ export function slugify(input: string): string {
     .slice(0, 80);
 }
 
+/**
+ * First and last initial: "Chirag Yogesh Pednekar" → "CP", "Asha" → "A".
+ * The first two words gave "CY" for anyone with a middle name, and the
+ * leaderboard and Settings disagreed about who you were.
+ */
 export function initials(name: string | null | undefined): string {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]!.toUpperCase())
-    .join("");
+  const words = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  const first = words[0]!;
+  const last = words.length > 1 ? words[words.length - 1]! : "";
+  return (Array.from(first)[0]! + (last ? Array.from(last)[0]! : "")).toUpperCase();
+}
+
+/**
+ * The tint an avatar without a photo takes, picked from the user's id so the
+ * same person is the same colour on every page.
+ */
+export const AVATAR_TONES = ["brand", "info", "success", "highlight", "warning", "danger"] as const;
+export type AvatarTone = (typeof AVATAR_TONES)[number];
+
+export function avatarTone(id: string | null | undefined): AvatarTone {
+  let hash = 0;
+  for (const ch of id ?? "") hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATAR_TONES[hash % AVATAR_TONES.length]!;
 }
 
 /** Rough token estimate — good enough for guarding a context window. */

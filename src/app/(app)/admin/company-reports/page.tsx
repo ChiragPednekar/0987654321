@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ReportModeration, type PendingReport } from "@/components/admin/report-moderation";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Reported questions · Admin" };
 
@@ -36,13 +37,11 @@ export default async function AdminCompanyReportsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Reported questions</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Students report questions they were asked; nothing appears on a company page until it is
-          approved here. Approve real, specific questions. Reject anything invented, vague,
-          promotional, or naming an interviewer or candidate — fix a typo, but do not rewrite a
-          question into one the student was not asked. {approvedCount ?? 0} approved so far.
-        </p>
+        <PageHeader
+          eyebrow="Platform"
+          title="Reported questions"
+          subtitle={<>Students report questions they were asked; nothing appears on a company page until it is approved here. Approve real, specific questions. Reject anything invented, vague, promotional, or naming an interviewer or candidate — fix a typo, but do not rewrite a question into one the student was not asked. {approvedCount ?? 0} approved so far.</>}
+        />
       </div>
       <ReportModeration reports={reports} />
     </div>

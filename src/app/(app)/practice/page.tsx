@@ -7,8 +7,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { OBJECTIVE_TRACKS } from "@/lib/objective";
 import type { ObjectiveSummaryRow } from "@/lib/types/database";
+import { Page, PageHeader } from "@/components/page-header";
 
-export const metadata: Metadata = { title: "Aptitude practice" };
+export const metadata: Metadata = { title: "Aptitude" };
 
 /**
  * The objective practice hub.
@@ -37,12 +38,17 @@ export default async function PracticePage() {
   const canAssign = profile?.role === "teacher" || profile?.role === "admin";
 
   return (
-    <div className="mx-auto w-full max-w-4xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Aptitude practice</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Marked instantly against an answer key, with the working shown for every
-        question.
-      </p>
+    <Page className="max-w-4xl">
+      <PageHeader
+        eyebrow="Practise"
+        title="Aptitude"
+        subtitle={
+          <>
+            Marked instantly against an answer key, with the working shown for every
+            question.
+          </>
+        }
+      />
 
       {/*
         Said plainly because it is the commercial point, not a footnote: this
@@ -98,6 +104,6 @@ export default async function PracticePage() {
           </div>
         </section>
       ))}
-    </div>
+    </Page>
   );
 }

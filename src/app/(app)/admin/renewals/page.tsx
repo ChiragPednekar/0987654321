@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { MODEL_RATES } from "@/lib/constants";
 import { cn, formatNumber } from "@/lib/utils";
 import type { InstitutionCommercialsRow } from "@/lib/types/database";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Renewals" };
 
@@ -69,10 +70,11 @@ export default async function RenewalsPage() {
   return (
     <div>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Renewals</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Contracts expiring within 60 days, and any that already have.
-        </p>
+        <PageHeader
+          eyebrow="Commercial"
+          title="Renewals"
+          subtitle="Contracts expiring within 60 days, and any that already have."
+        />
       </div>
 
       {total === 0 ? (

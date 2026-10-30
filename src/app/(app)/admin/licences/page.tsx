@@ -11,6 +11,7 @@ import { StatCard } from "@/components/stat-card";
 import { MODEL_RATES, PLATFORM_INFRA_INR_PER_YEAR } from "@/lib/constants";
 import { cn, formatNumber } from "@/lib/utils";
 import type { InstitutionCommercialsRow } from "@/lib/types/database";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Campus licences" };
 
@@ -66,21 +67,22 @@ export default async function LicencesPage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Campus licences</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Contracts, seat usage and what each one costs to serve.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/admin/licences/new">
-            <Plus className="size-4" />
-            New licence
-          </Link>
-        </Button>
-      </div>
+    <div className="min-w-0">
+      <PageHeader
+        eyebrow="Commercial"
+        title="Licences"
+        subtitle="Contracts, seat usage and what each one costs to serve."
+        actions={
+          <>
+            <Button asChild>
+              <Link href="/admin/licences/new">
+                <Plus className="size-4" />
+                New licence
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Annual contract value" value={rupees(arr)} icon={Building2} />

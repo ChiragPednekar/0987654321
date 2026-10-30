@@ -1,17 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { Check, Flame } from "lucide-react";
+import { Check, Newspaper } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve } from "@/lib/entitlement";
-import { Card, CardContent } from "@/components/ui/card";
 import { addDays, currentStreak, istDate } from "@/lib/current-affairs/questions";
 import { loadReview } from "@/lib/current-affairs/review";
 import { DailyQuiz } from "@/components/daily/daily-quiz";
-import { cn, plural } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { Page, PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
+import { StatChip } from "@/components/stat-chip";
 
-export const metadata: Metadata = { title: "Daily current affairs" };
+export const metadata: Metadata = { title: "Daily quiz" };
 
 function longDate(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", {
@@ -68,15 +70,19 @@ export default async function DailyPage({
 
   if (!selected) {
     return (
-      <div className="mx-auto w-full max-w-3xl">
-        <h1 className="text-2xl font-semibold tracking-tight">Daily current affairs</h1>
-        <Card className="mt-6">
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            The first quiz has not been written yet. A new one appears each morning,
-            written from the Reserve Bank of India&apos;s latest press releases.
-          </CardContent>
-        </Card>
-      </div>
+      <Page narrow>
+        <PageHeader
+          eyebrow="Practise"
+          title="Daily quiz"
+          subtitle="Current affairs, written from the RBI's press releases, every answer sourced."
+        />
+        <EmptyState
+          className="mt-6"
+          icon={Newspaper}
+          title="The first quiz isn't out yet"
+          description="A new one appears each morning, written from the Reserve Bank of India's latest press releases."
+        />
+      </Page>
     );
   }
 
@@ -93,20 +99,14 @@ export default async function DailyPage({
   const isToday = selected.quiz_date === today;
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Daily current affairs</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {isToday ? "Today" : longDate(selected.quiz_date)} · written from the RBI&apos;s
-            press releases, every answer sourced.
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5 rounded-md border px-3 py-1 text-sm">
-          <Flame className={cn("size-4", streak > 0 ? "text-[var(--warning)]" : "text-muted-foreground")} />
-          <span className="tabular">{plural(streak, "day")}</span>
-        </div>
-      </div>
+    <Page narrow>
+      <PageHeader
+        eyebrow="Practise"
+        title="Daily quiz"
+        subtitle="Current affairs, written from the RBI's press releases, every answer sourced."
+        stats={[isToday ? "Today's quiz" : longDate(selected.quiz_date)]}
+        actions={<StatChip label="Quiz streak" value={streak} unit={streak === 1 ? "day" : "days"} tone={streak > 0 ? "warning" : "neutral"} />}
+      />
 
       {!isToday && all[0]?.quiz_date !== today && selected.id === all[0]?.id && (
         <p className="mt-4 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
@@ -162,6 +162,6 @@ export default async function DailyPage({
           </div>
         </div>
       )}
-    </div>
+    </Page>
   );
 }

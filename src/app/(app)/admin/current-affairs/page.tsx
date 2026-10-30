@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PullToggle } from "@/components/admin/pull-toggle";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Daily quiz · Admin" };
 
@@ -44,13 +45,11 @@ export default async function AdminCurrentAffairsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Daily quiz</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Written each morning from RBI press releases. Every question has already passed an
-          automatic check that its quote is in the release and its answer&apos;s figures are
-          too — but a question can be grounded and still be poor. Pulling one removes it from
-          every student&apos;s score, including past attempts.
-        </p>
+        <PageHeader
+          eyebrow="Platform"
+          title="Daily quiz"
+          subtitle={<>Written each morning from RBI press releases. Every question has already passed an automatic check that its quote is in the release and its answer&apos;s figures are too — but a question can be grounded and still be poor. Pulling one removes it from every student&apos;s score, including past attempts.</>}
+        />
       </div>
 
       {(quizzes ?? []).length === 0 && (

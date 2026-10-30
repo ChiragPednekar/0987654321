@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AuthzError, requireAdminActor } from "@/lib/authz";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { Page } from "@/components/page-header";
 
 /**
  * Guards the whole admin area.
@@ -24,9 +25,9 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <Page>
       <AdminNav />
       <div className="mt-6">{children}</div>
-    </div>
+    </Page>
   );
 }

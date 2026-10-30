@@ -8,6 +8,7 @@ import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import { checkoutModeFor } from "@/lib/billing/checkout-mode";
 import { getAccess, purchaseBlock } from "@/lib/subscription";
 import { getQuotaStatus } from "@/lib/quota";
+import { Page, PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = {
   title: "Upgrade",
@@ -44,21 +45,16 @@ export default async function UpgradePage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-20 pt-10 sm:px-6">
-      <header>
-        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Upgrade</p>
-        <h1 className="mt-4 font-editorial text-[2.6rem] font-normal leading-[0.98] tracking-[-0.02em] sm:text-[3.4rem]">
-          {access?.subscription ? (
-            <>Your <em className="italic">CaseCode Pro</em>.</>
-          ) : (
-            <>Upgrade to <em className="italic">CaseCode Pro</em>.</>
-          )}
-        </h1>
-        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-          Write answers and have them graded, take AI mock interviews, and work through every drill. No college ID
-          needed — pick the plan that fits how you prepare.
-        </p>
-      </header>
+    <Page>
+      <PageHeader
+        eyebrow="You"
+        title="Upgrade"
+        subtitle={
+          access?.subscription
+            ? "Your CaseCode Pro plan: graded answers, AI mock interviews and every drill."
+            : "Upgrade to CaseCode Pro to have your answers graded, take AI mock interviews, and work through every drill. No college ID needed; pick the plan that fits how you prepare."
+        }
+      />
 
       {access?.pro && !access.subscription ? (
         <p className="mt-10 max-w-xl rounded-xl bg-card px-4 py-3 shadow-xs dark:shadow-none text-sm text-muted-foreground">
@@ -103,6 +99,6 @@ export default async function UpgradePage() {
           </Link>
         </div>
       </section>
-    </div>
+    </Page>
   );
 }

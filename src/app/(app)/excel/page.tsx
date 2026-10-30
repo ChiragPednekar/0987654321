@@ -9,8 +9,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { plural } from "@/lib/utils";
+import { Page, PageHeader } from "@/components/page-header";
 
-export const metadata: Metadata = { title: "Excel practice" };
+export const metadata: Metadata = { title: "Excel" };
 
 export default async function ExcelIndex() {
   const supabase = await createClient();
@@ -46,12 +47,17 @@ export default async function ExcelIndex() {
   const solvedCount = list.filter((e) => done.has(e.id)).length;
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Excel practice</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Write the formula, run it, get it marked. The lookups, conditional sums
-        and cleanup a finance or operations interviewer asks at the desk.
-      </p>
+    <Page narrow>
+      <PageHeader
+        eyebrow="Practise"
+        title="Excel"
+        subtitle={
+          <>
+            Write the formula, run it, get it marked. The lookups, conditional sums
+            and cleanup a finance or operations interviewer asks at the desk.
+          </>
+        }
+      />
 
       <Card className="mt-6 border-muted">
         <CardContent className="space-y-2 p-4 text-xs text-muted-foreground">
@@ -105,6 +111,6 @@ export default async function ExcelIndex() {
           </Link>
         ))}
       </div>
-    </div>
+    </Page>
   );
 }

@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { StartRunButton } from "@/components/sim/start-run-button";
 import { SIM } from "@/lib/sim/engine";
 import { timeAgo } from "@/lib/utils";
+import { Page, PageHeader } from "@/components/page-header";
 
-export const metadata: Metadata = { title: "Business simulation" };
+export const metadata: Metadata = { title: "Simulation" };
 
 export default async function SimulationPage() {
   const supabase = await createClient();
@@ -29,13 +30,18 @@ export default async function SimulationPage() {
   const live = (runs ?? []).find((r) => r.status === "live");
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Business simulation</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {SIM.rounds} quarters running a manufacturer against two rivals. Set
-        price, marketing, R&amp;D and capacity each quarter and live with what
-        the market does.
-      </p>
+    <Page narrow>
+      <PageHeader
+        eyebrow="Practise"
+        title="Simulation"
+        subtitle={
+          <>
+            {SIM.rounds} quarters running a manufacturer against two rivals. Set
+              price, marketing, R&amp;D and capacity each quarter and live with what
+              the market does.
+          </>
+        }
+      />
 
       <Card className="mt-6 border-muted">
         <CardContent className="space-y-2 p-4 text-xs text-muted-foreground">
@@ -103,6 +109,6 @@ export default async function SimulationPage() {
           </div>
         </>
       )}
-    </div>
+    </Page>
   );
 }

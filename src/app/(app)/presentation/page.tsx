@@ -5,8 +5,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve } from "@/lib/entitlement";
 import { getQuotaStatus } from "@/lib/quota";
 import { DeckReviewer, type StoredDeckReview } from "@/components/presentation/deck-reviewer";
+import { Page, PageHeader } from "@/components/page-header";
 
-export const metadata: Metadata = { title: "Presentation review" };
+export const metadata: Metadata = { title: "Deck review" };
 
 export default async function PresentationPage() {
   const supabase = await createClient();
@@ -29,13 +30,19 @@ export default async function PresentationPage() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Presentation review</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Upload a deck — a case competition submission, an interview presentation — and get it read
-        the way a partner reads one: storyline, action titles, one message a slide, and whether the
-        charts prove the point.
-      </p>
+    <Page narrow>
+      <PageHeader
+        eyebrow="Practise"
+        title="Deck review"
+        subtitle={
+          <>
+            Upload a deck — a case competition submission, an interview presentation — and get it read
+            the way a partner reads one: storyline, action titles, one message a slide, and whether the
+            charts prove the point.
+          </>
+        }
+      />
+
       <div className="mt-6">
         <DeckReviewer
           history={(past ?? []) as StoredDeckReview[]}
@@ -43,6 +50,6 @@ export default async function PresentationPage() {
           gradingsLeft={quota.gradingsLeft}
         />
       </div>
-    </div>
+    </Page>
   );
 }

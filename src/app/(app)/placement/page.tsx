@@ -6,6 +6,7 @@ import { StudentDirectory } from "@/components/placement/student-directory";
 import { AssessmentForm, PlacementAction } from "@/components/placement/forms";
 import { CollegeOverview, loadOverview } from "@/components/placement/college-overview";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata = { title: "Placement Cell" };
 
@@ -30,17 +31,17 @@ export default async function PlacementPage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="space-y-8">
-      <header className="dashboard-hero flex flex-wrap items-end justify-between gap-4 p-6 sm:p-8">
-        <div>
-          <h1 className="text-2xl font-semibold">{institution.name}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Prepare the whole batch. Review the evidence. Share the right candidates.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href={`/placement/reports/new?institution=${id}`}>Create company report</Link>
-        </Button>
-      </header>
+      <PageHeader
+        hero
+        eyebrow="Placement Cell"
+        title={institution.name}
+        subtitle="Prepare the whole batch. Review the evidence. Share the right candidates."
+        actions={
+          <Button asChild>
+            <Link href={`/placement/reports/new?institution=${id}`}>Create company report</Link>
+          </Button>
+        }
+      />
 
       <CollegeOverview overview={overview} data={data} now={now} />
 

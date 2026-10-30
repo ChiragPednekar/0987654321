@@ -5,6 +5,7 @@ import { requireTeacherActor, batchesTaughtBy } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AssignmentForm } from "@/components/teacher/assignment-form";
 import { EmptyState } from "@/components/teacher/empty-state";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "New assignment" };
 
@@ -15,12 +16,16 @@ export default async function NewAssignmentPage() {
 
   if (ids.length === 0) {
     return (
-      <EmptyState
-        icon={ClipboardCheck}
-        title="No batches yet"
-        body="An assignment belongs to a batch. Create one first."
-        action={{ href: "/teacher/batches", label: "Create a batch" }}
-      />
+      <>
+        <PageHeader eyebrow="Teaching" title="New assignment" />
+        <EmptyState
+          className="mt-8"
+          icon={ClipboardCheck}
+          title="No batches yet"
+          body="An assignment belongs to a batch. Create one first."
+          action={{ href: "/teacher/batches", label: "Create a batch" }}
+        />
+      </>
     );
   }
 

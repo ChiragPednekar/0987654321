@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StartNegotiationButton } from "@/components/negotiation/start-button";
 import { timeAgo } from "@/lib/utils";
+import { Page, PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Negotiation" };
 
@@ -33,12 +34,17 @@ export default async function NegotiationLobby() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Negotiation</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Multi-issue deals against a counterparty with its own interests, its own
-        priorities, and a walk-away point you cannot argue it past.
-      </p>
+    <Page narrow>
+      <PageHeader
+        eyebrow="Practise"
+        title="Negotiation"
+        subtitle={
+          <>
+            Multi-issue deals against a counterparty with its own interests, its own
+            priorities, and a walk-away point you cannot argue it past.
+          </>
+        }
+      />
 
       <Card className="mt-6 border-muted">
         <CardContent className="p-4 text-xs text-muted-foreground">
@@ -116,6 +122,6 @@ export default async function NegotiationLobby() {
           </div>
         </>
       )}
-    </div>
+    </Page>
   );
 }

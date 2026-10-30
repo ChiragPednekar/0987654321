@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/teacher/empty-state";
 import { formatDay, formatNumber } from "@/lib/utils";
 import type { ClassroomAssignmentStatsRow } from "@/lib/types/database";
 import { ASSIGNMENT_KIND_LABEL } from "@/lib/assignments";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Assignments" };
 
@@ -20,12 +21,16 @@ export default async function AssignmentsPage() {
 
   if (ids.length === 0) {
     return (
-      <EmptyState
-        icon={ClipboardCheck}
-        title="No batches yet"
-        body="Assignments belong to a batch. Create one first, then set your students some work."
-        action={{ href: "/teacher/batches", label: "Create a batch" }}
-      />
+      <>
+        <PageHeader eyebrow="Teaching" title="Assignments" />
+        <EmptyState
+          className="mt-8"
+          icon={ClipboardCheck}
+          title="No batches yet"
+          body="Assignments belong to a batch. Create one first, then set your students some work."
+          action={{ href: "/teacher/batches", label: "Create a batch" }}
+        />
+      </>
     );
   }
 
@@ -50,17 +55,18 @@ export default async function AssignmentsPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">Assignments</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Everything you have set, and how much is waiting to be marked.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/teacher/assignments/new">New assignment</Link>
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow="Teaching"
+        title="Assignments"
+        subtitle="Everything you have set, and how much is waiting to be marked."
+        actions={
+          <>
+            <Button asChild>
+              <Link href="/teacher/assignments/new">New assignment</Link>
+            </Button>
+          </>
+        }
+      />
 
       {!assignments || assignments.length === 0 ? (
         <p className="mt-8 border-t border-border pt-4 text-sm text-muted-foreground">

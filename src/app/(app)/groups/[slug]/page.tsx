@@ -3,12 +3,12 @@ import type { Metadata } from "next";
 import { Globe, Lock, Users } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { GroupActions } from "@/components/groups/group-actions";
 import { GroupCodeBadge } from "@/components/groups/group-code-badge";
 import { cleanGroupDescription } from "@/lib/group-codes";
-import { initials, timeAgo } from "@/lib/utils";
+import { timeAgo } from "@/lib/utils";
+import { UserAvatar } from "@/components/user-avatar";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -122,9 +122,7 @@ export default async function GroupPage({ params }: PageProps) {
             return (
               <Card key={post.id}>
                 <CardContent className="flex gap-3 p-4">
-                  <Avatar className="size-8 shrink-0">
-                    <AvatarFallback>{initials(author?.full_name)}</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar name={author?.full_name} className="size-8 shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm">
                       <span className="font-medium">

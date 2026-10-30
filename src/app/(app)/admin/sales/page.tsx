@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { rupees } from "@/lib/pricing";
 import { formatDay } from "@/lib/utils";
 import type { PurchaseRow } from "@/lib/types/database";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Sales" };
 export const dynamic = "force-dynamic";
@@ -29,9 +30,8 @@ export default async function AdminSalesPage() {
   const demo = purchases.filter((p) => p.source === "demo").length;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-20 pt-10 sm:px-6">
-      <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin</p>
-      <h1 className="mt-4 font-editorial text-[2.6rem] font-normal leading-tight">Sales</h1>
+    <div className="min-w-0">
+      <PageHeader eyebrow="Commercial" title="Sales" subtitle="Revenue by product, and every purchase." />
 
       <div className="mt-8 grid gap-6 border-y border-border py-5 sm:grid-cols-3">
         {Object.entries(KIND_LABEL).map(([k, label]) => (

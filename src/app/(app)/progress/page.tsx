@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { BookOpen, Target, TrendingUp } from "lucide-react";
+import { BookOpen, Target, TrendingUp, LineChart } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import type { TrendPoint } from "@/components/score-trend";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { Difficulty, Domain } from "@/lib/types/database";
+import { Page, PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 
 export const metadata: Metadata = { title: "Progress" };
 
@@ -100,11 +102,16 @@ export default async function ProgressPage({
       : null;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Progress</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Every graded attempt, and whether the feedback is landing.
-      </p>
+    <Page>
+      <PageHeader
+        eyebrow="You"
+        title="Progress"
+        subtitle={
+          <>
+            Every graded attempt, and whether the feedback is landing.
+          </>
+        }
+      />
 
       {/* ---- summary ------------------------------------------------------ */}
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -175,15 +182,17 @@ export default async function ProgressPage({
         </div>
 
         {rows.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 px-4 py-16 text-center">
-            <p className="text-sm text-muted-foreground">
-              No graded attempts yet. Your history appears here after your first
-              submission.
-            </p>
-            <Button asChild size="sm">
-              <Link href="/cases">Browse cases</Link>
-            </Button>
-          </div>
+          <EmptyState
+            className="rounded-none border-0 shadow-none"
+            icon={LineChart}
+            title="No graded attempts yet"
+            description="Your history appears here after your first submission."
+            action={
+              <Button variant="secondary" asChild>
+                <Link href="/cases">Browse cases</Link>
+              </Button>
+            }
+          />
         ) : (
           <ul className="divide-y divide-border">
             {rows.map((row) => (
@@ -249,6 +258,6 @@ export default async function ProgressPage({
           How grading works
         </Link>
       </p>
-    </div>
+    </Page>
   );
 }

@@ -10,6 +10,8 @@ import { ClassroomForms } from "@/components/classroom/classroom-forms";
 import { JoinBatchModal } from "@/components/classroom/join-batch-modal";
 import { plural } from "@/lib/utils";
 import { assignmentTarget } from "@/lib/assignments";
+import { Page, PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 
 export const metadata: Metadata = {
   title: "Classrooms & Batches",
@@ -97,20 +99,14 @@ export default async function ClassroomsPage() {
   const myBatches = batches.filter((b) => enrolledIds.has(b.id) || b.owner_id === profile.id);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 space-y-12">
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 pb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <GraduationCap className="size-6 text-primary" />
-            <h1 className="text-2xl font-semibold tracking-tight">Classrooms & Batches</h1>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Instructor-led cohorts, case assignments, and open faculty framework guides.
-          </p>
-        </div>
-        <ClassroomForms />
-      </div>
+    <Page className="space-y-12">
+      <PageHeader
+        eyebrow="Community"
+        title="Classrooms"
+        subtitle="Your batches, their case assignments, and the faculty's framework guides."
+        stats={[{ value: myBatches.length, label: myBatches.length === 1 ? "batch" : "batches" }]}
+        actions={<ClassroomForms />}
+      />
 
       {/* 1. My Enrolled Batches */}
       {myBatches.length > 0 ? (
@@ -199,11 +195,11 @@ export default async function ClassroomsPage() {
         </div>
 
         {batches.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-sm text-muted-foreground text-center">
-              No batches created yet. Instructors can click &ldquo;New classroom&rdquo; to launch a batch.
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={GraduationCap}
+            title="No batches yet"
+            description="A teacher starts a batch with “New classroom”. Yours will show up here when you join one."
+          />
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2">
             {batches.map((room) => {
@@ -329,6 +325,6 @@ export default async function ClassroomsPage() {
           </div>
         )}
       </section>
-    </div>
+    </Page>
   );
 }

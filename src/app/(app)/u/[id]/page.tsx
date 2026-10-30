@@ -4,14 +4,14 @@ import type { Metadata } from "next";
 import { Award, Flame, Target, Trophy } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { YearHeatmap, type YearCounts } from "@/components/year-heatmap";
 import { DOMAINS, DOMAIN_LABEL } from "@/lib/constants";
-import { formatNumber, initials } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils";
 import type { Domain } from "@/lib/types/database";
+import { UserAvatar } from "@/components/user-avatar";
 
 export async function generateMetadata({
   params,
@@ -100,10 +100,7 @@ export default async function PublicProfilePage({
       {/* ---- header ------------------------------------------------------- */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Avatar className="size-16">
-            {user.avatar_url && <AvatarImage src={user.avatar_url} alt="" />}
-            <AvatarFallback>{initials(user.full_name)}</AvatarFallback>
-          </Avatar>
+          <UserAvatar id={user.id} name={user.full_name} src={user.avatar_url} size="lg" className="size-16" />
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
               {user.full_name ?? "Anonymous"}

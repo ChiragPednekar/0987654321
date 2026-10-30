@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TeacherGdDialog } from "@/components/teacher/teacher-gd-dialog";
 import { TeacherGdSessionActions } from "@/components/teacher/teacher-gd-session-actions";
 import { formatDay, timeAgo } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Group Discussions — Teacher" };
 
@@ -91,26 +92,12 @@ export default async function TeacherDiscussionsPage() {
   return (
     <div className="space-y-8">
       {/* ------------------------------------------------ Header --- */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-            Teaching · Live Practice
-          </p>
-          <h1 className="mt-1 font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">
-            Group Discussions
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Host live, Google Meet-style group discussions with your batches. Practice communication, argument framing,
-            and discussion etiquette without any proctoring interference.
-          </p>
-        </div>
-
-        <TeacherGdDialog
-          topics={topics ?? []}
-          batches={batches ?? []}
-          triggerLabel="Host discussion"
-        />
-      </div>
+      <PageHeader
+        eyebrow="Teaching"
+        title="Group discussions"
+        subtitle="Host live group discussions with your batches to practise communication, argument framing and discussion etiquette. No proctoring."
+        actions={<TeacherGdDialog topics={topics ?? []} batches={batches ?? []} triggerLabel="Host discussion" />}
+      />
 
       {/* --------------------------------------- Feature Explainer Banner --- */}
       <div className="rounded-lg border border-border bg-card/60 p-5">

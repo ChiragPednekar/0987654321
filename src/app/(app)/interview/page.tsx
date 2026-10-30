@@ -9,8 +9,9 @@ import { PiLauncher } from "@/components/pi/pi-launcher";
 
 import { PI_KINDS } from "@/lib/pi";
 import { timeAgo } from "@/lib/utils";
+import { Page, PageHeader } from "@/components/page-header";
 
-export const metadata: Metadata = { title: "HR & personal interview" };
+export const metadata: Metadata = { title: "HR interview" };
 
 export default async function InterviewPage() {
   const supabase = await createClient();
@@ -38,13 +39,18 @@ export default async function InterviewPage() {
   const labelOf = new Map(PI_KINDS.map((k) => [k.value, k.label]));
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">HR &amp; personal interview</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        The round where most candidates lose an offer. The interviewer reads
-        your background and digs into it — vague answers get followed up, not
-        accepted.
-      </p>
+    <Page narrow>
+      <PageHeader
+        eyebrow="Practise"
+        title="HR interview"
+        subtitle={
+          <>
+            The round where most candidates lose an offer. The interviewer reads
+            your background and digs into it — vague answers get followed up, not
+            accepted.
+          </>
+        }
+      />
 
       <div className="mt-6">
         <PiLauncher
@@ -92,6 +98,6 @@ export default async function InterviewPage() {
           </div>
         </>
       )}
-    </div>
+    </Page>
   );
 }

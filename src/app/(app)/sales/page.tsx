@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StartSalesButton } from "@/components/sales/sales-room";
 import { timeAgo } from "@/lib/utils";
+import { Page, PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Sales role-play" };
 
@@ -34,12 +35,17 @@ export default async function SalesLobby() {
   const titleOf = new Map((scenarios ?? []).map((s) => [s.id, s.title]));
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Sales role-play</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Sell to a buyer with needs they will not volunteer and concerns they will raise. The
-        role-play FMCG, BFSI and B2B sales interviews are built around.
-      </p>
+    <Page narrow>
+      <PageHeader
+        eyebrow="Practise"
+        title="Sales role-play"
+        subtitle={
+          <>
+            Sell to a buyer with needs they will not volunteer and concerns they will raise. The
+            role-play FMCG, BFSI and B2B sales interviews are built around.
+          </>
+        }
+      />
 
       <Card className="mt-6 border-muted">
         <CardContent className="p-4 text-xs text-muted-foreground">
@@ -95,6 +101,6 @@ export default async function SalesLobby() {
           </div>
         </>
       )}
-    </div>
+    </Page>
   );
 }

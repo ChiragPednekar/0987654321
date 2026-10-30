@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { Page, PageHeader } from "@/components/page-header";
 import { requireActor } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { weekStart } from "@/lib/placement/core";
 import { preparationState } from "@/lib/placement/next-practice";
 import { PreparationProfileForm, TaskCheck, SpokenDefense } from "@/components/preparation/workspace";
 
-export const metadata = { title: "Your preparation plan" };
+export const metadata = { title: "Preparation plan" };
 
 export default async function PreparationPage({ searchParams }: { searchParams: Promise<{ submission?: string }> }) {
   const actor = await requireActor();
@@ -28,19 +29,22 @@ export default async function PreparationPage({ searchParams }: { searchParams: 
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-7 p-4 sm:p-8">
-      <header>
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">Your preparation plan</p>
-        <h1 className="mt-2 font-editorial text-4xl">A plan for your placements.</h1>
-        <p className="mt-3 text-muted-foreground">
-          {profile?.target_role || "Set your target role below"}
-          {profile?.placement_date && ` · placements from ${new Date(profile.placement_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`}
-          . Short sessions, honest feedback, then a fresh task.
-        </p>
-      </header>
+    <Page className="space-y-7">
+      <PageHeader
+        eyebrow="Practise"
+        title="Preparation plan"
+        subtitle="A plan for your placements: short sessions, honest feedback, then a fresh task."
+        stats={[
+          profile?.target_role || "Set your target role below",
+          profile?.placement_date
+            ? `Placements from ${new Date(profile.placement_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`
+            : "",
+          { value: `${plan.filter((p) => tasks.some((t) => t.task_key === p.key)).length}/${plan.length}`, label: "done this week" },
+        ]}
+      />
 
       <Link href={next.href} className="group block rounded-xl border border-primary/30 bg-primary/5 p-5 transition-colors hover:bg-primary/10">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">Your next practice · {next.minutes}</p>
+        <p className="text-[13px] font-semibold text-brand">Your next practice · {next.minutes}</p>
         <p className="mt-2 flex items-center gap-2 text-xl font-medium">
           {next.title}
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -138,6 +142,6 @@ export default async function PreparationPage({ searchParams }: { searchParams: 
           ))}
         </section>
       ) : null}
-    </div>
+    </Page>
   );
 }

@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { Users } from "lucide-react";
+import { Users, MessagesSquare } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { OpenGdForm } from "@/components/gd/open-gd-form";
 import { timeAgo } from "@/lib/utils";
+import { Page, PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 
 export const metadata: Metadata = { title: "Group discussions" };
 
@@ -51,17 +53,14 @@ export default async function GdLobbyPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Group discussions</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Meet your group, talk through a topic, and share notes in chat. Use
-            an open link or let the host approve each person.
-          </p>
-        </div>
-        <OpenGdForm />
-      </div>
+    <Page narrow>
+      <PageHeader
+        eyebrow="Community"
+        title="Group discussions"
+        subtitle="Meet your group, talk through a topic, and share notes in chat. Use an open link or let the host approve each person."
+        stats={[{ value: rooms.length, label: rooms.length === 1 ? "open room" : "open rooms" }]}
+        actions={<OpenGdForm />}
+      />
 
       <Card className="mt-6 border-muted">
         <CardContent className="p-4 text-xs text-muted-foreground">
@@ -74,11 +73,12 @@ export default async function GdLobbyPage() {
         Open rooms
       </h2>
       {rooms.length === 0 ? (
-        <Card className="mt-3">
-          <CardContent className="p-8 text-center text-sm text-muted-foreground">
-            No rooms open. Open one and share the link with your batch.
-          </CardContent>
-        </Card>
+        <EmptyState
+          className="mt-3"
+          icon={MessagesSquare}
+          title="No rooms open"
+          description="Open one and share the link with your batch."
+        />
       ) : (
         <div className="mt-3 space-y-2">
           {rooms.map((room) => {
@@ -152,6 +152,6 @@ export default async function GdLobbyPage() {
           </p>
         </>
       )}
-    </div>
+    </Page>
   );
 }

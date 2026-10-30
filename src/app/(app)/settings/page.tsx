@@ -18,6 +18,7 @@ import { canRenew, getAccess, renewalWindowDays } from "@/lib/subscription";
 import { PLANS, rupees } from "@/lib/pricing";
 import { formatDay } from "@/lib/utils";
 import type { UniversityRow } from "@/lib/types/database";
+import { Page, PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -72,11 +73,16 @@ export default async function SettingsPage() {
     .maybeSingle();
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Your profile, practice solver options, notifications, privacy, and data.
-      </p>
+    <Page narrow>
+      <PageHeader
+        eyebrow="You"
+        title="Settings"
+        subtitle={
+          <>
+            Your profile, practice solver options, notifications, privacy, and data.
+          </>
+        }
+      />
 
       <Tabs defaultValue="profile" className="mt-6">
         <TabsList className="grid grid-cols-3 sm:flex flex-wrap h-auto gap-1 p-1">
@@ -303,7 +309,7 @@ export default async function SettingsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </Page>
   );
 }
 

@@ -13,6 +13,7 @@ import { getCourseProgress, type CourseProgress } from "@/lib/course-progress";
 import { rupees } from "@/lib/pricing";
 import { formatDay } from "@/lib/utils";
 import type { CertAttemptRow, CertExamRow } from "@/lib/types/database";
+import { Page, PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = {
   title: "Certificates & Courses",
@@ -58,21 +59,12 @@ export default async function CertificatesPage() {
   );
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pb-20 pt-10 sm:px-6">
-      {/* ---------------------------------------------------- Hero Header --- */}
-      <header>
-        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          Certifications &amp; Courses
-        </p>
-        <h1 className="mt-4 font-editorial text-[2.6rem] font-normal leading-[0.98] tracking-[-0.02em] sm:text-[3.4rem]">
-          Learn the frameworks. <em className="italic">Prove it under exam conditions</em>.
-        </h1>
-        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-          Each certification includes a structured preparation curriculum paired with real practice cases.
-          Study the core mental models and business arithmetic first, then sit for the proctored exam to earn a verifiable
-          credential with 1-click addition to your LinkedIn profile.
-        </p>
-      </header>
+    <Page>
+      <PageHeader
+        eyebrow="You"
+        title="Certificates"
+        subtitle="Learn the frameworks, then prove it under exam conditions. Each certificate pairs a preparation course with real practice cases; pass the proctored exam to earn a credential you can verify and add to LinkedIn."
+      />
 
       {/* --------------------------------------- Certification Roadmap --- */}
       <div className="mt-10 rounded-lg border border-border bg-card/40 p-6">
@@ -258,6 +250,6 @@ export default async function CertificatesPage() {
           </ul>
         </Section>
       )}
-    </div>
+    </Page>
   );
 }

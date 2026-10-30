@@ -8,6 +8,7 @@ import { createAdminClientOrNull } from "@/lib/supabase/admin";
 import { checkoutMode, checkoutModeFor } from "@/lib/billing/checkout-mode";
 import { getAccess, purchaseBlock, type Access } from "@/lib/subscription";
 import { PLANS, USAGE_WINDOW, rupees } from "@/lib/pricing";
+import { Page, PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -79,17 +80,12 @@ export default async function PricingPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-20 pt-10 sm:px-6">
-      <header>
-        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Pricing</p>
-        <h1 className="mt-4 font-editorial text-[2.8rem] font-normal leading-[0.98] tracking-[-0.02em] sm:text-[3.8rem]">
-          Practise properly, <em className="italic">from {rupees(PLANS.monthly.pricePaise)} a month</em>.
-        </h1>
-        <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-          Reading the library is free. CaseCode Pro adds graded answers, AI mock interviews and every drill. Sign up
-          with any email — no college ID needed — or get it through your college&apos;s licence.
-        </p>
-      </header>
+    <Page>
+      <PageHeader
+        eyebrow="Pricing"
+        title={<>Practise properly, from {rupees(PLANS.monthly.pricePaise)} a month.</>}
+        subtitle="Reading the library is free. CaseCode Pro adds graded answers, AI mock interviews and every drill. Sign up with any email (no college ID needed) or get it through your college's licence."
+      />
 
       <div id="plans" className="mt-14 scroll-mt-10">
         <PlanTable buyer={buyer} loginNext="/pricing" />
@@ -210,6 +206,6 @@ export default async function PricingPage() {
           ))}
         </dl>
       </section>
-    </div>
+    </Page>
   );
 }

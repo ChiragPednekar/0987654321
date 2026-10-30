@@ -10,6 +10,7 @@ import { cn, formatNumber, timeAgo } from "@/lib/utils";
 import type { Difficulty, Domain } from "@/lib/types/database";
 import { PickToggle } from "@/components/teacher/library-picker";
 import { OBJECTIVE_TRACKS } from "@/lib/objective";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Question bank" };
 
@@ -62,18 +63,18 @@ export default async function QuestionBank() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">Question bank</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Your own questions, plus {formatNumber(platformCount ?? 0)} platform
-            cases you can assign as they are.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/teacher/questions/new">Add a question</Link>
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow="Library"
+        title="Question bank"
+        subtitle={<>Your own questions, plus {formatNumber(platformCount ?? 0)} platform cases you can assign as they are.</>}
+        actions={
+          <>
+            <Button asChild>
+              <Link href="/teacher/questions/new">Add a question</Link>
+            </Button>
+          </>
+        }
+      />
 
       <Note className="mt-6" title={`Platform library — ${formatNumber(platformCount ?? 0)} cases with rubrics, hints and worked answers`}>
         Tick anything in the library — cases, paths, SQL, Excel or aptitude

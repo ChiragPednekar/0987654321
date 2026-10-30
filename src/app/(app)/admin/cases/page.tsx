@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { Difficulty, Domain } from "@/lib/types/database";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Manage cases" };
 
@@ -38,7 +39,7 @@ export default async function AdminCasesPage({
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / pageSize));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <div className="min-w-0">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Link
@@ -47,10 +48,11 @@ export default async function AdminCasesPage({
           >
             ← Admin
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Cases</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {count ?? 0} total
-          </p>
+          <PageHeader
+            eyebrow="Platform"
+            title="Case library"
+            stats={[{ value: count ?? 0, label: count === 1 ? "case" : "cases" }]}
+          />
         </div>
         <Button asChild>
           <Link href="/admin/cases/new">New case</Link>

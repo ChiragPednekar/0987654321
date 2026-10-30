@@ -33,9 +33,8 @@ import { CaseProctorShell, type CaseQuestionData } from "@/components/case/case-
 import { CaseProblemView } from "@/components/case/case-problem-view";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
-import { cn, initials, plural, timeAgo } from "@/lib/utils";
+import { cn, plural, timeAgo } from "@/lib/utils";
 import { canSolve } from "@/lib/entitlement";
 import { LicenceGate } from "@/components/case/licence-gate";
 import type {
@@ -44,6 +43,7 @@ import type {
   RubricCriteria,
   ScoreRow,
 } from "@/lib/types/database";
+import { UserAvatar } from "@/components/user-avatar";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -644,11 +644,7 @@ export default async function CaseDetailPage({
                       <Card key={solution.id}>
                         <CardHeader className="flex-row items-center justify-between">
                           <div className="flex items-center gap-2.5">
-                            <Avatar className="size-7">
-                              <AvatarFallback className="text-[11px]">
-                                {initials(author?.full_name)}
-                              </AvatarFallback>
-                            </Avatar>
+                            <UserAvatar name={author?.full_name} size="sm" />
                             <div>
                               <p className="text-sm font-medium">
                                 {author?.full_name ?? "Anonymous"}

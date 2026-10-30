@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn, timeAgo } from "@/lib/utils";
 import type { NotificationRow } from "@/lib/types/database";
+import { Page, PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 
 export const metadata: Metadata = { title: "Notifications" };
 
@@ -25,27 +27,29 @@ export default async function NotificationsPage() {
   const items = (data ?? []) as NotificationRow[];
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Notifications</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Grades, badges, contests and replies.
-      </p>
+    <Page narrow>
+      <PageHeader
+        eyebrow="You"
+        title="Notifications"
+        subtitle={
+          <>
+            Grades, badges, contests and replies.
+          </>
+        }
+      />
 
       {items.length === 0 ? (
-        <Card className="mt-6">
-          <div className="flex flex-col items-center gap-4 px-4 py-20 text-center">
-            <Bell className="size-8 text-muted-foreground/40" />
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Nothing yet</p>
-              <p className="text-sm text-muted-foreground">
-                Submit a case and your grade will show up here.
-              </p>
-            </div>
-            <Button asChild size="sm">
+        <EmptyState
+          className="mt-6"
+          icon={Bell}
+          title="No notifications yet"
+          description="Submit a case and your grade will show up here."
+          action={
+            <Button variant="secondary" asChild>
               <Link href="/cases">Browse cases</Link>
             </Button>
-          </div>
-        </Card>
+          }
+        />
       ) : (
         <Card className="mt-6 overflow-hidden">
           <ul className="divide-y divide-border">
@@ -91,6 +95,6 @@ export default async function NotificationsPage() {
           </ul>
         </Card>
       )}
-    </div>
+    </Page>
   );
 }

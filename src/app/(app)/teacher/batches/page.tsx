@@ -4,6 +4,8 @@ import { requireTeacherActor, batchesTaughtBy } from "@/lib/authz";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CreateBatchForm } from "@/components/teacher/create-batch-form";
 import { formatNumber } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/teacher/empty-state";
 
 export const metadata: Metadata = { title: "Batches" };
 
@@ -28,21 +30,23 @@ export default async function BatchesPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">Batches</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Students join with the code — no invites needed.
-          </p>
-        </div>
-        <CreateBatchForm />
-      </div>
+      <PageHeader
+        eyebrow="Teaching"
+        title="Batches"
+        subtitle="Students join with the code — no invites needed."
+        actions={
+          <>
+            <CreateBatchForm />
+          </>
+        }
+      />
 
       {!batches || batches.length === 0 ? (
-        <p className="mt-8 border-t border-border pt-4 text-sm text-muted-foreground">
-          No batches yet. Create one and share its join code with your
-          students.
-        </p>
+        <EmptyState
+          className="mt-8"
+          title="No batches yet"
+          body="Create one with “New batch” and share its join code with your students."
+        />
       ) : (
         <div className="mt-8">
           <div className="hidden grid-cols-[1fr_7rem_8rem] gap-4 border-b border-border pb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground sm:grid">

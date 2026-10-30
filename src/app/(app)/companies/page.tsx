@@ -6,8 +6,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { COMPANY_SECTORS } from "@/lib/companies";
 import { plural } from "@/lib/utils";
+import { Page, PageHeader } from "@/components/page-header";
 
-export const metadata: Metadata = { title: "Company prep" };
+export const metadata: Metadata = { title: "Companies" };
 
 export default async function CompaniesPage() {
   const supabase = await createClient();
@@ -30,12 +31,18 @@ export default async function CompaniesPage() {
   for (const r of approved ?? []) questionsOf.set(r.company_id, (questionsOf.get(r.company_id) ?? 0) + 1);
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Company prep</h1>
-      <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-        How each firm&apos;s process usually runs, what it tends to look for, the practice here
-        that matches — and questions students were actually asked, reported by them.
-      </p>
+    <Page>
+      <PageHeader
+        eyebrow="Practise"
+        title="Companies"
+        subtitle={
+          <>
+            How each firm&apos;s process usually runs, what it tends to look for, the practice here
+            that matches — and questions students were actually asked, reported by them.
+          </>
+        }
+      />
+
       <p className="mt-2 max-w-2xl text-xs text-muted-foreground">
         Profiles are general guidance. Each one is marked unverified until it has been checked
         against an official source, and lists that source once it has.
@@ -103,6 +110,6 @@ export default async function CompaniesPage() {
         CaseCode is not affiliated with, endorsed by, or connected to any company listed. Processes
         vary by year, campus and role — confirm the details with your placement cell.
       </p>
-    </div>
+    </Page>
   );
 }

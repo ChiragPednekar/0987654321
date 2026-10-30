@@ -10,6 +10,7 @@ import { Note, Section, SectionEmpty, SectionList } from "@/components/section";
 import { DOMAIN_LABEL } from "@/lib/constants";
 import { formatDay, formatNumber, plural } from "@/lib/utils";
 import type { Domain } from "@/lib/types/database";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Teacher dashboard" };
 
@@ -23,11 +24,15 @@ export default async function TeacherDashboard() {
 
   if (batchIds.length === 0) {
     return (
-      <EmptyState
-        title="No batches yet"
-        body="Create your first batch to start assigning cases. Students join with a six-character code — no invites, no spreadsheets."
-        action={{ href: "/teacher/batches", label: "Create a batch" }}
-      />
+      <>
+        <PageHeader hero eyebrow="Teaching" title="Dashboard" />
+        <EmptyState
+          className="mt-8"
+          title="No batches yet"
+          body="Create your first batch to start assigning cases. Students join with a six-character code — no invites, no spreadsheets."
+          action={{ href: "/teacher/batches", label: "Create a batch" }}
+        />
+      </>
     );
   }
 
@@ -133,28 +138,29 @@ export default async function TeacherDashboard() {
 
   return (
     <div>
-      <div className="dashboard-hero flex flex-wrap items-end justify-between gap-4 p-6 sm:p-8">
-        <div>
-          <h1 className="font-editorial text-[2.6rem] font-normal leading-[1.02] tracking-[-0.02em]">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {formatNumber(uniqueStudents.size)}{" "}
-            {uniqueStudents.size === 1 ? "student" : "students"} across{" "}
-            {formatNumber(batchIds.length)}{" "}
-            {batchIds.length === 1 ? "batch" : "batches"}.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link href="/teacher/discussions">Group discussion</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/teacher/questions/new">New question</Link>
-          </Button>
-          <Button variant="ink" asChild>
-            <Link href="/teacher/assignments/new">New assignment</Link>
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        hero
+        eyebrow="Teaching"
+        title="Dashboard"
+        subtitle="Your batches at a glance: who's practising, where they're weakest, and what's due."
+        stats={[
+          { value: formatNumber(uniqueStudents.size), label: uniqueStudents.size === 1 ? "student" : "students" },
+          { value: formatNumber(batchIds.length), label: batchIds.length === 1 ? "batch" : "batches" },
+        ]}
+        actions={
+          <>
+            <Button asChild variant="secondary">
+              <Link href="/teacher/discussions">Group discussion</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/teacher/questions/new">New question</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/teacher/assignments/new">New assignment</Link>
+            </Button>
+          </>
+        }
+      />
 
       <div className="mt-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
         <StatCard

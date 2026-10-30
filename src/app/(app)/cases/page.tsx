@@ -13,10 +13,16 @@ import {
   CASES_PER_PAGE,
   CASE_FORMAT_LABEL,
   COMPANY_TRACKS,
-  DIFFICULTY_CLASS,
   DOMAIN_LABEL,
 } from "@/lib/constants";
 import { cn, plural } from "@/lib/utils";
+import { SearchX } from "lucide-react";
+import { Page, PageHeader } from "@/components/page-header";
+import { SegmentedNav } from "@/components/segmented-nav";
+import { DifficultySignal } from "@/components/difficulty-signal";
+import { CaseTags } from "@/components/case-tags";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/ui/button";
 import type { CaseFormat, Difficulty, Domain } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Cases" };
@@ -83,7 +89,7 @@ export default async function CasesPage({
     return supabase
       .from("cases")
       .select(
-        "id, slug, title, domain, difficulty, company_track, firm_style, format, is_pro, estimated_minutes, completion_rate, total_submissions",
+        "id, slug, title, domain, difficulty, company_track, firm_style, format, is_pro, estimated_minutes, completion_rate, total_submissions, tags",
         { count: "exact" },
       )
       .eq("is_published", true);
@@ -150,6 +156,7 @@ export default async function CasesPage({
   }
 
   const byTrack = params.view === "tracks";
+  const solvedCount = [...bestByCase.values()].filter((pct) => pct >= 60).length;
 
   let trackGroups: TrackGroup[] = [];
   if (byTrack) {
@@ -215,47 +222,26 @@ export default async function CasesPage({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6">
-      {/* A casebook's contents page: the title in the Didone, the count in
-          small capitals, and the list ruled on the page — no box around it. */}
-      <header>
-        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          The library · {count ?? 0} cases
-        </p>
-        <h1 className="mt-4 font-editorial text-[2.8rem] font-normal leading-[0.98] tracking-[-0.02em] sm:text-[3.8rem]">
-          Case <em className="italic">library</em>
-        </h1>
-        <p className="mt-4 text-sm text-muted-foreground">
-          Pick one and commit to a recommendation.
-        </p>
-      </header>
+    <Page>
+      <PageHeader
+        eyebrow="Practise"
+        title="Cases"
+        subtitle="Pick one and commit to a recommendation."
+        stats={[
+          { value: count ?? 0, label: count === 1 ? "case" : "cases" },
+          ...(profile ? [{ value: solvedCount, label: "solved" }, { value: attemptedCaseIds.size, label: "attempted" }] : []),
+        ]}
+      />
       {canAssign && <PickHint noun="cases" />}
 
-      <nav className="mt-10 flex gap-6 border-b border-border text-sm" aria-label="Library view">
-        {(
-          [
-            ["list", "Every case"],
-            ["tracks", "By track"],
-          ] as const
-        ).map(([value, label]) => {
-          const active = (value === "tracks") === byTrack;
-          return (
-            <Link
-              key={value}
-              href={value === "tracks" ? "/cases?view=tracks" : "/cases"}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "-mb-px border-b pb-2.5 transition-colors",
-                active
-                  ? "border-brand font-semibold text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {label}
-            </Link>
-          );
-        })}
-      </nav>
+      <SegmentedNav
+        label="Library view"
+        className="mt-8"
+        items={[
+          { href: "/cases", label: "Every case", active: !byTrack },
+          { href: "/cases?view=tracks", label: "By track", active: byTrack },
+        ]}
+      />
 
       <div className="mt-5">
         <CaseFilters
@@ -273,22 +259,27 @@ export default async function CasesPage({
       ) : (
       <div className="mt-8">
         {/* Column headers — hidden on mobile, where each row stacks. */}
-        <div className="hidden items-center gap-4 border-b border-border pb-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground sm:flex">
+        <div className="hidden items-center gap-4 border-b border-border pb-2 text-[12px] font-medium text-muted-foreground sm:flex">
           <span className={cn("w-5", canAssign && "ml-9")} />
           <span className="flex-1">Case</span>
           <span className="w-36">Domain</span>
-          <span className="w-20">Level</span>
+          <span className="w-24">Difficulty</span>
           <span className="w-16 text-right">Time</span>
           <span className="w-20 text-right">Solve rate</span>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="border-b border-border py-14">
-            <p className="font-editorial text-2xl">No cases match those filters.</p>
-            <Link href="/cases" className="mt-3 inline-block text-sm underline underline-offset-4">
-              Clear filters
-            </Link>
-          </div>
+          <EmptyState
+            className="mt-4"
+            icon={SearchX}
+            title="No cases match those filters"
+            description="Loosen a filter or two, or start again from the whole library."
+            action={
+              <Button variant="secondary" asChild>
+                <Link href="/cases">Clear filters</Link>
+              </Button>
+            }
+          />
         ) : (
           <ul className="divide-y divide-border border-b border-border">
             {filtered.map((item) => {
@@ -314,11 +305,11 @@ export default async function CasesPage({
                     </span>
 
                     <span className="w-full min-w-0 sm:w-auto sm:flex-1">
-                      <span className="font-editorial text-[1.15rem] leading-snug group-hover:italic">
+                      <span className="font-medium leading-snug group-hover:text-brand">
                         {item.title}
                       </span>
                       {(item.is_pro || item.format !== "full_case" || item.company_track) && (
-                        <span className="ml-2 font-mono text-[11px] text-muted-foreground">
+                        <span className="ml-2 text-[12px] text-muted-foreground">
                           {[
                             item.company_track,
                             item.format !== "full_case" ? CASE_FORMAT_LABEL[item.format as CaseFormat] : null,
@@ -328,26 +319,22 @@ export default async function CasesPage({
                             .join(" · ")}
                         </span>
                       )}
+                      <CaseTags tags={item.tags} className="mt-0.5" />
                     </span>
 
                     <span className="shrink-0 text-xs text-muted-foreground sm:w-36">
                       {DOMAIN_LABEL[item.domain as Domain]}
                     </span>
 
-                    <span
-                      className={cn(
-                        "shrink-0 font-mono text-xs capitalize sm:w-20",
-                        DIFFICULTY_CLASS[item.difficulty as Difficulty],
-                      )}
-                    >
-                      {item.difficulty}
+                    <span className="shrink-0 sm:w-24">
+                      <DifficultySignal difficulty={item.difficulty as Difficulty} />
                     </span>
 
-                    <span className="shrink-0 font-mono text-xs text-muted-foreground sm:w-16 sm:text-right">
+                    <span className="shrink-0 text-xs text-muted-foreground tabular sm:w-16 sm:text-right">
                       {item.estimated_minutes} min
                     </span>
 
-                    <span className="hidden shrink-0 font-mono text-xs text-muted-foreground tabular sm:inline sm:w-20 sm:text-right">
+                    <span className="hidden shrink-0 text-xs text-muted-foreground tabular sm:inline sm:w-20 sm:text-right">
                       {item.total_submissions > 0
                         ? `${(Number(item.completion_rate) * 100).toFixed(0)}%`
                         : "—"}
@@ -372,8 +359,8 @@ export default async function CasesPage({
             <span className="text-sm text-subtle-foreground">← Previous</span>
           )}
           <div className="flex items-center gap-3">
-            <span className="font-mono text-xs text-muted-foreground tabular">
-              page {page} of {totalPages}
+            <span className="text-xs text-muted-foreground tabular">
+              Page {page} of {totalPages}
             </span>
             <Link
               href="/cases?all=1"
@@ -401,6 +388,6 @@ export default async function CasesPage({
           </Link>
         </div>
       )}
-    </div>
+    </Page>
   );
 }

@@ -6,9 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { Flame, LogOut, Menu, Settings, Shield, User as UserIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { cn, initials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +20,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { NotificationRow, UserRole, UserRow } from "@/lib/types/database";
 import { roleHome } from "@/lib/role-home";
+import { UserAvatar } from "@/components/user-avatar";
 
 /**
  * Top-bar links, per role.
@@ -171,12 +171,7 @@ export function SiteNav({
                   className="touch-target flex items-center justify-center rounded-full transition-opacity hover:opacity-80"
                   aria-label="Account menu"
                 >
-                  <Avatar className="size-8">
-                    {profile.avatar_url && (
-                      <AvatarImage src={profile.avatar_url} alt="" />
-                    )}
-                    <AvatarFallback>{initials(profile.full_name)}</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar id={profile.id} name={profile.full_name} src={profile.avatar_url} className="size-8" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">

@@ -1,35 +1,39 @@
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
+import { GraduationCap, type LucideIcon } from "lucide-react";
+import { EmptyState as SharedEmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 
 /**
- * The empty state every teacher section falls back to.
- *
- * A blank table teaches nothing. Each of these says what the section is for and
- * offers the one action that fills it. Set left-aligned under an ink rule,
- * like the start of a fresh page — not a centred icon above a centred line,
- * which is every generated app's empty state. `icon` is still accepted so no
- * caller changes; it is no longer drawn.
+ * The empty state every teacher section falls back to: the shared
+ * `EmptyState`, so a teacher's empty page looks like a student's, with the
+ * one action that fills the section.
  */
 export function EmptyState({
+  icon = GraduationCap,
   title,
   body,
   action,
+  className,
 }: {
   icon?: LucideIcon;
   title: string;
   body: string;
   action?: { href: string; label: string };
+  className?: string;
 }) {
   return (
-    <div className="max-w-lg border-t border-border pt-5 pb-10">
-      <h2 className="text-xl font-semibold">{title}</h2>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
-      {action ? (
-        <Button asChild className="mt-5">
-          <Link href={action.href}>{action.label}</Link>
-        </Button>
-      ) : null}
-    </div>
+    <SharedEmptyState
+      className={className}
+      icon={icon}
+      title={title}
+      description={body}
+      action={
+        action ? (
+          <Button asChild>
+            <Link href={action.href}>{action.label}</Link>
+          </Button>
+        ) : undefined
+      }
+    />
   );
 }

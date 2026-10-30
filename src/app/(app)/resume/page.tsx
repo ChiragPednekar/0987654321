@@ -5,8 +5,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { canSolve } from "@/lib/entitlement";
 import { getQuotaStatus } from "@/lib/quota";
 import { ResumeCritic, type StoredCritique } from "@/components/resume/resume-critic";
+import { Page, PageHeader } from "@/components/page-header";
 
-export const metadata: Metadata = { title: "Resume critique" };
+export const metadata: Metadata = { title: "Resume" };
 
 export default async function ResumePage() {
   const supabase = await createClient();
@@ -29,12 +30,17 @@ export default async function ResumePage() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Resume critique</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Paste your CV bullets. Each one is judged the way a shortlister reads it,
-        and rewritten — without inventing a single number.
-      </p>
+    <Page narrow>
+      <PageHeader
+        eyebrow="Practise"
+        title="Resume"
+        subtitle={
+          <>
+            Paste your CV bullets. Each one is judged the way a shortlister reads it,
+            and rewritten — without inventing a single number.
+          </>
+        }
+      />
 
       <div className="mt-6">
         <ResumeCritic
@@ -43,6 +49,6 @@ export default async function ResumePage() {
           gradingsLeft={quota.gradingsLeft}
         />
       </div>
-    </div>
+    </Page>
   );
 }

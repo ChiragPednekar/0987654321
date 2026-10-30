@@ -13,6 +13,8 @@ import { LicenceGate } from "@/components/case/licence-gate";
 import { DOMAIN_LABEL } from "@/lib/constants";
 import { timeAgo } from "@/lib/utils";
 import type { Domain } from "@/lib/types/database";
+import { Page, PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 
 export const metadata: Metadata = { title: "Peer interviews" };
 export const dynamic = "force-dynamic";
@@ -51,12 +53,17 @@ export default async function PeerLobbyPage() {
   const own = mine ?? [];
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Peer interviews</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Take a case with another student. One interviews, one answers, then you
-        swap — and you each mark the other on the same rubric the AI uses.
-      </p>
+    <Page className="max-w-4xl">
+      <PageHeader
+        eyebrow="Practise"
+        title="Peer interviews"
+        subtitle={
+          <>
+            Take a case with another student. One interviews, one answers, then you
+            swap — and you each mark the other on the same rubric the AI uses.
+          </>
+        }
+      />
 
       {!entitled ? (
         <div className="mt-6">
@@ -106,15 +113,12 @@ export default async function PeerLobbyPage() {
           </h2>
 
           {rooms.length === 0 ? (
-            <Card className="mt-3">
-              <CardContent className="p-8 text-center">
-                <Users className="mx-auto size-8 text-muted-foreground" />
-                <p className="mt-3 text-sm text-muted-foreground">
-                  Nobody is waiting right now. Open a room and it will appear here
-                  for other students to join.
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              className="mt-3"
+              icon={Users}
+              title="Nobody is waiting right now"
+              description="Open a room and it will appear here for other students to join."
+            />
           ) : (
             <ul className="mt-3 space-y-2">
               {rooms.map((room) => {
@@ -156,6 +160,6 @@ export default async function PeerLobbyPage() {
           )}
         </>
       )}
-    </div>
+    </Page>
   );
 }

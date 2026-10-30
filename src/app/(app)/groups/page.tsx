@@ -9,6 +9,8 @@ import { CreateGroupForm } from "@/components/groups/create-group-form";
 import { JoinGroupModal } from "@/components/groups/join-group-modal";
 import { QuickJoinButton } from "@/components/groups/quick-join-button";
 import { cleanGroupDescription } from "@/lib/group-codes";
+import { Page, PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 
 export const metadata: Metadata = {
   title: "Groups",
@@ -37,19 +39,19 @@ export default async function GroupsPage() {
   const myGroups = (allGroups ?? []).filter((g) => joinedIds.has(g.id) || g.owner_id === profile.id);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 space-y-10">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Study Groups & Circles</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Join public practice circles freely or enter a private invite code from your peer or coach.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <JoinGroupModal />
-          <CreateGroupForm />
-        </div>
-      </div>
+    <Page className="space-y-10">
+      <PageHeader
+        eyebrow="Community"
+        title="Groups"
+        subtitle="Study groups and practice circles. Join a public one, or enter an invite code from a classmate or coach."
+        stats={[{ value: myGroups.length, label: myGroups.length === 1 ? "group joined" : "groups joined" }]}
+        actions={
+          <>
+            <JoinGroupModal />
+            <CreateGroupForm />
+          </>
+        }
+      />
 
       {/* My Enrolled Groups */}
       {myGroups.length > 0 ? (
@@ -139,11 +141,15 @@ export default async function GroupsPage() {
         </div>
 
         {publicGroups.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-sm text-muted-foreground text-center">
-              No public groups yet. Click <strong>New group</strong> above to start one!
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Users}
+            title="No public groups yet"
+            description={
+              <>
+                Use <span className="font-medium">New group</span> above to start one.
+              </>
+            }
+          />
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2">
             {publicGroups.map((group) => {
@@ -190,6 +196,6 @@ export default async function GroupsPage() {
           </ul>
         )}
       </section>
-    </div>
+    </Page>
   );
 }

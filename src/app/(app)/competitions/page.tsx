@@ -6,9 +6,12 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { timeAgo } from "@/lib/utils";
+import { formatDay, formatDayTime } from "@/lib/utils";
+import { DateBlock } from "@/components/date-block";
+import { EmptyState } from "@/components/empty-state";
+import { Page, PageHeader } from "@/components/page-header";
 
-export const metadata: Metadata = { title: "Case competitions" };
+export const metadata: Metadata = { title: "Competitions" };
 
 function stateOf(c: { opens_at: string; closes_at: string; results_at: string | null }) {
   const now = Date.now();
@@ -52,12 +55,17 @@ export default async function CompetitionsPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Case competitions</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Teams of two to four, one brief, one submission, ranked against everyone
-        who entered.
-      </p>
+    <Page narrow>
+      <PageHeader
+        eyebrow="Community"
+        title="Competitions"
+        subtitle={
+          <>
+            Teams of two to four, one brief, one submission, ranked against everyone
+            who entered.
+          </>
+        }
+      />
 
       <Card className="mt-6 border-muted">
         <CardContent className="p-4 text-xs text-muted-foreground">
@@ -68,55 +76,78 @@ export default async function CompetitionsPage() {
         </CardContent>
       </Card>
 
-      <div className="mt-6 space-y-3">
-        {(comps ?? []).map((c) => {
-          const state = stateOf(c);
-          const isIn = enteredSlugs.has(c.slug);
+      {/* Live and upcoming first, soonest deadline on top; then past ones, newest first. */}
+      {(() => {
+        const all = (comps ?? []).map((c) => ({ ...c, state: stateOf(c) }));
+        const live = all.filter((c) => c.state === "open" || c.state === "upcoming");
+        const past = all
+          .filter((c) => c.state === "judging" || c.state === "results")
+          .sort((x, y) => new Date(y.closes_at).getTime() - new Date(x.closes_at).getTime());
+        if (all.length === 0) {
           return (
-            <Link key={c.slug} href={`/competitions/${c.slug}`}>
-              <Card className="transition-colors hover:border-foreground/25">
-                <CardContent className="p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium">{c.title}</p>
-                        {state === "open" && <Badge>open</Badge>}
-                        {state === "upcoming" && <Badge variant="outline">opens soon</Badge>}
-                        {state === "judging" && <Badge variant="secondary">judging</Badge>}
-                        {state === "results" && (
-                          <Badge variant="secondary" className="gap-1">
-                            <Trophy className="size-3" /> results out
-                          </Badge>
-                        )}
-                        {isIn && <Badge variant="outline">entered</Badge>}
-                      </div>
-                      {c.sponsor && (
-                        <p className="mt-0.5 text-xs text-muted-foreground">{c.sponsor}</p>
-                      )}
-                      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                        {c.brief}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="mt-3 flex flex-wrap gap-x-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Users className="size-3" />
-                      {c.min_team_size}–{c.max_team_size} per team
-                    </span>
-                    <span>
-                      {state === "upcoming"
-                        ? `opens ${timeAgo(c.opens_at)}`
-                        : state === "open"
-                          ? `closes ${timeAgo(c.closes_at)}`
-                          : `closed ${timeAgo(c.closes_at)}`}
-                    </span>
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+            <EmptyState
+              className="mt-6"
+              icon={Trophy}
+              title="No competitions yet"
+              description="When one opens you'll see it here, with its brief and team size."
+            />
           );
-        })}
-      </div>
-    </div>
+        }
+        return [
+          { title: "Open and upcoming", rows: live },
+          { title: "Past", rows: past },
+        ]
+          .filter((group) => group.rows.length > 0)
+          .map((group) => (
+            <section key={group.title} className="mt-8">
+              <h2 className="px-1 pb-2 text-[1.25rem] font-bold tracking-[-0.018em]">{group.title}</h2>
+              <div className="space-y-3">
+                {group.rows.map((c) => {
+                  const isIn = enteredSlugs.has(c.slug);
+                  const keyDate = c.state === "upcoming" ? c.opens_at : c.closes_at;
+                  return (
+                    <Link key={c.slug} href={`/competitions/${c.slug}`} className="block">
+                      <Card className="transition-[border-color,box-shadow] hover:border-border hover:shadow-md">
+                        <CardContent className="flex gap-4 p-5">
+                          <DateBlock date={keyDate} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-medium">{c.title}</p>
+                              {c.state === "open" && <Badge>Open</Badge>}
+                              {c.state === "upcoming" && <Badge variant="outline">Opens soon</Badge>}
+                              {c.state === "judging" && <Badge variant="secondary">Judging</Badge>}
+                              {c.state === "results" && (
+                                <Badge variant="secondary" className="gap-1">
+                                  <Trophy className="size-3" /> Results out
+                                </Badge>
+                              )}
+                              {isIn && <Badge variant="success">Entered</Badge>}
+                            </div>
+                            {c.sponsor && <p className="mt-0.5 text-xs text-muted-foreground">{c.sponsor}</p>}
+                            <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{c.brief}</p>
+                            <p className="mt-3 flex flex-wrap gap-x-4 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Users className="size-3" />
+                                {c.min_team_size}–{c.max_team_size} per team
+                              </span>
+                              <span>
+                                {c.state === "upcoming"
+                                  ? `Opens ${formatDayTime(c.opens_at)}`
+                                  : c.state === "open"
+                                    ? `Closes ${formatDayTime(c.closes_at)}`
+                                    : `Closed ${formatDay(c.closes_at)}`}
+                              </span>
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ));
+      })()}
+    </Page>
   );
 }

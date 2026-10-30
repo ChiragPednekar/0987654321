@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatNumber } from "@/lib/utils";
 import { Sparkline } from "@/components/sparkline";
+import { Page, PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -55,8 +56,11 @@ export default async function ProfilePage() {
   );
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
+    <Page narrow>
+      <PageHeader
+        eyebrow="You"
+        title="Profile"
+      />
 
       <div className="mt-6 grid gap-4 sm:grid-cols-4">
         {(
@@ -151,6 +155,6 @@ export default async function ProfilePage() {
           </ul>
         </CardContent>
       </Card>
-    </div>
+    </Page>
   );
 }

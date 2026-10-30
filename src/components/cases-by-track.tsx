@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { CheckCircle2, Circle, CircleDashed } from "lucide-react";
-import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
-import { cn } from "@/lib/utils";
-import type { Difficulty, Domain } from "@/lib/types/database";
+import { DOMAIN_LABEL } from "@/lib/constants";
+import { EmptyState } from "@/components/empty-state";
+import { TrackCard } from "@/components/track-card";
+import { domainIllustration } from "@/components/illustrations";
+import type { Domain } from "@/lib/types/database";
 
 export interface TrackCase {
   id: string;
@@ -23,9 +23,8 @@ export interface TrackGroup {
 /**
  * The library grouped by learning track rather than as a flat list.
  *
- * Cases keep their track order rather than being re-sorted by difficulty: the
- * sequence is the pedagogy, and reordering it would defeat the point of a
- * track.
+ * "Next" follows the track's own order rather than difficulty: the sequence
+ * is the pedagogy. A case you started and didn't finish comes first.
  */
 export function CasesByTrack({
   tracks,
@@ -38,74 +37,34 @@ export function CasesByTrack({
 }) {
   if (tracks.length === 0) {
     return (
-      <p className="mt-8 border-t border-border pt-4 text-sm text-muted-foreground">
-        No tracks have cases assigned yet.
-      </p>
+      <EmptyState
+        className="mt-8"
+        illustration="issueTree"
+        title="No tracks yet"
+        description="Tracks appear here once cases are assigned to them."
+      />
     );
   }
 
-  // Each track is a section of the contents page: its title in the Didone
-  // over an ink rule, then its steps in order — the numbering is real here,
-  // because a track unlocks one step at a time.
+  // One card per track: how far you are and the next case in its order.
   return (
-    <div>
+    <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {tracks.map((track) => {
         const solved = track.cases.filter((c) => solvedIds.has(c.id)).length;
-
+        const next =
+          track.cases.find((c) => !solvedIds.has(c.id) && attemptedIds.has(c.id)) ??
+          track.cases.find((c) => !solvedIds.has(c.id));
         return (
-          <section key={track.id} className="mt-10">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border pb-2">
-              <Link
-                href={`/paths/${track.slug}`}
-                className="font-editorial text-[1.6rem] leading-tight hover:italic"
-              >
-                {track.title}
-              </Link>
-              <span className="font-mono text-xs text-muted-foreground tabular">
-                {DOMAIN_LABEL[track.domain as Domain]} · {solved}/{track.cases.length} solved
-              </span>
-            </div>
-
-            <ul className="divide-y divide-border">
-              {track.cases.map((item) => {
-                const isSolved = solvedIds.has(item.id);
-                const isAttempted = !isSolved && attemptedIds.has(item.id);
-
-                return (
-                  <li key={item.id}>
-                    <Link
-                      href={`/cases/${item.slug}`}
-                      className="group flex items-baseline gap-4 py-3"
-                    >
-                      <span className="w-6 shrink-0 font-mono text-xs text-muted-foreground tabular">
-                        {String(item.step_order).padStart(2, "0")}
-                      </span>
-                      <span className="shrink-0">
-                        {isSolved ? (
-                          <CheckCircle2 className="size-3.5 translate-y-0.5 text-success" aria-label="Solved" />
-                        ) : isAttempted ? (
-                          <CircleDashed className="size-3.5 translate-y-0.5 text-warning" aria-label="Attempted" />
-                        ) : (
-                          <Circle className="size-3.5 translate-y-0.5 text-muted-foreground/30" aria-label="Not started" />
-                        )}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate font-editorial text-[1.1rem] group-hover:italic">
-                        {item.title}
-                      </span>
-                      <span
-                        className={cn(
-                          "shrink-0 font-mono text-xs capitalize",
-                          DIFFICULTY_CLASS[item.difficulty as Difficulty],
-                        )}
-                      >
-                        {item.difficulty}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
+          <TrackCard
+            key={track.id}
+            href={`/paths/${track.slug}`}
+            title={track.title}
+            description={DOMAIN_LABEL[track.domain as Domain]}
+            illustration={domainIllustration(track.domain)}
+            solved={solved}
+            total={track.cases.length}
+            next={next ? { title: next.title, href: `/cases/${next.slug}` } : undefined}
+          />
         );
       })}
     </div>

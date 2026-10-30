@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { greetingFor, greetingName } from "@/lib/greeting";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
@@ -8,7 +9,8 @@ import { QuotaCard } from "@/components/quota-card";
 import { Section, SectionEmpty, SectionList } from "@/components/section";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { StatCard } from "@/components/stat-card";
+import { Page, PageHeader } from "@/components/page-header";
+import { StatChip, StatChipRow } from "@/components/stat-chip";
 import type { SkillPoint } from "@/components/skill-radar";
 import { SkillRadarLazy } from "@/components/skill-radar-lazy";
 import { DailyCaseCard, type DailyCase } from "@/components/daily-case-card";
@@ -270,52 +272,59 @@ export default async function DashboardPage() {
   const quotaAdmin = createAdminClientOrNull();
   if (quotaAdmin) quota = await getQuotaStatus(quotaAdmin, profile.id);
 
-  // The greeting is worked out in IST: the page is rendered on a server in
-  // another timezone, and "Good evening" at 9 a.m. would be worse than none.
   const now = new Date();
-  const hourIst = Number(
-    now.toLocaleString("en-IN", { hour: "numeric", hour12: false, timeZone: "Asia/Kolkata" }),
-  );
-  const greeting = hourIst < 12 ? "Good morning" : hourIst < 17 ? "Good afternoon" : "Good evening";
+  const greeting = greetingFor(now);
   const today = now.toLocaleDateString("en-IN", {
     weekday: "long",
     day: "numeric",
     month: "long",
     timeZone: "Asia/Kolkata",
   });
-  // Only a word that reads as a name goes in the headline. Accounts created
-  // from an email address can carry a handle like "jdoe-2024", and set at
-  // 60px in italic that is worse than no name at all.
-  const firstWord = profile.full_name?.trim().split(/\s+/)[0] ?? "";
-  const firstName = /^[\p{L}][\p{L}'’.-]{0,19}$/u.test(firstWord) ? firstWord : null;
+  const firstName = greetingName(profile.full_name);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6">
+    <Page>
       {/* --------------------------------------------------- greeting --- */}
-      <header className="dashboard-hero flex flex-wrap items-end justify-between gap-6 p-6 sm:p-8">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-            {today}
-          </p>
-          <h1 className="mt-4 font-editorial text-[2.8rem] font-normal leading-[0.98] tracking-[-0.02em] sm:text-[3.8rem]">
+      <PageHeader
+        hero
+        eyebrow="Dashboard"
+        title={
+          <>
             {greeting}
             {firstName ? (
               <>
-                , <em className="italic">{firstName}</em>
+                , <span className="text-brand">{firstName}</span>
               </>
             ) : null}
             .
-          </h1>
-          <p className="mt-4 text-sm text-muted-foreground">
-            {profile.cases_solved === 0
-              ? "Your first case is the hardest. Start with an easy one."
-              : `${formatNumber(profile.cases_solved)} cases solved · Level ${profile.level}`}
-          </p>
-        </div>
-        <Button variant="ink" size="lg" asChild>
-          <Link href="/cases">Solve a case</Link>
-        </Button>
-      </header>
+          </>
+        }
+        subtitle={
+          profile.cases_solved === 0
+            ? `${today}. Your first case is the hardest. Start with an easy one.`
+            : `${today}. Pick up where you left off, or start something new.`
+        }
+        stats={[
+          { value: formatNumber(profile.cases_attempted), label: "attempted" },
+          `Level ${profile.level}`,
+          { value: formatNumber(profile.total_score), label: "points" },
+        ]}
+        actions={
+          <Button size="lg" asChild>
+            <Link href="/cases">
+              Solve a case <ArrowRight />
+            </Link>
+          </Button>
+        }
+      />
+
+      {/* ------------------------------------------------------- stats --- */}
+      <StatChipRow className="mt-6 lg:grid-cols-4">
+        <StatChip label="Current streak" value={profile.current_streak} unit={profile.current_streak === 1 ? "day" : "days"} tone="warning" />
+        <StatChip label="Cases solved" value={formatNumber(profile.cases_solved)} tone="brand" />
+        <StatChip label="Average score" value={accuracy > 0 ? `${accuracy.toFixed(0)}%` : "—"} tone="success" />
+        <StatChip label="Global rank" value={rank?.rank ? `#${formatNumber(rank.rank)}` : "—"} tone="highlight" />
+      </StatChipRow>
 
       <Link
         href={nextStep?.href ?? "/preparation"}
@@ -344,30 +353,6 @@ export default async function DashboardPage() {
           <DailyCaseCard dailyCase={dailyCase} solved={dailySolved} />
         </div>
       )}
-
-      {/* ------------------------------------------------------- stats --- */}
-      <div className="mt-10 grid grid-cols-2 gap-6 lg:grid-cols-4">
-        <StatCard
-          label="Cases solved"
-          value={formatNumber(profile.cases_solved)}
-          sublabel={`${formatNumber(profile.cases_attempted)} attempted`}
-        />
-        <StatCard
-          label="Average score"
-          value={accuracy > 0 ? `${accuracy.toFixed(0)}%` : "—"}
-          sublabel="Across all solved cases"
-        />
-        <StatCard
-          label="Current streak"
-          value={profile.current_streak}
-          sublabel={`Longest ${profile.longest_streak}`}
-        />
-        <StatCard
-          label="Global rank"
-          value={rank?.rank ? `#${formatNumber(rank.rank)}` : "—"}
-          sublabel={`${formatNumber(profile.total_score)} points`}
-        />
-      </div>
 
       {/* --------------------------------------------- effort over time --- */}
       {/* Paired: both answer "how much have I been doing lately", and side by
@@ -542,6 +527,6 @@ export default async function DashboardPage() {
           </SectionList>
         </Section>
       </div>
-    </div>
+    </Page>
   );
 }

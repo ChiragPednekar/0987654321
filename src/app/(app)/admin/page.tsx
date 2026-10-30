@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/stat-card";
 import { formatNumber, plural, timeAgo } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -83,26 +84,26 @@ export default async function AdminPage() {
   const rupees = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <div className="dashboard-hero flex flex-wrap items-end justify-between gap-4 p-6 sm:p-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Licences, revenue, usage and content.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href="/admin/licences">
-              <Building2 className="size-4" />
-              Licences
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/admin/cases/new">New case</Link>
-          </Button>
-        </div>
-      </div>
+    <div className="min-w-0">
+      <PageHeader
+        hero
+        eyebrow="Platform"
+        title="Dashboard"
+        subtitle="Licences, revenue, usage and content."
+        actions={
+          <>
+            <Button asChild variant="secondary">
+              <Link href="/admin/licences">
+                <Building2 className="size-4" />
+                Licences
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/admin/cases/new">New case</Link>
+            </Button>
+          </>
+        }
+      />
 
       {/*
         People first.

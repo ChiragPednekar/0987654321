@@ -1,12 +1,15 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Crown, GraduationCap, Medal } from "lucide-react";
+import { GraduationCap, Trophy } from "lucide-react";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/user-avatar";
+import { RankBadge } from "@/components/rank-badge";
+import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { cn, formatNumber, initials, plural } from "@/lib/utils";
+import { cn, formatNumber, plural } from "@/lib/utils";
 import type { LeaderboardPeriod } from "@/lib/types/database";
+import { Page, PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Leaderboard" };
 
@@ -173,13 +176,18 @@ export default async function LeaderboardPage({
   const boardTitle = isCohort ? university : "Global leaderboard";
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Leaderboard</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {isCohort
-          ? `Ranked within ${university}. Ties break on accuracy.`
-          : `Ranking of all ${plural(rows.length, "student")} on the platform. Ties break on accuracy.`}
-      </p>
+    <Page className="max-w-4xl">
+      <PageHeader
+        eyebrow="Community"
+        title="Leaderboard"
+        subtitle={
+          <>
+            {isCohort
+              ? `Ranked within ${university}. Ties break on accuracy.`
+              : `Ranking of all ${plural(rows.length, "student")} on the platform. Ties break on accuracy.`}
+          </>
+        }
+      />
 
       {/* ---- cohort scope ---------------------------------------------- */}
       <div className="mt-6 flex flex-wrap items-center gap-2">
@@ -293,11 +301,16 @@ export default async function LeaderboardPage({
         </div>
 
         {!rows || rows.length === 0 ? (
-          <p className="px-4 py-16 text-center text-sm text-muted-foreground">
-            {isCohort
-              ? `Nobody from ${university} has ranked in this period yet. Solve a case to put your campus on the board.`
-              : "No rankings yet for this period. Solve a case to appear here."}
-          </p>
+          <EmptyState
+            className="rounded-none border-0 shadow-none"
+            icon={Trophy}
+            title="No rankings yet"
+            description={
+              isCohort
+                ? `Nobody from ${university} has ranked in this period yet. Solve a case to put your campus on the board.`
+                : "Nobody has ranked in this period yet. Solve a case to appear here."
+            }
+          />
         ) : (
           <ul className="divide-y divide-border">
             {rows.map((row) => {
@@ -312,31 +325,17 @@ export default async function LeaderboardPage({
                 <li
                   key={row.user_id}
                   className={cn(
-                    "flex items-center gap-4 px-4 py-3",
+                    "flex h-16 items-center gap-4 px-4",
                     isMe && "bg-accent/60",
                   )}
                 >
+                  {/* A podium place needs points: three students tied on zero aren't gold, silver and bronze. */}
                   <span className="w-10 shrink-0">
-                    {row.total_points > 0 && displayRank === 1 ? (
-                      <Crown className="size-4 text-[var(--warning)]" />
-                    ) : row.total_points > 0 && displayRank <= 3 ? (
-                      <Medal className="size-4 text-muted-foreground" />
-                    ) : (
-                      <span className="text-sm text-muted-foreground tabular">
-                        {displayRank}
-                      </span>
-                    )}
+                    <RankBadge rank={displayRank} podium={row.total_points > 0} />
                   </span>
 
                   <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                    <Avatar className="size-7 shrink-0">
-                      {user?.avatar_url && (
-                        <AvatarImage src={user.avatar_url} alt="" />
-                      )}
-                      <AvatarFallback className="text-[11px]">
-                        {initials(user?.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar id={row.user_id} name={user?.full_name} src={user?.avatar_url} size="sm" className="shrink-0" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">
                         <Link
@@ -351,16 +350,19 @@ export default async function LeaderboardPage({
                           </Badge>
                         )}
                       </p>
-                      {user?.university && !isCohort && (
+                      {/* The second line is always there, empty or not, so rows don't jump in height. */}
+                      {user?.university && !isCohort ? (
                         <Link
                           href={hrefWith(
                             { period, sort },
                             { uni: user.university },
                           )}
-                          className="truncate text-xs text-muted-foreground hover:underline"
+                          className="block truncate text-xs text-muted-foreground hover:underline"
                         >
                           {user.university}
                         </Link>
+                      ) : (
+                        <span aria-hidden className="block text-xs">&nbsp;</span>
                       )}
                     </div>
                   </div>
@@ -403,6 +405,6 @@ export default async function LeaderboardPage({
           </div>
         </Card>
       )}
-    </div>
+    </Page>
   );
 }

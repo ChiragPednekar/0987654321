@@ -10,6 +10,8 @@ import { BookmarkButton } from "@/components/case/bookmark-button";
 import { DIFFICULTY_CLASS, DOMAIN_LABEL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { Difficulty, Domain } from "@/lib/types/database";
+import { Page, PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/empty-state";
 
 export const metadata: Metadata = { title: "Bookmarks" };
 
@@ -47,37 +49,30 @@ export default async function BookmarksPage() {
   );
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Bookmarks</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {rows.length === 0
-              ? "Cases you save appear here."
-              : `${rows.length} saved ${rows.length === 1 ? "case" : "cases"}.`}
-          </p>
-        </div>
-        <Button variant="outline" asChild>
-          <Link href="/cases">Browse cases</Link>
-        </Button>
-      </div>
+    <Page>
+      <PageHeader
+        eyebrow="You"
+        title="Bookmarks"
+        subtitle="Cases you saved to come back to."
+        stats={[{ value: rows.length, label: rows.length === 1 ? "saved case" : "saved cases" }]}
+        actions={
+          <Button variant="secondary" asChild>
+            <Link href="/cases">Browse cases</Link>
+          </Button>
+        }
+      />
 
       {rows.length === 0 ? (
-        <Card className="mt-6">
-          <div className="flex flex-col items-center gap-4 px-4 py-20 text-center">
-            <Bookmark className="size-8 text-muted-foreground/50" />
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Nothing saved yet</p>
-              <p className="text-sm text-muted-foreground">
-                Hit <span className="font-medium">Save</span> on any case to
-                keep it here for later.
-              </p>
-            </div>
-            <Button asChild size="sm">
-              <Link href="/cases">Browse cases</Link>
-            </Button>
-          </div>
-        </Card>
+        <EmptyState
+          className="mt-6"
+          icon={Bookmark}
+          title="Nothing saved yet"
+          description={
+            <>
+              Hit <span className="font-medium">Save</span> on any case to keep it here for later.
+            </>
+          }
+        />
       ) : (
         <Card className="mt-6 overflow-hidden">
           <ul className="divide-y divide-border">
@@ -129,6 +124,6 @@ export default async function BookmarksPage() {
           </ul>
         </Card>
       )}
-    </div>
+    </Page>
   );
 }

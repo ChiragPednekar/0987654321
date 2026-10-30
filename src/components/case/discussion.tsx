@@ -6,8 +6,8 @@ import { ArrowBigUp, Loader2, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn, initials, timeAgo } from "@/lib/utils";
+import { cn, timeAgo } from "@/lib/utils";
+import { UserAvatar } from "@/components/user-avatar";
 
 export interface DiscussionComment {
   id: string;
@@ -113,14 +113,7 @@ export function Discussion({
     return (
       <li key={comment.id} className={cn(depth > 0 && "ml-6 border-l border-border pl-4")}>
         <div className="flex gap-3 py-3">
-          <Avatar className="size-7 shrink-0">
-            {comment.author?.avatar_url && (
-              <AvatarImage src={comment.author.avatar_url} alt="" />
-            )}
-            <AvatarFallback className="text-[11px]">
-              {initials(comment.author?.full_name)}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar name={comment.author?.full_name} src={comment.author?.avatar_url} size="sm" className="shrink-0" />
 
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-2">

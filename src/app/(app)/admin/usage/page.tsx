@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { StatCard } from "@/components/stat-card";
 import { MODEL_RATES, QUOTA } from "@/lib/constants";
 import { formatNumber, plural } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "AI usage" };
 
@@ -32,7 +33,10 @@ export default async function UsagePage() {
   if (rows.length === 0) {
     return (
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">AI usage</h1>
+        <PageHeader
+          eyebrow="Commercial"
+          title="AI usage"
+        />
         <Card className="mt-6">
           <CardContent className="p-6 text-center">
             <Cpu className="mx-auto size-8 text-muted-foreground" />

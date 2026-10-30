@@ -8,6 +8,7 @@ import { UserActions } from "@/components/admin/user-actions";
 import { SubscriptionActions } from "@/components/admin/subscription-actions";
 import { formatDay, formatNumber, plural, timeAgo } from "@/lib/utils";
 import type { AdminUserRow } from "@/lib/types/database";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -60,11 +61,11 @@ export default async function UsersPage({
   return (
     <div>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {plural(Number(total), "account")}
-          {deactivated > 0 ? `, ${formatNumber(deactivated)} deactivated on this page` : ""}.
-        </p>
+        <PageHeader
+          eyebrow="Platform"
+          title="Users"
+          subtitle={<>{plural(Number(total), "account")}{deactivated > 0 ? `, ${formatNumber(deactivated)} deactivated on this page` : ""}.</>}
+        />
       </div>
 
       <div className="mt-6">

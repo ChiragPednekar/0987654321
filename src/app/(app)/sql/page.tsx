@@ -9,8 +9,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { plural } from "@/lib/utils";
+import { Page, PageHeader } from "@/components/page-header";
 
-export const metadata: Metadata = { title: "SQL practice" };
+export const metadata: Metadata = { title: "SQL" };
 
 export default async function SqlIndex() {
   const supabase = await createClient();
@@ -48,12 +49,17 @@ export default async function SqlIndex() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">SQL practice</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Write the query, run it, get it marked. One schema throughout, so what
-        you learn on the first carries to the last.
-      </p>
+    <Page narrow>
+      <PageHeader
+        eyebrow="Practise"
+        title="SQL"
+        subtitle={
+          <>
+            Write the query, run it, get it marked. One schema throughout, so what
+            you learn on the first carries to the last.
+          </>
+        }
+      />
 
       <Card className="mt-6 border-muted">
         <CardContent className="space-y-2 p-4 text-xs text-muted-foreground">
@@ -108,6 +114,6 @@ export default async function SqlIndex() {
           </Link>
         ))}
       </div>
-    </div>
+    </Page>
   );
 }
