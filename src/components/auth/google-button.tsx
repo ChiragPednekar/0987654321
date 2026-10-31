@@ -6,12 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 /**
- * Render only when Supabase really has the provider enabled — see
- * `googleSignInEnabled()`. Left unconditional, this button is a guaranteed
- * dead end ("Unsupported provider: provider is not enabled") sitting directly
- * above the working email form, which reads as auth being broken.
+ * Starts Supabase's Google OAuth round trip, landing on `next` through
+ * /auth/callback. Shared by this button and the sign-in page's own.
  */
-export function GoogleButton({ next = "/dashboard" }: { next?: string }) {
+export function useGoogleSignIn(next = "/dashboard") {
   const [loading, setLoading] = React.useState(false);
 
   async function signInWithGoogle() {
@@ -25,11 +23,24 @@ export function GoogleButton({ next = "/dashboard" }: { next?: string }) {
       },
     });
 
+    // On success the browser is already leaving for Google; stay "loading".
     if (error) {
       toast.error(error.message);
       setLoading(false);
     }
   }
+
+  return { loading, signInWithGoogle };
+}
+
+/**
+ * Render only when Supabase really has the provider enabled — see
+ * `googleSignInEnabled()`. Left unconditional, this button is a guaranteed
+ * dead end ("Unsupported provider: provider is not enabled") sitting directly
+ * above the working email form, which reads as auth being broken.
+ */
+export function GoogleButton({ next = "/dashboard" }: { next?: string }) {
+  const { loading, signInWithGoogle } = useGoogleSignIn(next);
 
   return (
     <>

@@ -615,3 +615,126 @@ h2 em {
   height: 2.75rem;
   font-size: 1rem;
 }
+
+/* -------------------------------------------------------------- sign-in ---
+   /login has its own palette: obsidian and canvas, a blue accent and a
+   vermilion for the examiner. Dark by default, `.signin-light` when the
+   visitor picked light. Set on body too (via :has) so the Campus Key dialog
+   and the toasts, which portal to <body>, read the same tokens. */
+@theme inline {
+  --color-cc-obsidian: var(--cc-obsidian);
+  --color-cc-canvas: var(--cc-canvas);
+  --color-cc-card: var(--cc-card);
+  --color-cc-surface: var(--cc-surface);
+  --color-cc-border: var(--cc-border);
+  --color-cc-accent: var(--cc-accent);
+  --color-cc-accent-hover: var(--cc-accent-hover);
+  --color-cc-accent-ink: var(--cc-accent-ink);
+  --color-cc-vermilion: var(--cc-vermilion);
+  --color-cc-muted: var(--cc-muted);
+  --color-cc-ink: var(--cc-ink);
+  --color-cc-ink-2: var(--cc-ink-2);
+  --color-cc-ink-3: var(--cc-ink-3);
+  --shadow-isometric: 0 25px 40px -15px rgb(0 0 0 / 0.6), 0 0 1px 1px rgb(255 255 255 / 0.08);
+  --shadow-glow-vermilion: 0 0 40px -10px rgb(249 87 56 / 0.25);
+}
+
+.signin-theme,
+body:has(.signin-page) {
+  --cc-obsidian: #090b10;
+  --cc-canvas: #0e111a;
+  --cc-card: #141824;
+  --cc-surface: #181d2e;
+  --cc-border: #232a3d;
+  --cc-accent: #3b82f6;
+  --cc-accent-hover: #2563eb;
+  --cc-accent-ink: #60a5fa;
+  --cc-vermilion: #f95738;
+  --cc-muted: #717c99;
+  --cc-ink: #f1f5f9;
+  --cc-ink-2: #cbd5e1;
+  --cc-ink-3: #94a3b8;
+}
+.signin-theme.signin-light,
+body:has(.signin-page.signin-light) {
+  --cc-obsidian: #f8fafc;
+  --cc-canvas: #eef2f7;
+  --cc-card: #ffffff;
+  --cc-surface: #f1f5f9;
+  --cc-border: #dbe1ea;
+  --cc-accent-ink: #2563eb;
+  --cc-vermilion: #d94225;
+  --cc-muted: #5f6984;
+  --cc-ink: #0f172a;
+  --cc-ink-2: #334155;
+  --cc-ink-3: #475569;
+}
+.signin-theme {
+  color-scheme: dark;
+}
+.signin-theme.signin-light {
+  color-scheme: light;
+}
+/* Inter rather than SF, and Tailwind's stock radii (the app's are 4px
+   rounder), so the page matches its reference design. */
+.signin-theme,
+.signin-font,
+body:has(.signin-page) [data-sonner-toast] {
+  --font-text: var(--font-inter), system-ui, sans-serif;
+  --radius: 8px;
+  font-family: var(--font-text);
+}
+.signin-serif {
+  font-family: var(--font-newsreader), Georgia, serif;
+}
+body:has(.signin-page) [data-sonner-toast] {
+  background: var(--cc-card) !important;
+  color: var(--cc-ink) !important;
+  border-color: var(--cc-border) !important;
+}
+
+.signin-ambient {
+  background:
+    radial-gradient(circle at 18% 32%, rgb(59 130 246 / 0.14) 0%, transparent 48%),
+    radial-gradient(circle at 75% 70%, rgb(249 87 56 / 0.08) 0%, transparent 42%),
+    radial-gradient(circle at 50% -10%, rgb(30 58 138 / 0.2) 0%, transparent 55%);
+}
+.signin-light .signin-ambient {
+  background:
+    radial-gradient(circle at 18% 32%, rgb(59 130 246 / 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgb(249 87 56 / 0.05) 0%, transparent 45%);
+}
+
+/* The exploded case stack: a true-isometric tilt (54.7° / -45°), four
+   layers spaced along Z that spread further apart when expanded. */
+.isometric-stage {
+  perspective: 1400px;
+  perspective-origin: 50% 25%;
+}
+.isometric-stack {
+  transform-style: preserve-3d;
+  transform: rotateX(54.7deg) rotateZ(-45deg);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.isometric-layer {
+  transform-style: preserve-3d;
+  transition:
+    transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1),
+    box-shadow 0.45s ease,
+    border-color 0.45s ease;
+}
+.isometric-stack .layer-1 { transform: translateZ(105px); }
+.isometric-stack .layer-2 { transform: translateZ(55px); }
+.isometric-stack .layer-3 { transform: translateZ(5px); }
+.isometric-stack .layer-4 { transform: translateZ(-45px); }
+.isometric-stack.is-expanded .layer-1 { transform: translateZ(160px); }
+.isometric-stack.is-expanded .layer-2 { transform: translateZ(90px); }
+.isometric-stack.is-expanded .layer-3 { transform: translateZ(15px); }
+.isometric-stack.is-expanded .layer-4 { transform: translateZ(-65px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .isometric-stack,
+  .isometric-layer {
+    transition: none;
+  }
+}

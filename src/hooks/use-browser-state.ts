@@ -71,6 +71,17 @@ export function writeStored(key: string, value: string): boolean {
   return persisted;
 }
 
+/** Deletes a stored value and re-renders every component reading it. */
+export function removeStored(key: string): void {
+  memory.delete(key);
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Storage blocked: the in-memory copy is already gone.
+  }
+  listeners.forEach((l) => l());
+}
+
 /** The stored string for `key`, or null — always null on the server. */
 export function useStored(key: string): string | null {
   return React.useSyncExternalStore(
