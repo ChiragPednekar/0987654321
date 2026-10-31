@@ -88,8 +88,8 @@ export default async function ExcelIndex() {
 
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         {list.map((e) => (
-          <Link key={e.slug} href={`/excel/${e.slug}`}>
-            <Card className="transition-colors hover:border-foreground/25">
+          <Link key={e.slug} href={`/excel/${e.slug}`} className="block h-full">
+            <Card className="h-full transition-colors hover:border-foreground/25">
               <CardContent className="flex items-start justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
