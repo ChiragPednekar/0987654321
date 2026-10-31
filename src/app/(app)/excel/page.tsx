@@ -47,7 +47,7 @@ export default async function ExcelIndex() {
   const solvedCount = list.filter((e) => done.has(e.id)).length;
 
   return (
-    <Page narrow>
+    <Page>
       <PageHeader
         eyebrow="Practise"
         title="Excel"
@@ -86,7 +86,7 @@ export default async function ExcelIndex() {
         {plural(solvedCount, "exercise")} solved of {list.length}.
       </p>
 
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
         {list.map((e) => (
           <Link key={e.slug} href={`/excel/${e.slug}`}>
             <Card className="transition-colors hover:border-foreground/25">

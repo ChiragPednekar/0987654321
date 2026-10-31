@@ -21,7 +21,7 @@ export function SkillRadar({ data }: { data: SkillPoint[] }) {
 
   if (!hasData) {
     return (
-      <div className="flex h-[280px] flex-col items-center justify-center gap-2 text-center">
+      <div className="flex min-h-32 flex-col items-center justify-center gap-2 px-3 text-center">
         <p className="text-sm text-muted-foreground">
           Solve a case in any domain to start your radar.
         </p>

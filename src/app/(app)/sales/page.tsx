@@ -35,7 +35,7 @@ export default async function SalesLobby() {
   const titleOf = new Map((scenarios ?? []).map((s) => [s.id, s.title]));
 
   return (
-    <Page narrow>
+    <Page>
       <PageHeader
         eyebrow="Practise"
         title="Sales role-play"
@@ -56,10 +56,10 @@ export default async function SalesLobby() {
         </CardContent>
       </Card>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
         {(scenarios ?? []).map((s) => (
           <Card key={s.slug}>
-            <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between">
+            <CardContent className="flex h-full flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between lg:flex-col">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium">{s.title}</p>
@@ -82,7 +82,7 @@ export default async function SalesLobby() {
           <h2 className="mt-10 text-sm font-semibold text-foreground">
             Your meetings
           </h2>
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
             {(past ?? []).map((p) => (
               <Link key={p.id} href={p.status === "live" ? `/sales/${p.id}` : `/sales/${p.id}/result`}>
                 <Card className="transition-colors hover:border-foreground/25">

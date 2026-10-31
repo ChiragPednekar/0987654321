@@ -49,7 +49,7 @@ export default async function SqlIndex() {
   );
 
   return (
-    <Page narrow>
+    <Page>
       <PageHeader
         eyebrow="Practise"
         title="SQL"
@@ -89,7 +89,7 @@ export default async function SqlIndex() {
         {plural(done.size, "exercise")} solved of {(exercises ?? []).length}.
       </p>
 
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
         {(exercises ?? []).map((e) => (
           <Link key={e.slug} href={`/sql/${e.slug}`}>
             <Card className="transition-colors hover:border-foreground/25">

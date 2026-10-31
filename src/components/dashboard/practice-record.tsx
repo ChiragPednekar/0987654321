@@ -66,7 +66,12 @@ export function PracticeRecord({ record }: { record: Record8Weeks }) {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-dx-ink-2">Nothing here yet. Solve a case and it&apos;ll show up.</p>
+            <div className="flex min-h-32 flex-col items-center justify-center gap-2 px-3 text-center">
+              <p className="text-sm text-dx-ink-2">Nothing here yet. Solve a case and it&apos;ll show up.</p>
+              <Link href="/cases" className="text-sm font-semibold text-blue-700 hover:underline dark:text-blue-300">
+                Browse cases
+              </Link>
+            </div>
           )}
         </Block>
       </div>

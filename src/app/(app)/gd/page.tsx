@@ -53,7 +53,7 @@ export default async function GdLobbyPage() {
   }
 
   return (
-    <Page narrow>
+    <Page>
       <PageHeader
         eyebrow="Community"
         title="Group discussions"
@@ -80,7 +80,7 @@ export default async function GdLobbyPage() {
           description="Open one and share the link with your batch."
         />
       ) : (
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
           {rooms.map((room) => {
             const topic = Array.isArray(room.gd_topics) ? room.gd_topics[0] : room.gd_topics;
             const count = countByRoom.get(room.id) ?? 0;
@@ -117,7 +117,7 @@ export default async function GdLobbyPage() {
           <h2 className="mt-8 text-sm font-semibold text-foreground">
             Past marked practice
           </h2>
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
             {(mine ?? []).map((row) => {
               const s = Array.isArray(row.gd_sessions) ? row.gd_sessions[0] : row.gd_sessions;
               const t = s && (Array.isArray(s.gd_topics) ? s.gd_topics[0] : s.gd_topics);

@@ -8,7 +8,7 @@ import { DOMAIN_ICON, DifficultyMeter, Meter, eyebrow, panel } from "./primitive
 export function PracticeTracks({ tracks }: { tracks: TrackProgress[] }) {
   return (
     <section aria-labelledby="tracks-heading">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="tracks-heading" className="dash-display text-lg font-bold tracking-[-0.01em] text-dx-ink">
             Skill tracks
@@ -34,7 +34,7 @@ export function PracticeTracks({ tracks }: { tracks: TrackProgress[] }) {
           has everything in the meantime.
         </p>
       ) : (
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:max-[1359px]:grid-cols-3">
           {tracks.map((track) => (
             <li key={track.slug}>
               <TrackCard track={track} />
@@ -71,7 +71,7 @@ function TrackCard({ track }: { track: TrackProgress }) {
       <h3 className="dash-display mt-3 text-[15px] font-bold text-dx-ink">{track.title}</h3>
       <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-dx-ink-2">{track.description}</p>
 
-      <div className="mt-4 flex items-baseline justify-between gap-2 text-xs">
+      <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs">
         <span className="dash-mono text-dx-ink">
           {track.completed}/{track.total} <span className="text-dx-muted">cases</span>
         </span>
@@ -85,8 +85,8 @@ function TrackCard({ track }: { track: TrackProgress }) {
         {track.next ? (
           <>
             <p className={`${eyebrow} text-dx-muted`}>Next recommended</p>
-            <p className="mt-1 flex items-center justify-between gap-2">
-              <span className="min-w-0 truncate font-medium text-dx-ink" title={track.next.title}>
+            <p className="mt-1 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+              <span className="min-w-0 flex-1 font-medium leading-snug text-dx-ink">
                 {track.next.title}
               </span>
               <DifficultyMeter difficulty={track.next.difficulty} className="shrink-0 text-dx-muted" />

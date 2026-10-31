@@ -38,7 +38,7 @@ export default async function PracticePage() {
   const canAssign = profile?.role === "teacher" || profile?.role === "admin";
 
   return (
-    <Page className="max-w-4xl">
+    <Page>
       <PageHeader
         eyebrow="Practise"
         title="Aptitude"

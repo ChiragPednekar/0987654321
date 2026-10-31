@@ -34,7 +34,7 @@ export default async function NegotiationLobby() {
   ]);
 
   return (
-    <Page narrow>
+    <Page>
       <PageHeader
         eyebrow="Practise"
         title="Negotiation"
@@ -55,10 +55,10 @@ export default async function NegotiationLobby() {
         </CardContent>
       </Card>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
         {(cases ?? []).map((c) => (
           <Card key={c.slug}>
-            <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between">
+            <CardContent className="flex h-full flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between lg:flex-col">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium">{c.title}</p>
@@ -83,7 +83,7 @@ export default async function NegotiationLobby() {
           <h2 className="mt-10 text-sm font-semibold text-foreground">
             Your negotiations
           </h2>
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
             {(past ?? []).map((p) => {
               const c = Array.isArray(p.negotiation_cases)
                 ? p.negotiation_cases[0]

@@ -25,7 +25,7 @@ export function WeeklyPoints({ data }: { data: WeekPoint[] }) {
 
   if (total === 0) {
     return (
-      <div className="flex h-[220px] items-center justify-center text-center">
+      <div className="flex min-h-32 items-center justify-center px-3 text-center">
         <p className="text-sm text-muted-foreground">
           Solve a case to start earning points.
         </p>

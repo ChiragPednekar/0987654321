@@ -152,9 +152,9 @@ export function ProctorGate({
           ? "Re-enter exam mode to carry on"
           : (title ?? "This case is answered under exam conditions")}
       </h3>
-      <ul className="mx-auto mt-3 max-w-sm space-y-1.5 text-left text-xs text-muted-foreground">
+      <ul className="mx-auto mt-4 max-w-xl list-disc space-y-1.5 pl-5 text-left text-xs leading-relaxed text-muted-foreground">
         {rules.map((rule) => (
-          <li key={rule}>· {rule}</li>
+          <li key={rule}>{rule}</li>
         ))}
       </ul>
       {camera && <CameraConsent camera={camera} />}
@@ -247,7 +247,7 @@ function CameraConsent({ camera }: { camera: CameraApi }) {
             : null;
 
   return (
-    <div className="mx-auto mt-4 max-w-sm rounded-md border bg-muted/40 p-3 text-left text-xs text-muted-foreground">
+    <div className="mx-auto mt-4 max-w-xl rounded-md border bg-muted/40 p-4 text-left text-xs leading-relaxed text-muted-foreground">
       <p className="flex items-center gap-1.5 font-medium text-foreground">
         <Camera className="size-3.5" aria-hidden />
         Camera & Microphone

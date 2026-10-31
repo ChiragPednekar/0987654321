@@ -176,7 +176,7 @@ export default async function LeaderboardPage({
   const boardTitle = isCohort ? university : "Global leaderboard";
 
   return (
-    <Page className="max-w-4xl">
+    <Page>
       <PageHeader
         eyebrow="Community"
         title="Leaderboard"

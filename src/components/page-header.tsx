@@ -3,23 +3,22 @@ import { cn } from "@/lib/utils";
 /**
  * The frame every app page sits in. It owns the width, the side gutters and
  * the distance from the top bar, so no page sets its own and every page's
- * content starts at the same x and the same y. One width for every page: a
- * page whose content is a narrow form keeps the frame and narrows the form
- * (`narrow`), left-aligned, so its title doesn't drift right.
+ * content starts at the same y. Pages with longer lists use the full frame;
+ * form-focused pages center a readable column with `narrow`.
  */
 export function Page({
   narrow = false,
   className,
   children,
 }: {
-  /** Keep the content to reading width, still starting at the page's left edge. */
+  /** Center form-focused content at a readable width. */
   narrow?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-8 sm:px-6 sm:pt-10">
-      <div className={cn(narrow && "max-w-3xl", className)}>{children}</div>
+      <div className={cn(narrow && "mx-auto w-full max-w-4xl", className)}>{children}</div>
     </div>
   );
 }

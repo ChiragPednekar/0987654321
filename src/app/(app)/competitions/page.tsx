@@ -55,7 +55,7 @@ export default async function CompetitionsPage() {
   );
 
   return (
-    <Page narrow>
+    <Page>
       <PageHeader
         eyebrow="Community"
         title="Competitions"
@@ -101,7 +101,7 @@ export default async function CompetitionsPage() {
           .map((group) => (
             <section key={group.title} className="mt-8">
               <h2 className="px-1 pb-2 text-[1.25rem] font-bold tracking-[-0.018em]">{group.title}</h2>
-              <div className="space-y-3">
+              <div className="grid gap-4 lg:grid-cols-2">
                 {group.rows.map((c) => {
                   const isIn = enteredSlugs.has(c.slug);
                   const keyDate = c.state === "upcoming" ? c.opens_at : c.closes_at;

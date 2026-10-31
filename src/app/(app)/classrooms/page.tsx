@@ -126,7 +126,7 @@ export default async function ClassroomsPage() {
               const assignments = assignCountMap.get(room.id) ?? 0;
 
               return (
-                <li key={room.id}>
+                <li key={room.id} className={myBatches.length === 1 ? "w-full max-w-4xl sm:col-span-2 sm:mx-auto" : undefined}>
                   <Link href={`/classrooms/${room.id}`} className="block h-full">
                     <Card className="h-full border-border/80 transition-colors hover:border-foreground/25">
                       <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
@@ -209,7 +209,7 @@ export default async function ClassroomsPage() {
               const assignments = assignCountMap.get(room.id) ?? 0;
 
               return (
-                <li key={room.id}>
+                <li key={room.id} className={batches.length === 1 ? "w-full max-w-4xl sm:col-span-2 sm:mx-auto" : undefined}>
                   <Card className="h-full border-border/80 transition-colors hover:border-foreground/25 flex flex-col justify-between">
                     <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
                       <div>
