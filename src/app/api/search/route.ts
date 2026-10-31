@@ -14,10 +14,11 @@ export interface SearchResult {
 export interface SearchResponse {
   cases: SearchResult[];
   tracks: SearchResult[];
+  firms: SearchResult[];
 }
 
 /**
- * Backs the ⌘K palette. Deliberately narrow: cases and skill tracks only,
+ * Backs the ⌘K palette. Deliberately narrow: cases, skill tracks and firms,
  * capped tight, because a palette that takes a second to answer is one people
  * stop opening. Static "go to" destinations are matched on the client — they
  * never change and do not deserve a round trip.
@@ -26,13 +27,13 @@ export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
 
   if (q.length < 2) {
-    return NextResponse.json<SearchResponse>({ cases: [], tracks: [] });
+    return NextResponse.json<SearchResponse>({ cases: [], tracks: [], firms: [] });
   }
 
   // Escape PostgREST's `or` delimiters before interpolating.
   const safe = q.replace(/[(),*]/g, " ").trim();
   if (!safe) {
-    return NextResponse.json<SearchResponse>({ cases: [], tracks: [] });
+    return NextResponse.json<SearchResponse>({ cases: [], tracks: [], firms: [] });
   }
 
   // The caller's own client, so RLS decides what is visible. Deliberately NOT
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
   // without making anything safer.
   const supabase = await createClient();
 
-  const [{ data: cases }, { data: tracks }] = await Promise.all([
+  const [{ data: cases }, { data: tracks }, { data: firms }] = await Promise.all([
     supabase
       .from("cases")
       .select("id, slug, title, domain, difficulty")
@@ -55,6 +56,12 @@ export async function GET(request: NextRequest) {
       .select("id, slug, title, domain")
       .eq("is_published", true)
       .ilike("title", `%${safe}%`)
+      .limit(4),
+    supabase
+      .from("companies")
+      .select("id, slug, name")
+      .eq("is_published", true)
+      .ilike("name", `%${safe}%`)
       .limit(4),
   ]);
 
@@ -71,6 +78,11 @@ export async function GET(request: NextRequest) {
       title: t.title,
       href: `/paths/${t.slug}`,
       domain: t.domain,
+    })),
+    firms: (firms ?? []).map((f) => ({
+      id: f.id,
+      title: f.name,
+      href: `/companies/${f.slug}`,
     })),
   });
 }

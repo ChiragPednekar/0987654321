@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 import {
   BookOpen,
+  Building2,
   FileText,
   LayoutDashboard,
   Route,
@@ -77,7 +78,10 @@ function pagesFor(role: UserRole | null | undefined): Page[] {
   }
 }
 
-const EMPTY: SearchResponse = { cases: [], tracks: [] };
+/** Dispatch on `window` to open the palette from a button or search box. */
+export const OPEN_SEARCH_EVENT = "casecode:open-search";
+
+const EMPTY: SearchResponse = { cases: [], tracks: [], firms: [] };
 
 export function CommandPalette({ role }: { role?: UserRole | null }) {
   const router = useRouter();
@@ -106,10 +110,20 @@ export function CommandPalette({ role }: { role?: UserRole | null }) {
       if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         setOpen((prev) => !prev);
+      } else if (event.key === "Escape") {
+        setOpen(false);
       }
     }
+    // Anything on the page can open it too — the dashboard's search box does.
+    function onOpen() {
+      setOpen(true);
+    }
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    window.addEventListener(OPEN_SEARCH_EVENT, onOpen);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener(OPEN_SEARCH_EVENT, onOpen);
+    };
   }, []);
 
   // Debounced remote search. Local pages filter instantly via cmdk itself.
@@ -166,7 +180,7 @@ export function CommandPalette({ role }: { role?: UserRole | null }) {
             autoFocus
             value={query}
             onValueChange={setQuery}
-            placeholder="Search cases, tracks and pages…"
+            placeholder="Search cases, tracks, firms and pages…"
             className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           <kbd className="hidden shrink-0 rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground sm:block">
@@ -203,6 +217,17 @@ export function CommandPalette({ role }: { role?: UserRole | null }) {
                   <Route className="size-4 shrink-0 text-muted-foreground" />
                   <span className="flex-1 truncate">{item.title}</span>
                   {item.domain && <DomainBadge domain={item.domain} />}
+                </Item>
+              ))}
+            </Group>
+          )}
+
+          {results.firms.length > 0 && (
+            <Group heading="Firms">
+              {results.firms.map((item) => (
+                <Item key={item.id} value={item.href} onSelect={() => go(item.href)}>
+                  <Building2 className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="flex-1 truncate">{item.title}</span>
                 </Item>
               ))}
             </Group>

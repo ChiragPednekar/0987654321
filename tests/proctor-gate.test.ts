@@ -16,11 +16,15 @@ vi.mock("@/hooks/use-proctor", () => ({
 
 describe("case proctoring entry", () => {
   it.each([false, true])("requires camera access for a student, including retries (submitted=%s)", (hasSubmitted) => {
-    const html = renderToStaticMarkup(React.createElement(CaseProctorShell, {
-      caseId: "case", slug: "case", signedIn: true, entitled: true,
-      defaultTab: "problem", hasSubmissionParam: false, hasSubmitted,
-      children: "Private case content",
-    }));
+    const html = renderToStaticMarkup(React.createElement(
+      CaseProctorShell,
+      {
+        caseId: "case", slug: "case", signedIn: true, entitled: true,
+        defaultTab: "problem", hasSubmissionParam: false, hasSubmitted,
+        // children arrive as the third argument (react/no-children-prop).
+      } as React.ComponentProps<typeof CaseProctorShell>,
+      "Private case content",
+    ));
     expect(html).toContain("Turn on camera");
     expect(html).not.toContain("Private case content");
   });
